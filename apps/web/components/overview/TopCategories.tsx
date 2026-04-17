@@ -1,0 +1,67 @@
+'use client'
+import { useTranslations } from 'next-intl'
+import { useCategoryBreakdown } from '@/hooks/useAnalytics'
+import { useFamily } from '@/hooks/useFamily'
+import { formatAmount } from '@/lib/formatters'
+import { Skeleton } from '@/components/ui/skeleton'
+
+export function TopCategories() {
+  const t = useTranslations('overview')
+  const { family } = useFamily()
+  const now = new Date()
+  const { data, isLoading } = useCategoryBreakdown(
+    family?.id ?? '',
+    now.getMonth() + 1,
+    now.getFullYear()
+  )
+
+  const top = (data ?? []).slice(0, 5)
+  const maxVal = top[0]?.total ?? 1
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3">
+            <Skeleton className="h-8 w-8 rounded-full" />
+            <div className="flex-1"><Skeleton className="h-3 w-full rounded-full" /></div>
+            <Skeleton className="h-4 w-14" />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  if (!top.length) {
+    return <p className="text-sm text-muted-foreground py-4 text-center">{t('noData')}</p>
+  }
+
+  return (
+    <ul className="space-y-3">
+      {top.map(cat => (
+        <li key={cat.name_key} className="flex items-center gap-3">
+          <span className="text-xl w-8 text-center shrink-0">{cat.icon}</span>
+          <div className="flex-1 min-w-0">
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-sm font-medium truncate">
+                {t(`categories.${cat.name_key}`, { defaultValue: cat.name_key })}
+              </span>
+              <span className="text-sm font-semibold tabular-nums shrink-0 ml-2">
+                {formatAmount(cat.total)}
+              </span>
+            </div>
+            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${Math.round((cat.total / maxVal) * 100)}%`,
+                  backgroundColor: cat.color ?? 'var(--primary)',
+                }}
+              />
+            </div>
+          </div>
+        </li>
+      ))}
+    </ul>
+  )
+}
