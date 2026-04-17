@@ -1,0 +1,185 @@
+{
+  "nav": {
+    "overview": "Главная",
+    "transactions": "Операции",
+    "transfers": "Переводы",
+    "budgets": "Бюджеты",
+    "goals": "Цели",
+    "accounts": "Счета",
+    "analytics": "Аналитика",
+    "cashback": "Кэшбэк",
+    "car": "Автомобиль",
+    "family": "Семья"
+  },
+  "common": {
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "delete": "Удалить",
+    "edit": "Изменить",
+    "add": "Добавить",
+    "close": "Закрыть",
+    "confirm": "Подтвердить",
+    "loading": "Загрузка...",
+    "error": "Ошибка",
+    "empty": "Нет данных",
+    "today": "Сегодня",
+    "yesterday": "Вчера",
+    "income": "Доход",
+    "expense": "Расход",
+    "balance": "Баланс",
+    "amount": "Сумма",
+    "note": "Заметка",
+    "date": "Дата",
+    "category": "Категория",
+    "account": "Счёт",
+    "all": "Все"
+  },
+  "auth": {
+    "login": "Войти",
+    "register": "Регистрация",
+    "logout": "Выйти",
+    "email": "Email",
+    "password": "Пароль",
+    "forgot_password": "Забыли пароль?",
+    "no_account": "Нет аккаунта?",
+    "have_account": "Уже есть аккаунт?",
+    "name": "Имя"
+  },
+  "overview": {
+    "title": "Главная",
+    "total_balance": "Общий баланс",
+    "daily_budget": "Дневной бюджет",
+    "daily_budget_left": "осталось сегодня",
+    "top_categories": "Топ расходов",
+    "rule_5030": "Правило 50/30/20",
+    "needs": "Нужды",
+    "wants": "Желания",
+    "savings": "Сбережения"
+  },
+  "transactions": {
+    "title": "Операции",
+    "add": "Добавить",
+    "no_transactions": "Операций пока нет",
+    "filter": "Фильтр",
+    "search": "Поиск"
+  },
+  "transfers": {
+    "title": "Переводы",
+    "send": "Отправить",
+    "accept": "Принять",
+    "decline": "Отклонить",
+    "pending": "Ожидает подтверждения",
+    "confirmed": "Подтверждён",
+    "declined": "Отклонён",
+    "recipient": "Получатель",
+    "from_account": "С какого счёта",
+    "to_account": "На счёт",
+    "history": "История переводов",
+    "no_transfers": "Переводов пока нет",
+    "transfer_received": "{from} отправил вам {amount}"
+  },
+  "budgets": {
+    "title": "Бюджеты",
+    "add": "Добавить бюджет",
+    "limit": "Лимит",
+    "spent": "Потрачено",
+    "left": "Осталось",
+    "over_budget": "Превышен на {amount}"
+  },
+  "goals": {
+    "title": "Цели",
+    "add": "Новая цель",
+    "target": "Цель",
+    "current": "Накоплено",
+    "deadline": "Срок",
+    "forecast": "Прогноз",
+    "completed": "Достигнута!",
+    "auto_save": "Автопополнение"
+  },
+  "accounts": {
+    "title": "Счета",
+    "add": "Добавить счёт",
+    "types": {
+      "cash": "Наличные",
+      "card": "Карта",
+      "savings": "Вклад",
+      "investment": "Инвестиции"
+    }
+  },
+  "analytics": {
+    "title": "Аналитика",
+    "by_category": "По категориям",
+    "by_weekday": "По дням недели",
+    "income_expense": "Доходы и расходы",
+    "heatmap": "Тепловая карта",
+    "personal_inflation": "Личная инфляция",
+    "period_comparison": "Сравнение периодов"
+  },
+  "cashback": {
+    "title": "Кэшбэк",
+    "add_card": "Добавить карту",
+    "best_card": "Лучшая карта",
+    "earned": "Заработано",
+    "limit": "Лимит",
+    "optimizer": "Оптимизатор"
+  },
+  "car": {
+    "title": "Автомобиль",
+    "add": "Добавить авто",
+    "cost_per_km": "₽/км",
+    "fuel_log": "Журнал заправок",
+    "service_book": "Сервисная книжка",
+    "fines": "Штрафы",
+    "categories": {
+      "fuel": "Топливо",
+      "service": "ТО и ремонт",
+      "insurance": "Страховки",
+      "documents": "Документы",
+      "parking": "Парковка",
+      "wash": "Мойка",
+      "tires": "Шиномонтаж",
+      "fine": "Штрафы",
+      "equipment": "Оборудование",
+      "other": "Прочее"
+    },
+    "service_items": {
+      "motor_oil": "Моторное масло",
+      "air_filter": "Воздушный фильтр",
+      "brake_pads": "Тормозные колодки",
+      "timing_belt": "Ремень ГРМ",
+      "coolant": "Антифриз",
+      "osago": "ОСАГО",
+      "tech_inspection": "Техосмотр"
+    }
+  },
+  "family": {
+    "title": "Семья",
+    "invite": "Пригласить",
+    "invite_code": "Код приглашения",
+    "join": "Вступить",
+    "members": "Участники",
+    "owner": "Владелец",
+    "member": "Участник",
+    "leave": "Покинуть семью"
+  },
+  "categories": {
+    "groceries": "Продукты",
+    "transport": "Транспорт",
+    "cafe": "Кафе и рестораны",
+    "entertainment": "Развлечения",
+    "health": "Здоровье",
+    "clothes": "Одежда",
+    "utilities": "Коммунальные услуги",
+    "communication": "Связь",
+    "education": "Образование",
+    "travel": "Путешествия",
+    "subscriptions": "Подписки",
+    "car": "Автомобиль",
+    "other": "Прочее",
+    "salary": "Зарплата",
+    "freelance": "Фриланс",
+    "investment": "Инвестиции",
+    "gifts": "Подарки",
+    "other_income": "Прочий доход"
+  }
+}
