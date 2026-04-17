@@ -9,7 +9,8 @@
     "analytics": "Analytics",
     "cashback": "Cashback",
     "car": "Car",
-    "family": "Family"
+    "family": "Family",
+    "settings": "Settings"
   },
   "common": {
     "save": "Save",
@@ -21,6 +22,7 @@
     "confirm": "Confirm",
     "loading": "Loading...",
     "error": "Error",
+    "success": "Saved!",
     "empty": "No data",
     "today": "Today",
     "yesterday": "Yesterday",
@@ -160,7 +162,27 @@
     "members": "Members",
     "owner": "Owner",
     "member": "Member",
-    "leave": "Leave Family"
+    "leave": "Leave Family",
+    "myFamily": "My Family",
+    "inviteCode": "Invite Code",
+    "you": "you"
+  },
+  "settings": {
+    "title": "Settings",
+    "profile": "Profile",
+    "family": "Family",
+    "preferences": "Preferences",
+    "displayName": "Display Name",
+    "displayNamePlaceholder": "Your name",
+    "inviteCode": "Invite Code",
+    "familyName": "Family Name",
+    "members": "Members",
+    "you": "you",
+    "currency": "Currency",
+    "language": "Language",
+    "languageNote": "Language change requires a page reload.",
+    "logout": "Log Out",
+    "logoutConfirm": "Are you sure you want to log out?"
   },
   "categories": {
     "groceries": "Groceries",

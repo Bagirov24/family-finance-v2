@@ -21,7 +21,7 @@
     "confirm": "Подтвердить",
     "loading": "Загрузка...",
     "error": "Ошибка",
-    "success": "Успешно",
+    "success": "Сохранено!",
     "noData": "Нет данных",
     "total": "Итого",
     "income": "Доход",
@@ -61,5 +61,34 @@
     "dailyBudget": "Бюджет на сегодня",
     "thisMonth": "В этом месяце",
     "topCategories": "Топ категорий"
+  },
+  "family": {
+    "title": "Семья",
+    "invite": "Пригласить",
+    "myFamily": "Моя семья",
+    "inviteCode": "Код приглашения",
+    "join": "Вступить",
+    "members": "Участники",
+    "owner": "Владелец",
+    "member": "Участник",
+    "leave": "Покинуть семью",
+    "you": "вы"
+  },
+  "settings": {
+    "title": "Настройки",
+    "profile": "Профиль",
+    "family": "Семья",
+    "preferences": "Параметры",
+    "displayName": "Отображаемое имя",
+    "displayNamePlaceholder": "Ваше имя",
+    "inviteCode": "Код приглашения",
+    "familyName": "Название семьи",
+    "members": "Участники",
+    "you": "вы",
+    "currency": "Валюта",
+    "language": "Язык",
+    "languageNote": "Для смены языка потребуется перезагрузка страницы.",
+    "logout": "Выйти",
+    "logoutConfirm": "Вы уверены, что хотите выйти?"
   }
 }
