@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useFamily } from '@/hooks/useFamily'
 import { useUIStore } from '@/store/ui.store'
 import { Skeleton } from '@/components/ui/skeleton'
+import { AvatarUpload } from '@/components/ui/AvatarUpload'
 import {
   User, Users, Settings2, LogOut, Copy, Check,
   Crown, Trash2, ChevronRight
@@ -31,6 +32,7 @@ export default function SettingsPage() {
 
   const [tab, setTab] = useState<Tab>('profile')
   const [displayName, setDisplayName] = useState('')
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -62,6 +64,7 @@ export default function SettingsPage() {
   useEffect(() => {
     const member = members.find(m => m.user_id === userId)
     if (member?.display_name) setDisplayName(member.display_name)
+    if (member && 'avatar_url' in member) setAvatarUrl((member as { avatar_url?: string | null }).avatar_url ?? null)
   }, [members, userId])
 
   async function saveProfile() {
@@ -107,7 +110,6 @@ export default function SettingsPage() {
     setLocaleCookie(value)
     setLocaleSaved(true)
     setTimeout(() => setLocaleSaved(false), 2000)
-    // Перезагружаем страницу чтобы next-intl перечитал cookie
     router.refresh()
   }
 
@@ -155,6 +157,20 @@ export default function SettingsPage() {
         <div className="space-y-4">
           <section className="bg-card border rounded-2xl p-4 space-y-4">
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">{t('profile')}</h2>
+
+            {/* Avatar */}
+            {userId && (
+              <div className="flex justify-center pt-1 pb-2">
+                <AvatarUpload
+                  userId={userId}
+                  currentUrl={avatarUrl}
+                  displayName={displayName}
+                  onUploaded={(url) => setAvatarUrl(url)}
+                  size={80}
+                />
+              </div>
+            )}
+
             <div className="space-y-2">
               <label className="text-sm font-medium">{t('displayName')}</label>
               <input
@@ -208,7 +224,6 @@ export default function SettingsPage() {
       {/* Family tab */}
       {tab === 'family' && (
         <div className="space-y-4">
-          {/* Invite code */}
           {family?.invite_code && (
             <section className="bg-card border rounded-2xl p-4 space-y-3">
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">{t('inviteCode')}</h2>
@@ -227,7 +242,6 @@ export default function SettingsPage() {
             </section>
           )}
 
-          {/* Family name (owner only) */}
           {isOwner && (
             <section className="bg-card border rounded-2xl p-4 space-y-4">
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">{t('familyName')}</h2>
@@ -246,44 +260,49 @@ export default function SettingsPage() {
             </section>
           )}
 
-          {/* Members list */}
           <section>
             <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">{t('members')}</h2>
             <div className="space-y-2">
-              {members.map(m => (
-                <div
-                  key={m.user_id}
-                  className={cn(
-                    'flex items-center gap-3 p-3 rounded-2xl border bg-card',
-                    m.user_id === userId && 'border-primary/30 bg-primary/5'
-                  )}
-                >
-                  <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0">
-                    <User size={16} className="text-muted-foreground" />
+              {members.map(m => {
+                const memberAvatarUrl = 'avatar_url' in m ? (m as { avatar_url?: string | null }).avatar_url : null
+                return (
+                  <div
+                    key={m.user_id}
+                    className={cn(
+                      'flex items-center gap-3 p-3 rounded-2xl border bg-card',
+                      m.user_id === userId && 'border-primary/30 bg-primary/5'
+                    )}
+                  >
+                    <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+                      {memberAvatarUrl
+                        ? <img src={memberAvatarUrl} alt={m.display_name ?? ''} className="w-full h-full object-cover" />
+                        : <User size={16} className="text-muted-foreground" />
+                      }
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {m.display_name ?? m.user_id.slice(0, 8)}
+                        {m.user_id === userId && (
+                          <span className="ml-1.5 text-xs text-muted-foreground">({t('you')})</span>
+                        )}
+                      </p>
+                      <p className="text-xs text-muted-foreground capitalize">{m.role}</p>
+                    </div>
+                    {m.role === 'owner'
+                      ? <Crown size={15} className="text-yellow-500 shrink-0" />
+                      : isOwner && m.user_id !== userId && (
+                        <button
+                          onClick={() => removeMember(m.user_id)}
+                          className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                          aria-label="Remove member"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )
+                    }
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {m.display_name ?? m.user_id.slice(0, 8)}
-                      {m.user_id === userId && (
-                        <span className="ml-1.5 text-xs text-muted-foreground">({t('you')})</span>
-                      )}
-                    </p>
-                    <p className="text-xs text-muted-foreground capitalize">{m.role}</p>
-                  </div>
-                  {m.role === 'owner'
-                    ? <Crown size={15} className="text-yellow-500 shrink-0" />
-                    : isOwner && m.user_id !== userId && (
-                      <button
-                        onClick={() => removeMember(m.user_id)}
-                        className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                        aria-label="Remove member"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )
-                  }
-                </div>
-              ))}
+                )
+              })}
             </div>
           </section>
         </div>
