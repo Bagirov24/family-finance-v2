@@ -1,6 +1,9 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+const SUPPORTED_LOCALES = ['ru', 'en']
+const DEFAULT_LOCALE = 'ru'
+
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
@@ -37,6 +40,16 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = '/overview'
     return NextResponse.redirect(url)
+  }
+
+  // Устанавливаем дефолтный locale cookie если ещё нет
+  const existingLocale = request.cookies.get('NEXT_LOCALE')?.value
+  if (!existingLocale || !SUPPORTED_LOCALES.includes(existingLocale)) {
+    supabaseResponse.cookies.set('NEXT_LOCALE', DEFAULT_LOCALE, {
+      path: '/',
+      maxAge: 60 * 60 * 24 * 365, // 1 год
+      sameSite: 'lax',
+    })
   }
 
   return supabaseResponse

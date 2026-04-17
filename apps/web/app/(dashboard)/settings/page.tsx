@@ -17,6 +17,10 @@ type Tab = 'profile' | 'family' | 'preferences'
 const CURRENCIES = ['RUB', 'USD', 'EUR', 'KZT', 'BYN', 'UAH']
 const LOCALES = [{ value: 'ru', label: 'Русский' }, { value: 'en', label: 'English' }]
 
+function setLocaleCookie(locale: string) {
+  document.cookie = `NEXT_LOCALE=${locale}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`
+}
+
 export default function SettingsPage() {
   const t = useTranslations('settings')
   const tc = useTranslations('common')
@@ -34,6 +38,13 @@ export default function SettingsPage() {
   const [currency, setCurrency] = useState('RUB')
   const [locale, setLocale] = useState('ru')
   const [confirmLogout, setConfirmLogout] = useState(false)
+  const [localeSaved, setLocaleSaved] = useState(false)
+
+  // Инициализируем locale из cookie
+  useEffect(() => {
+    const match = document.cookie.match(/(?:^|;\s*)NEXT_LOCALE=([^;]+)/)
+    if (match) setLocale(match[1])
+  }, [])
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -89,6 +100,15 @@ export default function SettingsPage() {
     navigator.clipboard.writeText(family.invite_code)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  function handleLocaleChange(value: string) {
+    setLocale(value)
+    setLocaleCookie(value)
+    setLocaleSaved(true)
+    setTimeout(() => setLocaleSaved(false), 2000)
+    // Перезагружаем страницу чтобы next-intl перечитал cookie
+    router.refresh()
   }
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
@@ -307,7 +327,7 @@ export default function SettingsPage() {
               {LOCALES.map(l => (
                 <button
                   key={l.value}
-                  onClick={() => setLocale(l.value)}
+                  onClick={() => handleLocaleChange(l.value)}
                   className={cn(
                     'flex-1 py-2 rounded-xl border text-sm font-semibold transition-all',
                     locale === l.value
@@ -319,6 +339,11 @@ export default function SettingsPage() {
                 </button>
               ))}
             </div>
+            {localeSaved && (
+              <p className="flex items-center gap-1.5 text-xs text-primary font-medium">
+                <Check size={12} /> {tc('success')}
+              </p>
+            )}
             <p className="text-xs text-muted-foreground">{t('languageNote')}</p>
           </section>
         </div>
