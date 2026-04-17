@@ -1,31 +1,27 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
 import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getMessages } from 'next-intl/server'
-import { Toaster } from '@/components/ui/toaster'
+import { Toaster } from 'sonner'
+import { QueryProvider } from '@/components/providers/QueryProvider'
 import './globals.css'
 
-const inter = Inter({ subsets: ['latin', 'cyrillic'] })
-
 export const metadata: Metadata = {
-  title: 'Family Finance',
-  description: 'Умный учёт семейных финансов',
+  title: { default: 'Family Finance', template: '%s — Family Finance' },
+  description: 'Семейный финансовый трекер',
 }
 
-export default async function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale()
   const messages = await getMessages()
 
   return (
     <html lang={locale} suppressHydrationWarning>
-      <body className={inter.className}>
+      <body>
         <NextIntlClientProvider messages={messages}>
-          {children}
-          <Toaster />
+          <QueryProvider>
+            {children}
+            <Toaster richColors closeButton position="top-right" />
+          </QueryProvider>
         </NextIntlClientProvider>
       </body>
     </html>

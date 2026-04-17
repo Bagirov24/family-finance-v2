@@ -1,51 +1,36 @@
 import { create } from 'zustand'
 
-interface UIStore {
-  // Auth
+interface UIState {
   userId: string | null
-  setUserId: (id: string | null) => void
-
-  // Sidebar
   sidebarOpen: boolean
-  setSidebarOpen: (open: boolean) => void
-  toggleSidebar: () => void
-
-  // Add transaction modal
   addTransactionOpen: boolean
-  setAddTransactionOpen: (open: boolean) => void
-
-  // Add transfer modal
   addTransferOpen: boolean
-  setAddTransferOpen: (open: boolean) => void
-
-  // Active period (for analytics/budgets)
   activePeriod: { month: number; year: number }
-  setActivePeriod: (period: { month: number; year: number }) => void
-
-  // Theme
   theme: 'light' | 'dark' | 'system'
-  setTheme: (theme: 'light' | 'dark' | 'system') => void
+
+  setUserId: (id: string | null) => void
+  setSidebarOpen: (v: boolean) => void
+  setAddTransactionOpen: (v: boolean) => void
+  setAddTransferOpen: (v: boolean) => void
+  setActivePeriod: (month: number, year: number) => void
+  setTheme: (t: 'light' | 'dark' | 'system') => void
 }
 
-const now = new Date()
-
-export const useUIStore = create<UIStore>((set) => ({
+export const useUIStore = create<UIState>(set => ({
   userId: null,
-  setUserId: (id) => set({ userId: id }),
-
   sidebarOpen: false,
-  setSidebarOpen: (open) => set({ sidebarOpen: open }),
-  toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
-
   addTransactionOpen: false,
-  setAddTransactionOpen: (open) => set({ addTransactionOpen: open }),
-
   addTransferOpen: false,
-  setAddTransferOpen: (open) => set({ addTransferOpen: open }),
-
-  activePeriod: { month: now.getMonth() + 1, year: now.getFullYear() },
-  setActivePeriod: (period) => set({ activePeriod: period }),
-
+  activePeriod: {
+    month: new Date().getMonth() + 1,
+    year: new Date().getFullYear(),
+  },
   theme: 'system',
-  setTheme: (theme) => set({ theme }),
+
+  setUserId: (id) => set({ userId: id }),
+  setSidebarOpen: (v) => set({ sidebarOpen: v }),
+  setAddTransactionOpen: (v) => set({ addTransactionOpen: v }),
+  setAddTransferOpen: (v) => set({ addTransferOpen: v }),
+  setActivePeriod: (month, year) => set({ activePeriod: { month, year } }),
+  setTheme: (t) => set({ theme: t }),
 }))
