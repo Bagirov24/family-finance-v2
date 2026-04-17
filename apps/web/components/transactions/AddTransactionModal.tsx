@@ -1,135 +1,161 @@
 'use client'
 import { useState } from 'react'
-import { useTranslations } from 'next-intl'
+import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useUIStore } from '@/store/ui.store'
+import { useCreateTransaction } from '@/hooks/useTransactions'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useCategories } from '@/hooks/useCategories'
-import { useTransactions } from '@/hooks/useTransactions'
-import { useFamily } from '@/hooks/useFamily'
-import { useUIStore } from '@/store/ui.store'
-import { toast } from 'sonner'
 
 export function AddTransactionModal() {
-  const t = useTranslations('transactions')
-  const open = useUIStore(s => s.addTransactionOpen)
-  const setOpen = useUIStore(s => s.setAddTransactionOpen)
-  const userId = useUIStore(s => s.userId)
-
-  const { family } = useFamily()
-  const { accounts } = useAccounts()
-  const { data: categories } = useCategories()
-  const { create } = useTransactions({})
-
-  const [type, setType] = useState<'expense' | 'income'>('expense')
+  const { addTransactionOpen, setAddTransactionOpen } = useUIStore()
+  const [type, setType] = useState<'income' | 'expense'>('expense')
   const [amount, setAmount] = useState('')
   const [accountId, setAccountId] = useState('')
   const [categoryId, setCategoryId] = useState('')
-  const [note, setNote] = useState('')
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
-  const [loading, setLoading] = useState(false)
+  const [comment, setComment] = useState('')
 
-  const filteredCategories = (categories ?? []).filter(c => c.type === type || c.type === 'both')
+  const { data: accounts = [] } = useAccounts()
+  const { data: categories = [] } = useCategories(type)
+  const { mutateAsync, isPending } = useCreateTransaction()
+
+  function reset() {
+    setAmount('')
+    setCategoryId('')
+    setComment('')
+    setDate(new Date().toISOString().split('T')[0])
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!family || !userId || !accountId || !amount) return
-    setLoading(true)
+    if (!amount || !accountId) return
     try {
-      await create.mutateAsync({
-        family_id: family.id,
-        user_id: userId,
+      await mutateAsync({
         account_id: accountId,
         category_id: categoryId || undefined,
-        type,
         amount: parseFloat(amount),
-        note: note || undefined,
+        type,
         date,
-        source: 'manual',
+        comment: comment || undefined,
       })
-      toast.success(t('added'))
-      setOpen(false)
-      setAmount('')
-      setNote('')
-      setCategoryId('')
+      toast.success(type === 'income' ? 'Доход добавлен' : 'Расход добавлен')
+      setAddTransactionOpen(false)
+      reset()
     } catch {
-      toast.error(t('error'))
-    } finally {
-      setLoading(false)
+      toast.error('Ошибка при сохранении')
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-w-md">
+    <Dialog open={addTransactionOpen} onOpenChange={setAddTransactionOpen}>
+      <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>{t('add')}</DialogTitle>
+          <DialogTitle>Добавить транзакцию</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Tabs value={type} onValueChange={v => setType(v as 'expense' | 'income')}>
-            <TabsList className="w-full">
-              <TabsTrigger value="expense" className="flex-1">{t('expense')}</TabsTrigger>
-              <TabsTrigger value="income" className="flex-1">{t('income')}</TabsTrigger>
-            </TabsList>
-          </Tabs>
 
-          <div className="space-y-1">
-            <Label>{t('amount')}</Label>
+        {/* Type toggle */}
+        <div className="flex rounded-xl overflow-hidden border border-border">
+          {(['expense', 'income'] as const).map(t => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => { setType(t); setCategoryId('') }}
+              className={`flex-1 py-2 text-sm font-medium transition-colors ${
+                type === t
+                  ? t === 'expense' ? 'bg-red-500 text-white' : 'bg-green-500 text-white'
+                  : 'hover:bg-accent text-muted-foreground'
+              }`}
+            >
+              {t === 'expense' ? '− Расход' : '+ Доход'}
+            </button>
+          ))}
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-3">
+          {/* Amount */}
+          <div className="space-y-1.5">
+            <Label>Сумма</Label>
             <Input
               type="number"
-              min="0"
+              min="0.01"
               step="0.01"
+              placeholder="0.00"
               value={amount}
               onChange={e => setAmount(e.target.value)}
-              placeholder="0.00"
               required
+              className="text-lg font-semibold tabular-nums"
               autoFocus
             />
           </div>
 
-          <div className="space-y-1">
-            <Label>{t('account')}</Label>
+          {/* Account */}
+          <div className="space-y-1.5">
+            <Label>Счёт</Label>
             <Select value={accountId} onValueChange={setAccountId} required>
-              <SelectTrigger><SelectValue placeholder={t('selectAccount')} /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="Выберите счёт" />
+              </SelectTrigger>
               <SelectContent>
                 {accounts.map(a => (
-                  <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1">
-            <Label>{t('category')}</Label>
-            <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger><SelectValue placeholder={t('selectCategory')} /></SelectTrigger>
-              <SelectContent>
-                {filteredCategories.map(c => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.icon} {t(`categories.${c.name_key}`, { defaultValue: c.name_key })}
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.emoji} {a.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          <div className="space-y-1">
-            <Label>{t('date')}</Label>
-            <Input type="date" value={date} onChange={e => setDate(e.target.value)} />
+          {/* Category */}
+          <div className="space-y-1.5">
+            <Label>Категория</Label>
+            <Select value={categoryId} onValueChange={setCategoryId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Без категории" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories?.map(c => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.emoji} {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="space-y-1">
-            <Label>{t('note')}</Label>
-            <Input value={note} onChange={e => setNote(e.target.value)} placeholder={t('notePlaceholder')} />
+          {/* Date */}
+          <div className="space-y-1.5">
+            <Label>Дата</Label>
+            <Input
+              type="date"
+              value={date}
+              onChange={e => setDate(e.target.value)}
+              required
+            />
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? t('saving') : t('save')}
-          </Button>
+          {/* Comment */}
+          <div className="space-y-1.5">
+            <Label>Комментарий</Label>
+            <Input
+              placeholder="Необязательно"
+              value={comment}
+              onChange={e => setComment(e.target.value)}
+            />
+          </div>
+
+          <div className="flex gap-2 pt-1">
+            <Button type="button" variant="outline" className="flex-1" onClick={() => setAddTransactionOpen(false)}>
+              Отмена
+            </Button>
+            <Button type="submit" className="flex-1" disabled={isPending}>
+              {isPending ? 'Сохранение...' : 'Добавить'}
+            </Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

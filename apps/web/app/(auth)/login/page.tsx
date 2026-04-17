@@ -1,76 +1,91 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { toast } from 'sonner'
 
 export default function LoginPage() {
-  const t = useTranslations()
   const router = useRouter()
-  const supabase = createClient()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [mode, setMode] = useState<'login' | 'register'>('login')
 
-  const handleLogin = async (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
-    setError(null)
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const supabase = createClient()
+
+    const { error } =
+      mode === 'login'
+        ? await supabase.auth.signInWithPassword({ email, password })
+        : await supabase.auth.signUp({ email, password })
+
+    setLoading(false)
+
     if (error) {
-      setError(error.message)
-      setLoading(false)
-      return
+      toast.error(error.message)
+    } else if (mode === 'register') {
+      toast.success('Проверьте email для подтверждения')
+    } else {
+      router.replace('/overview')
     }
-    router.push('/overview')
-    router.refresh()
   }
 
   return (
-    <Card className="shadow-xl border-0">
-      <CardHeader>
-        <CardTitle className="text-center">{t('auth.login')}</CardTitle>
-      </CardHeader>
-      <form onSubmit={handleLogin}>
-        <CardContent className="space-y-4">
-          {error && (
-            <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-lg">{error}</div>
-          )}
-          <div className="space-y-2">
-            <Label htmlFor="email">{t('auth.email')}</Label>
+    <div className="flex min-h-dvh items-center justify-center bg-background p-4">
+      <div className="w-full max-w-sm">
+        {/* Logo */}
+        <div className="mb-8 text-center">
+          <div className="text-4xl mb-2">💰</div>
+          <h1 className="text-xl font-bold">FamilyFinance</h1>
+          <p className="text-sm text-muted-foreground mt-1">Семейный финансовый трекер</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="email">Email</Label>
             <Input
-              id="email" type="email" value={email} required
+              id="email"
+              type="email"
+              value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="you@example.com"
+              required
+              autoComplete="email"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">{t('auth.password')}</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="password">Пароль</Label>
             <Input
-              id="password" type="password" value={password} required
+              id="password"
+              type="password"
+              value={password}
               onChange={e => setPassword(e.target.value)}
               placeholder="••••••••"
+              required
+              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
             />
           </div>
-        </CardContent>
-        <CardFooter className="flex-col gap-3">
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? t('common.loading') : t('auth.login')}
+            {loading ? 'Загрузка...' : mode === 'login' ? 'Войти' : 'Зарегистрироваться'}
           </Button>
-          <p className="text-sm text-muted-foreground">
-            {t('auth.no_account')}{' '}
-            <Link href="/register" className="text-primary hover:underline font-medium">
-              {t('auth.register')}
-            </Link>
-          </p>
-        </CardFooter>
-      </form>
-    </Card>
+        </form>
+
+        <p className="mt-4 text-center text-sm text-muted-foreground">
+          {mode === 'login' ? 'Нет аккаунта? ' : 'Уже есть аккаунт? '}
+          <button
+            type="button"
+            className="text-primary underline underline-offset-4 hover:no-underline"
+            onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
+          >
+            {mode === 'login' ? 'Зарегистрироваться' : 'Войти'}
+          </button>
+        </p>
+      </div>
+    </div>
   )
 }
