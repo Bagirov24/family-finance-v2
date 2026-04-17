@@ -1,0 +1,71 @@
+'use client'
+import { useTranslations } from 'next-intl'
+import { useCashbackCards } from '@/hooks/useCashback'
+import { useCategories } from '@/hooks/useCategories'
+import { Skeleton } from '@/components/ui/skeleton'
+import { CreditCard } from 'lucide-react'
+
+export default function CashbackPage() {
+  const t = useTranslations('cashback')
+  const { cards, isLoading, getBestCard } = useCashbackCards()
+  const { data: categories } = useCategories()
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-6">
+      <h1 className="text-xl font-bold">{t('title')}</h1>
+
+      {/* Cards grid */}
+      <section>
+        <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">{t('myCards')}</h2>
+        {isLoading ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-2xl" />)}
+          </div>
+        ) : !cards.length ? (
+          <div className="py-12 text-center text-muted-foreground">
+            <CreditCard size={36} className="mx-auto mb-3 opacity-30" />
+            <p>{t('noCards')}</p>
+          </div>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {cards.map(card => (
+              <div
+                key={card.id}
+                className="rounded-2xl p-4 text-white relative overflow-hidden shadow-md"
+                style={{ backgroundColor: card.color ?? '#6366f1' }}
+              >
+                <p className="text-xs opacity-80 mb-1">{card.bank}</p>
+                <p className="font-bold text-base">{card.name}</p>
+                <p className="text-sm mt-2 opacity-90">{t('defaultCashback')}: {card.default_cashback_percent}%</p>
+                <CreditCard size={48} className="absolute -right-2 -bottom-3 opacity-10" />
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Optimizer: best card per category */}
+      <section>
+        <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">{t('optimizer')}</h2>
+        <div className="rounded-2xl border bg-card p-4 space-y-2">
+          {(categories ?? []).filter(c => c.type === 'expense' || c.type === 'both').slice(0, 10).map(cat => {
+            const best = getBestCard(cat.id)
+            return (
+              <div key={cat.id} className="flex items-center justify-between py-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">{cat.icon}</span>
+                  <span className="text-sm">{t(`categories.${cat.name_key}`, { defaultValue: cat.name_key })}</span>
+                </div>
+                {best ? (
+                  <span className="text-xs font-semibold text-primary">{best.cardName} • {best.percent}%</span>
+                ) : (
+                  <span className="text-xs text-muted-foreground">—</span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </section>
+    </div>
+  )
+}
