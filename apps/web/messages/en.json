@@ -1,0 +1,185 @@
+{
+  "nav": {
+    "overview": "Overview",
+    "transactions": "Transactions",
+    "transfers": "Transfers",
+    "budgets": "Budgets",
+    "goals": "Goals",
+    "accounts": "Accounts",
+    "analytics": "Analytics",
+    "cashback": "Cashback",
+    "car": "Car",
+    "family": "Family"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "close": "Close",
+    "confirm": "Confirm",
+    "loading": "Loading...",
+    "error": "Error",
+    "empty": "No data",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "income": "Income",
+    "expense": "Expense",
+    "balance": "Balance",
+    "amount": "Amount",
+    "note": "Note",
+    "date": "Date",
+    "category": "Category",
+    "account": "Account",
+    "all": "All"
+  },
+  "auth": {
+    "login": "Sign In",
+    "register": "Sign Up",
+    "logout": "Log Out",
+    "email": "Email",
+    "password": "Password",
+    "forgot_password": "Forgot password?",
+    "no_account": "No account?",
+    "have_account": "Already have an account?",
+    "name": "Name"
+  },
+  "overview": {
+    "title": "Overview",
+    "total_balance": "Total Balance",
+    "daily_budget": "Daily Budget",
+    "daily_budget_left": "left today",
+    "top_categories": "Top Spending",
+    "rule_5030": "50/30/20 Rule",
+    "needs": "Needs",
+    "wants": "Wants",
+    "savings": "Savings"
+  },
+  "transactions": {
+    "title": "Transactions",
+    "add": "Add",
+    "no_transactions": "No transactions yet",
+    "filter": "Filter",
+    "search": "Search"
+  },
+  "transfers": {
+    "title": "Transfers",
+    "send": "Send",
+    "accept": "Accept",
+    "decline": "Decline",
+    "pending": "Awaiting confirmation",
+    "confirmed": "Confirmed",
+    "declined": "Declined",
+    "recipient": "Recipient",
+    "from_account": "From account",
+    "to_account": "To account",
+    "history": "Transfer History",
+    "no_transfers": "No transfers yet",
+    "transfer_received": "{from} sent you {amount}"
+  },
+  "budgets": {
+    "title": "Budgets",
+    "add": "Add Budget",
+    "limit": "Limit",
+    "spent": "Spent",
+    "left": "Left",
+    "over_budget": "Over by {amount}"
+  },
+  "goals": {
+    "title": "Goals",
+    "add": "New Goal",
+    "target": "Target",
+    "current": "Saved",
+    "deadline": "Deadline",
+    "forecast": "Forecast",
+    "completed": "Achieved!",
+    "auto_save": "Auto-save"
+  },
+  "accounts": {
+    "title": "Accounts",
+    "add": "Add Account",
+    "types": {
+      "cash": "Cash",
+      "card": "Card",
+      "savings": "Savings",
+      "investment": "Investment"
+    }
+  },
+  "analytics": {
+    "title": "Analytics",
+    "by_category": "By Category",
+    "by_weekday": "By Weekday",
+    "income_expense": "Income & Expenses",
+    "heatmap": "Spending Heatmap",
+    "personal_inflation": "Personal Inflation",
+    "period_comparison": "Period Comparison"
+  },
+  "cashback": {
+    "title": "Cashback",
+    "add_card": "Add Card",
+    "best_card": "Best Card",
+    "earned": "Earned",
+    "limit": "Limit",
+    "optimizer": "Optimizer"
+  },
+  "car": {
+    "title": "Car",
+    "add": "Add Car",
+    "cost_per_km": "₽/km",
+    "fuel_log": "Fuel Log",
+    "service_book": "Service Book",
+    "fines": "Fines",
+    "categories": {
+      "fuel": "Fuel",
+      "service": "Service",
+      "insurance": "Insurance",
+      "documents": "Documents",
+      "parking": "Parking",
+      "wash": "Car Wash",
+      "tires": "Tires",
+      "fine": "Fines",
+      "equipment": "Equipment",
+      "other": "Other"
+    },
+    "service_items": {
+      "motor_oil": "Engine Oil",
+      "air_filter": "Air Filter",
+      "brake_pads": "Brake Pads",
+      "timing_belt": "Timing Belt",
+      "coolant": "Coolant",
+      "osago": "OSAGO Insurance",
+      "tech_inspection": "Tech Inspection"
+    }
+  },
+  "family": {
+    "title": "Family",
+    "invite": "Invite",
+    "invite_code": "Invite Code",
+    "join": "Join",
+    "members": "Members",
+    "owner": "Owner",
+    "member": "Member",
+    "leave": "Leave Family"
+  },
+  "categories": {
+    "groceries": "Groceries",
+    "transport": "Transport",
+    "cafe": "Cafe & Restaurants",
+    "entertainment": "Entertainment",
+    "health": "Health",
+    "clothes": "Clothes",
+    "utilities": "Utilities",
+    "communication": "Communication",
+    "education": "Education",
+    "travel": "Travel",
+    "subscriptions": "Subscriptions",
+    "car": "Car",
+    "other": "Other",
+    "salary": "Salary",
+    "freelance": "Freelance",
+    "investment": "Investments",
+    "gifts": "Gifts",
+    "other_income": "Other Income"
+  }
+}
