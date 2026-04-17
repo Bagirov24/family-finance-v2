@@ -1,19 +1,22 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, CreditCard, ArrowLeftRight, Wallet, BarChart2 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
+import { LayoutDashboard, CreditCard, ArrowLeftRight, Wallet, BarChart2, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
-
-const ITEMS = [
-  { href: '/overview',     icon: LayoutDashboard, label: 'Обзор' },
-  { href: '/transactions', icon: CreditCard,      label: 'Расходы' },
-  { href: '/transfers',    icon: ArrowLeftRight,  label: 'Переводы' },
-  { href: '/budgets',      icon: Wallet,          label: 'Бюджеты' },
-  { href: '/analytics',    icon: BarChart2,       label: 'Аналитика' },
-]
 
 export function BottomNav() {
   const pathname = usePathname()
+  const t = useTranslations('nav')
+
+  const ITEMS = [
+    { href: '/overview',     icon: LayoutDashboard, label: t('overview') },
+    { href: '/transactions', icon: CreditCard,      label: t('transactions') },
+    { href: '/transfers',    icon: ArrowLeftRight,  label: t('transfers') },
+    { href: '/budgets',      icon: Wallet,          label: t('budgets') },
+    { href: '/analytics',    icon: BarChart2,       label: t('analytics') },
+    { href: '/settings',     icon: Settings,        label: t('settings') },
+  ]
 
   return (
     <nav className="fixed bottom-0 inset-x-0 z-20 flex border-t border-border bg-card md:hidden">
@@ -29,7 +32,7 @@ export function BottomNav() {
             )}
           >
             <Icon className={cn('h-5 w-5', active && 'text-primary')} />
-            {label}
+            <span className="truncate w-full text-center leading-none">{label}</span>
           </Link>
         )
       })}

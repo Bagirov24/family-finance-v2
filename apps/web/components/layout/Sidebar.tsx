@@ -1,30 +1,32 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, Target,
-  CreditCard, BarChart2, Gift, Users, Car, Settings, X
+  CreditCard, Landmark, BarChart2, Gift, Users, Car, Settings, X
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/store/ui.store'
 
-const NAV_ITEMS = [
-  { href: '/overview',      icon: LayoutDashboard, label: 'Обзор' },
-  { href: '/transactions',  icon: CreditCard,       label: 'Транзакции' },
-  { href: '/transfers',     icon: ArrowLeftRight,   label: 'Переводы' },
-  { href: '/budgets',       icon: Wallet,           label: 'Бюджеты' },
-  { href: '/goals',         icon: Target,           label: 'Цели' },
-  { href: '/accounts',      icon: CreditCard,       label: 'Счета' },
-  { href: '/analytics',     icon: BarChart2,        label: 'Аналитика' },
-  { href: '/cashback',      icon: Gift,             label: 'Кэшбэк' },
-  { href: '/family',        icon: Users,            label: 'Семья' },
-  { href: '/car',           icon: Car,              label: 'Авто' },
-  { href: '/settings',      icon: Settings,         label: 'Настройки' },
-]
-
 export function Sidebar() {
   const pathname = usePathname()
   const { sidebarOpen, setSidebarOpen } = useUIStore()
+  const t = useTranslations('nav')
+
+  const NAV_ITEMS = [
+    { href: '/overview',      icon: LayoutDashboard, label: t('overview') },
+    { href: '/transactions',  icon: CreditCard,      label: t('transactions') },
+    { href: '/transfers',     icon: ArrowLeftRight,  label: t('transfers') },
+    { href: '/budgets',       icon: Wallet,          label: t('budgets') },
+    { href: '/goals',         icon: Target,          label: t('goals') },
+    { href: '/accounts',      icon: Landmark,        label: t('accounts') },
+    { href: '/analytics',     icon: BarChart2,       label: t('analytics') },
+    { href: '/cashback',      icon: Gift,            label: t('cashback') },
+    { href: '/family',        icon: Users,           label: t('family') },
+    { href: '/car',           icon: Car,             label: t('car') },
+    { href: '/settings',      icon: Settings,        label: t('settings') },
+  ]
 
   return (
     <>
@@ -50,6 +52,7 @@ export function Sidebar() {
           <button
             className="md:hidden p-1 rounded-lg hover:bg-accent"
             onClick={() => setSidebarOpen(false)}
+            aria-label="Close menu"
           >
             <X className="h-4 w-4" />
           </button>
