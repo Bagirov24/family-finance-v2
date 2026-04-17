@@ -1,40 +1,81 @@
 'use client'
-import { Menu, Plus, Bell } from 'lucide-react'
-import { useTranslations } from 'next-intl'
-import { useUIStore } from '@/store/ui.store'
+import { Menu, Plus, ArrowLeftRight, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useUIStore } from '@/store/ui.store'
+import { getMonthName } from '@/lib/utils'
 
-export function Header({ title }: { title?: string }) {
-  const { toggleSidebar, setAddTransactionOpen } = useUIStore()
+export function Header() {
+  const {
+    setSidebarOpen,
+    setAddTransactionOpen,
+    setAddTransferOpen,
+    activePeriod,
+    setActivePeriod,
+  } = useUIStore()
+
+  function prevMonth() {
+    const { month, year } = activePeriod
+    if (month === 1) setActivePeriod(12, year - 1)
+    else setActivePeriod(month - 1, year)
+  }
+
+  function nextMonth() {
+    const { month, year } = activePeriod
+    if (month === 12) setActivePeriod(1, year + 1)
+    else setActivePeriod(month + 1, year)
+  }
+
+  const { month, year } = activePeriod
+  const isCurrentMonth =
+    month === new Date().getMonth() + 1 && year === new Date().getFullYear()
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between px-4 h-14 bg-background/80 backdrop-blur border-b">
-      <div className="flex items-center gap-3">
+    <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-border bg-card/80 backdrop-blur px-4">
+      {/* Burger */}
+      <button
+        className="md:hidden p-1.5 rounded-lg hover:bg-accent"
+        onClick={() => setSidebarOpen(true)}
+      >
+        <Menu className="h-5 w-5" />
+      </button>
+
+      {/* Period selector */}
+      <div className="flex items-center gap-1 rounded-xl border border-border bg-background px-1">
         <button
-          onClick={toggleSidebar}
-          className="lg:hidden p-2 rounded-lg hover:bg-muted"
+          onClick={prevMonth}
+          className="p-1.5 rounded-lg hover:bg-accent transition-colors"
         >
-          <Menu className="w-5 h-5" />
+          <ChevronLeft className="h-4 w-4" />
         </button>
-        {title && <h1 className="font-semibold text-lg truncate">{title}</h1>}
+        <span className="min-w-[110px] text-center text-sm font-medium capitalize">
+          {getMonthName(month)} {year}
+        </span>
+        <button
+          onClick={nextMonth}
+          disabled={isCurrentMonth}
+          className="p-1.5 rounded-lg hover:bg-accent transition-colors disabled:opacity-40"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="ml-auto flex items-center gap-2">
         <Button
-          size="icon"
-          variant="ghost"
-          className="relative"
-          onClick={() => {}}
+          size="sm"
+          variant="outline"
+          onClick={() => setAddTransferOpen(true)}
+          className="hidden sm:flex gap-1.5"
         >
-          <Bell className="w-5 h-5" />
+          <ArrowLeftRight className="h-3.5 w-3.5" />
+          Перевод
         </Button>
         <Button
           size="sm"
-          className="gap-1 rounded-xl"
           onClick={() => setAddTransactionOpen(true)}
+          className="gap-1.5"
         >
-          <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">Добавить</span>
+          <Plus className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Транзакция</span>
         </Button>
       </div>
     </header>
