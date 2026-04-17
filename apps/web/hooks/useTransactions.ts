@@ -1,91 +1,96 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { useUIStore } from '@/store/ui.store'
 
-const supabase = createClient()
-
-export interface CreateTransactionPayload {
-  family_id: string
-  account_id: string
-  category_id?: string
+export interface Transaction {
+  id: string
   user_id: string
-  type: 'income' | 'expense'
+  account_id: string
+  category_id: string | null
   amount: number
-  note?: string
-  date?: string
-  source?: 'manual' | 'vehicle' | 'recurring'
-  vehicle_id?: string
-  cashback_card_id?: string
-  cashback_category_id?: string
-  cashback_earned_rub?: number
+  type: 'income' | 'expense'
+  date: string
+  comment: string | null
+  created_at: string
+  categories?: { name: string; emoji: string; color: string } | null
+  accounts?: { name: string; currency: string } | null
 }
 
-export function useTransactions(filters?: {
-  type?: 'income' | 'expense'
+export interface CreateTransactionInput {
+  account_id: string
   category_id?: string
-  from?: string
-  to?: string
-  limit?: number
-}) {
-  const queryClient = useQueryClient()
+  amount: number
+  type: 'income' | 'expense'
+  date: string
+  comment?: string
+}
 
-  const query = useQuery({
-    queryKey: ['transactions', filters],
-    queryFn: async () => {
-      let q = supabase
+async function fetchTransactions(userId: string, month: number, year: number) {
+  const supabase = createClient()
+  const from = `${year}-${String(month).padStart(2, '0')}-01`
+  const to = new Date(year, month, 0).toISOString().split('T')[0]
+
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('*, categories(name,emoji,color), accounts(name,currency)')
+    .eq('user_id', userId)
+    .gte('date', from)
+    .lte('date', to)
+    .order('date', { ascending: false })
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return data as Transaction[]
+}
+
+export function useTransactions() {
+  const { userId, activePeriod } = useUIStore()
+  const { month, year } = activePeriod
+
+  return useQuery({
+    queryKey: ['transactions', userId, month, year],
+    queryFn: () => fetchTransactions(userId!, month, year),
+    enabled: !!userId,
+  })
+}
+
+export function useCreateTransaction() {
+  const qc = useQueryClient()
+  const { userId, activePeriod } = useUIStore()
+
+  return useMutation({
+    mutationFn: async (input: CreateTransactionInput) => {
+      const supabase = createClient()
+      const { data, error } = await supabase
         .from('transactions')
-        .select(`
-          *,
-          category:categories(id, name_key, icon, color),
-          account:accounts(id, name, color, icon)
-        `)
-        .order('date', { ascending: false })
-        .order('created_at', { ascending: false })
-
-      if (filters?.type) q = q.eq('type', filters.type)
-      if (filters?.category_id) q = q.eq('category_id', filters.category_id)
-      if (filters?.from) q = q.gte('date', filters.from)
-      if (filters?.to) q = q.lte('date', filters.to)
-      if (filters?.limit) q = q.limit(filters.limit)
-
-      const { data, error } = await q
+        .insert({ ...input, user_id: userId })
+        .select()
+        .single()
       if (error) throw error
       return data
-    }
-  })
-
-  const totalIncome = (query.data ?? [])
-    .filter(t => t.type === 'income')
-    .reduce((s, t) => s + Number(t.amount), 0)
-
-  const totalExpense = (query.data ?? [])
-    .filter(t => t.type === 'expense')
-    .reduce((s, t) => s + Number(t.amount), 0)
-
-  const create = useMutation({
-    mutationFn: async (payload: CreateTransactionPayload) => {
-      const { error } = await supabase.from('transactions').insert(payload)
-      if (error) throw error
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transactions'] })
-      queryClient.invalidateQueries({ queryKey: ['accounts'] })
-    }
+      qc.invalidateQueries({ queryKey: ['transactions', userId] })
+      qc.invalidateQueries({ queryKey: ['summary', userId] })
+      qc.invalidateQueries({ queryKey: ['accounts', userId] })
+    },
   })
+}
 
-  const remove = useMutation({
+export function useDeleteTransaction() {
+  const qc = useQueryClient()
+  const { userId } = useUIStore()
+
+  return useMutation({
     mutationFn: async (id: string) => {
+      const supabase = createClient()
       const { error } = await supabase.from('transactions').delete().eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['transactions'] })
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transactions', userId] })
+      qc.invalidateQueries({ queryKey: ['summary', userId] })
+      qc.invalidateQueries({ queryKey: ['accounts', userId] })
+    },
   })
-
-  return {
-    transactions: query.data ?? [],
-    totalIncome,
-    totalExpense,
-    isLoading: query.isLoading,
-    create,
-    remove
-  }
 }
