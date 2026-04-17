@@ -3,12 +3,13 @@ import createNextIntlPlugin from 'next-intl/plugin'
 
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts')
 
-const nextConfig: NextConfig = {
+const config: NextConfig = {
+  reactStrictMode: true,
   images: {
     remotePatterns: [
-      { protocol: 'https', hostname: '*.supabase.co' }
-    ]
-  }
+      { protocol: 'https', hostname: 'xyknhbqmrarqxjeimzrv.supabase.co' },
+    ],
+  },
 }
 
-export default withNextIntl(nextConfig)
+export default withNextIntl(config)
