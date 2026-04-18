@@ -27,6 +27,7 @@ export function TransferModal() {
   const [note, setNote] = useState('')
 
   const otherMembers = members.filter(m => m.user_id !== currentUserId)
+  const hasFamily = !!family?.id && otherMembers.length > 0
 
   function reset() {
     setFromAccountId('')
@@ -38,7 +39,15 @@ export function TransferModal() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!fromAccountId || !toAccountId || !toUserId || !amount || !family?.id) return
+    if (!fromAccountId || !toAccountId || !amount) return
+    if (!family?.id) {
+      toast.error(t('no_family'))
+      return
+    }
+    if (!toUserId) {
+      toast.error(t('no_recipient'))
+      return
+    }
     try {
       await createTransfer.mutateAsync({
         family_id: family.id,
@@ -63,52 +72,56 @@ export function TransferModal() {
           <DialogTitle>{t('title')}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="space-y-1.5">
-            <Label>{tc('amount')}</Label>
-            <Input
-              type="number"
-              min="0.01"
-              step="0.01"
-              placeholder="0.00"
-              value={amount}
-              onChange={e => setAmount(e.target.value)}
-              required
-              className="text-lg font-semibold tabular-nums"
-              autoFocus
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
+        {!hasFamily ? (
+          <p className="text-sm text-muted-foreground py-4 text-center">
+            {t('no_family')}
+          </p>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-3">
             <div className="space-y-1.5">
-              <Label>{t('from_account')}</Label>
-              <Select value={fromAccountId} onValueChange={setFromAccountId} required>
-                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                <SelectContent>
-                  {accounts.map(a => (
-                    <SelectItem key={a.id} value={a.id} disabled={a.id === toAccountId}>
-                      {a.icon ?? '💳'} {a.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>{tc('amount')}</Label>
+              <Input
+                type="number"
+                min="0.01"
+                step="0.01"
+                placeholder="0.00"
+                value={amount}
+                onChange={e => setAmount(e.target.value)}
+                required
+                className="text-lg font-semibold tabular-nums"
+                autoFocus
+              />
             </div>
-            <div className="space-y-1.5">
-              <Label>{t('to_account')}</Label>
-              <Select value={toAccountId} onValueChange={setToAccountId} required>
-                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                <SelectContent>
-                  {accounts.map(a => (
-                    <SelectItem key={a.id} value={a.id} disabled={a.id === fromAccountId}>
-                      {a.icon ?? '💳'} {a.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
 
-          {otherMembers.length > 0 && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>{t('from_account')}</Label>
+                <Select value={fromAccountId} onValueChange={setFromAccountId} required>
+                  <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                  <SelectContent>
+                    {accounts.map(a => (
+                      <SelectItem key={a.id} value={a.id} disabled={a.id === toAccountId}>
+                        {a.icon ?? '💳'} {a.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>{t('to_account')}</Label>
+                <Select value={toAccountId} onValueChange={setToAccountId} required>
+                  <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                  <SelectContent>
+                    {accounts.map(a => (
+                      <SelectItem key={a.id} value={a.id} disabled={a.id === fromAccountId}>
+                        {a.icon ?? '💳'} {a.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             <div className="space-y-1.5">
               <Label>{t('recipient')}</Label>
               <Select value={toUserId} onValueChange={setToUserId} required>
@@ -122,26 +135,26 @@ export function TransferModal() {
                 </SelectContent>
               </Select>
             </div>
-          )}
 
-          <div className="space-y-1.5">
-            <Label>{tc('note')}</Label>
-            <Input
-              placeholder={tc('note')}
-              value={note}
-              onChange={e => setNote(e.target.value)}
-            />
-          </div>
+            <div className="space-y-1.5">
+              <Label>{tc('note')}</Label>
+              <Input
+                placeholder={tc('note')}
+                value={note}
+                onChange={e => setNote(e.target.value)}
+              />
+            </div>
 
-          <div className="flex gap-2 pt-1">
-            <Button type="button" variant="outline" className="flex-1" onClick={() => setAddTransferOpen(false)}>
-              {tc('cancel')}
-            </Button>
-            <Button type="submit" className="flex-1" disabled={createTransfer.isPending}>
-              {createTransfer.isPending ? tc('loading') : t('send')}
-            </Button>
-          </div>
-        </form>
+            <div className="flex gap-2 pt-1">
+              <Button type="button" variant="outline" className="flex-1" onClick={() => { setAddTransferOpen(false); reset() }}>
+                {tc('cancel')}
+              </Button>
+              <Button type="submit" className="flex-1" disabled={createTransfer.isPending}>
+                {createTransfer.isPending ? tc('loading') : t('send')}
+              </Button>
+            </div>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   )

@@ -3,19 +3,10 @@ import { useTranslations } from 'next-intl'
 import { formatAmount, formatDate } from '@/lib/formatters'
 import { cn } from '@/lib/utils'
 import { ArrowUpRight, ArrowDownLeft, Clock } from 'lucide-react'
-
-interface Transfer {
-  id: string
-  from_user_id: string
-  to_user_id: string
-  amount: number | string
-  status: string
-  note?: string | null
-  created_at: string
-}
+import type { MemberTransfer } from '@/hooks/useTransfers'
 
 interface Props {
-  transfer: Transfer
+  transfer: MemberTransfer
   myUserId: string
 }
 
@@ -24,6 +15,9 @@ export function TransferCard({ transfer: tx, myUserId }: Props) {
   const isOutgoing = tx.from_user_id === myUserId
   const isPending = tx.status === 'pending'
   const isDeclined = tx.status === 'declined'
+
+  const fromName = tx.from_member?.display_name ?? tx.from_user_id
+  const toName = tx.to_member?.display_name ?? tx.to_user_id
 
   return (
     <div className={cn(
@@ -45,14 +39,19 @@ export function TransferCard({ transfer: tx, myUserId }: Props) {
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">
           {isOutgoing
-            ? t('sentTo', { name: tx.to_user_id })
-            : t('receivedFrom', { name: tx.from_user_id })}
+            ? t('sentTo', { name: toName })
+            : t('receivedFrom', { name: fromName })}
         </p>
         <div className="flex items-center gap-2">
           <p className="text-xs text-muted-foreground">{formatDate(tx.created_at.split('T')[0])}</p>
           {isPending && (
             <span className="text-xs px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300">
               {t('pending')}
+            </span>
+          )}
+          {isDeclined && (
+            <span className="text-xs px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300">
+              {t('declined')}
             </span>
           )}
         </div>

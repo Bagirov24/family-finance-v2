@@ -18,6 +18,8 @@ export interface MemberTransfer {
   created_at: string
   from_account?: { name: string; color: string | null; icon: string | null } | null
   to_account?: { name: string; color: string | null; icon: string | null } | null
+  from_member?: { display_name: string | null } | null
+  to_member?: { display_name: string | null } | null
 }
 
 export interface CreateTransferInput {
@@ -43,7 +45,9 @@ export function useTransfers() {
         .select(`
           *,
           from_account:accounts!from_account_id(name,color,icon),
-          to_account:accounts!to_account_id(name,color,icon)
+          to_account:accounts!to_account_id(name,color,icon),
+          from_member:family_members!from_user_id(display_name),
+          to_member:family_members!to_user_id(display_name)
         `)
         .or(`from_user_id.eq.${userId},to_user_id.eq.${userId}`)
         .order('created_at', { ascending: false })
@@ -53,7 +57,6 @@ export function useTransfers() {
     }
   })
 
-  // Realtime: invalidate when a transfer targeting this user changes
   useEffect(() => {
     if (!userId) return
     const supabase = createClient()
@@ -114,8 +117,10 @@ export function useTransfers() {
   })
 
   const all = query.data ?? []
+  // Pending transfers incoming to the current user
   const pending = all.filter(t => t.status === 'pending' && t.to_user_id === userId)
-  const history = all.filter(t => t.status !== 'pending')
+  // All non-pending + outgoing pending sent by me
+  const history = all.filter(t => t.status !== 'pending' || t.from_user_id === userId)
 
   return {
     pending,
