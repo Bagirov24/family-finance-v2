@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useUIStore } from '@/store/ui.store'
+import { useFamily } from '@/hooks/useFamily'
 
 export interface Account {
   id: string
@@ -25,24 +26,33 @@ export interface CreateAccountInput {
   icon?: string
 }
 
-async function fetchAccounts(userId: string) {
+async function fetchAccounts(userId: string, familyId?: string | null) {
   const supabase = createClient()
-  const { data, error } = await supabase
+
+  let query = supabase
     .from('accounts')
     .select('*')
-    .eq('owner_user_id', userId)
     .eq('is_archived', false)
     .order('created_at')
+
+  if (familyId) {
+    query = query.or(`family_id.eq.${familyId},owner_user_id.eq.${userId}`)
+  } else {
+    query = query.eq('owner_user_id', userId)
+  }
+
+  const { data, error } = await query
   if (error) throw error
   return data as Account[]
 }
 
 export function useAccounts() {
   const userId = useUIStore(s => s.userId)
+  const { family } = useFamily()
 
   const query = useQuery({
-    queryKey: ['accounts', userId],
-    queryFn: () => fetchAccounts(userId!),
+    queryKey: ['accounts', userId, family?.id],
+    queryFn: () => fetchAccounts(userId!, family?.id),
     enabled: !!userId,
   })
 
@@ -55,55 +65,72 @@ export function useAccounts() {
 export function useCreateAccount() {
   const qc = useQueryClient()
   const userId = useUIStore(s => s.userId)
+  const { family } = useFamily()
 
   return useMutation({
     mutationFn: async (input: CreateAccountInput) => {
       const supabase = createClient()
       const { data, error } = await supabase
         .from('accounts')
-        .insert({ ...input, owner_user_id: userId })
+        .insert({ ...input, owner_user_id: userId, family_id: family?.id ?? null })
         .select()
         .single()
       if (error) throw error
       return data
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['accounts', userId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['accounts', userId, family?.id] }),
   })
 }
 
 export function useUpdateAccount() {
   const qc = useQueryClient()
   const userId = useUIStore(s => s.userId)
+  const { family } = useFamily()
 
   return useMutation({
     mutationFn: async ({ id, ...patch }: Partial<Account> & { id: string }) => {
       const supabase = createClient()
-      const { data, error } = await supabase
+      let query = supabase
         .from('accounts')
         .update(patch)
         .eq('id', id)
-        .select()
-        .single()
+
+      if (family?.id) {
+        query = query.or(`family_id.eq.${family.id},owner_user_id.eq.${userId}`)
+      } else {
+        query = query.eq('owner_user_id', userId)
+      }
+
+      const { data, error } = await query.select().single()
       if (error) throw error
       return data
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['accounts', userId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['accounts', userId, family?.id] }),
   })
 }
 
 export function useArchiveAccount() {
   const qc = useQueryClient()
   const userId = useUIStore(s => s.userId)
+  const { family } = useFamily()
 
   return useMutation({
     mutationFn: async (id: string) => {
       const supabase = createClient()
-      const { error } = await supabase
+      let query = supabase
         .from('accounts')
         .update({ is_archived: true })
         .eq('id', id)
+
+      if (family?.id) {
+        query = query.or(`family_id.eq.${family.id},owner_user_id.eq.${userId}`)
+      } else {
+        query = query.eq('owner_user_id', userId)
+      }
+
+      const { error } = await query
       if (error) throw error
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['accounts', userId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['accounts', userId, family?.id] }),
   })
 }

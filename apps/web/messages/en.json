@@ -36,7 +36,8 @@
     "account": "Account",
     "all": "All",
     "show": "Show",
-    "hide": "Hide"
+    "hide": "Hide",
+    "currency": "Currency"
   },
   "auth": {
     "login": "Sign In",
@@ -123,11 +124,19 @@
   "accounts": {
     "title": "Accounts",
     "add": "Add Account",
+    "added": "Account added",
+    "archived": "Account archived",
+    "totalBalance": "Total balance",
+    "name": "Name",
+    "namePlaceholder": "For example, Main card",
+    "type": "Type",
+    "initialBalance": "Initial balance",
     "types": {
       "cash": "Cash",
       "card": "Card",
       "savings": "Savings",
-      "investment": "Investment"
+      "investment": "Investment",
+      "credit": "Credit"
     }
   },
   "analytics": {
