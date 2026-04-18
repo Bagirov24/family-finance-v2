@@ -3,27 +3,27 @@ import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { useGoals } from '@/hooks/useGoals'
 import { GoalCard } from '@/components/goals/GoalCard'
+import { CreateGoalModal } from '@/components/goals/CreateGoalModal'
+import { ContributeGoalModal } from '@/components/goals/ContributeGoalModal'
 import { Skeleton } from '@/components/ui/skeleton'
-import { toast } from 'sonner'
 
 export default function GoalsPage() {
   const t = useTranslations('goals')
-  const { goals, isLoading, contribute } = useGoals()
+  const { goals, isLoading } = useGoals()
+  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null)
+  const [contributeOpen, setContributeOpen] = useState(false)
 
   function handleContribute(id: string) {
-    const amountStr = prompt(t('contributePrompt'))
-    if (!amountStr) return
-    const amount = parseFloat(amountStr)
-    if (isNaN(amount) || amount <= 0) return
-    contribute.mutate({ id, amount }, {
-      onSuccess: () => toast.success(t('contributed')),
-      onError: () => toast.error(t('error')),
-    })
+    setSelectedGoalId(id)
+    setContributeOpen(true)
   }
 
   return (
     <div className="max-w-2xl mx-auto space-y-4">
-      <h1 className="text-xl font-bold">{t('title')}</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-xl font-bold">{t('title')}</h1>
+        <CreateGoalModal />
+      </div>
 
       {isLoading ? (
         <div className="grid gap-3 sm:grid-cols-2">
@@ -39,14 +39,16 @@ export default function GoalsPage() {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {goals.map(g => (
-            <GoalCard
-              key={g.id}
-              goal={g as Parameters<typeof GoalCard>[0]['goal']}
-              onContribute={handleContribute}
-            />
+            <GoalCard key={g.id} goal={g} onContribute={handleContribute} />
           ))}
         </div>
       )}
+
+      <ContributeGoalModal
+        goalId={selectedGoalId}
+        open={contributeOpen}
+        onOpenChange={setContributeOpen}
+      />
     </div>
   )
 }

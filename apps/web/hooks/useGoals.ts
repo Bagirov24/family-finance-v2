@@ -1,74 +1,136 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { useUIStore } from '@/store/ui.store'
+import { useFamily } from '@/hooks/useFamily'
 
 export interface Goal {
   id: string
-  user_id: string
+  family_id: string | null
   name: string
-  emoji: string
   target_amount: number
   current_amount: number
   deadline: string | null
+  icon: string | null
+  color: string | null
+  auto_save_type: string | null
+  auto_save_value: number | null
   is_completed: boolean
   created_at: string
 }
 
-async function fetchGoals(userId: string) {
+export interface GoalView extends Goal {
+  percent: number
+  remaining: number
+  completed: boolean
+  monthsLeft: number | null
+}
+
+async function fetchGoals(familyId: string) {
   const supabase = createClient()
   const { data, error } = await supabase
     .from('goals')
     .select('*')
-    .eq('user_id', userId)
+    .eq('family_id', familyId)
     .order('created_at', { ascending: false })
+
   if (error) throw error
-  return data as Goal[]
+
+  const now = new Date()
+  return (data as Goal[]).map(goal => {
+    const target = Number(goal.target_amount)
+    const current = Number(goal.current_amount)
+    const remaining = Math.max(0, target - current)
+    const percent = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0
+    const completed = goal.is_completed || current >= target
+
+    let monthsLeft: number | null = null
+    if (goal.deadline && !completed) {
+      const deadline = new Date(goal.deadline)
+      const diffMonths = (deadline.getFullYear() - now.getFullYear()) * 12 + (deadline.getMonth() - now.getMonth())
+      monthsLeft = Math.max(0, diffMonths)
+    }
+
+    return {
+      ...goal,
+      target_amount: target,
+      current_amount: current,
+      percent,
+      remaining,
+      completed,
+      monthsLeft,
+    }
+  })
 }
 
 export function useGoals() {
-  const userId = useUIStore(s => s.userId)
-  return useQuery({
-    queryKey: ['goals', userId],
-    queryFn: () => fetchGoals(userId!),
-    enabled: !!userId,
+  const { family } = useFamily()
+
+  const query = useQuery({
+    queryKey: ['goals', family?.id],
+    queryFn: () => fetchGoals(family!.id),
+    enabled: !!family?.id,
   })
+
+  return {
+    ...query,
+    goals: query.data ?? [],
+  }
 }
 
 export function useCreateGoal() {
   const qc = useQueryClient()
-  const userId = useUIStore(s => s.userId)
+  const { family } = useFamily()
 
   return useMutation({
-    mutationFn: async (input: Omit<Goal, 'id' | 'user_id' | 'created_at' | 'is_completed'>) => {
+    mutationFn: async (input: {
+      name: string
+      target_amount: number
+      current_amount?: number
+      deadline?: string | null
+      icon?: string | null
+      color?: string | null
+      auto_save_type?: string | null
+      auto_save_value?: number | null
+    }) => {
       const supabase = createClient()
+      const payload = {
+        family_id: family?.id,
+        name: input.name,
+        target_amount: input.target_amount,
+        current_amount: input.current_amount ?? 0,
+        deadline: input.deadline ?? null,
+        icon: input.icon ?? '🎯',
+        color: input.color ?? null,
+        auto_save_type: input.auto_save_type ?? null,
+        auto_save_value: input.auto_save_value ?? null,
+      }
+
       const { data, error } = await supabase
         .from('goals')
-        .insert({ ...input, user_id: userId })
+        .insert(payload)
         .select()
         .single()
       if (error) throw error
       return data
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['goals', userId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['goals'] }),
   })
 }
 
 export function useContributeGoal() {
   const qc = useQueryClient()
-  const userId = useUIStore(s => s.userId)
 
   return useMutation({
     mutationFn: async ({ id, amount }: { id: string; amount: number }) => {
       const supabase = createClient()
       const { data: goal, error: gErr } = await supabase
         .from('goals')
-        .select('current_amount, target_amount')
+        .select('current_amount, target_amount, is_completed')
         .eq('id', id)
         .single()
       if (gErr) throw gErr
 
-      const newAmount = goal.current_amount + amount
-      const isCompleted = newAmount >= goal.target_amount
+      const newAmount = Number(goal.current_amount) + amount
+      const isCompleted = goal.is_completed || newAmount >= Number(goal.target_amount)
 
       const { data, error } = await supabase
         .from('goals')
@@ -79,6 +141,6 @@ export function useContributeGoal() {
       if (error) throw error
       return data
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['goals', userId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['goals'] }),
   })
 }

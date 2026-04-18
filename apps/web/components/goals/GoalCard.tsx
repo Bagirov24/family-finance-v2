@@ -3,23 +3,10 @@ import { useTranslations } from 'next-intl'
 import { formatAmount } from '@/lib/formatters'
 import { cn } from '@/lib/utils'
 import { CheckCircle2 } from 'lucide-react'
-
-interface Goal {
-  id: string
-  name: string
-  target_amount: number | string
-  current_amount: number | string
-  percent: number
-  remaining: number
-  completed: boolean
-  monthsLeft: number | null
-  deadline?: string | null
-  icon?: string | null
-  color?: string | null
-}
+import type { GoalView } from '@/hooks/useGoals'
 
 interface Props {
-  goal: Goal
+  goal: GoalView
   onContribute?: (id: string) => void
 }
 
@@ -51,7 +38,7 @@ export function GoalCard({ goal: g, onContribute }: Props) {
         <div
           className="h-full rounded-full transition-all duration-700"
           style={{
-            width: `${g.percent}%`,
+            width: `${Math.min(g.percent, 100)}%`,
             backgroundColor: g.color ?? 'var(--primary)'
           }}
         />
@@ -59,7 +46,7 @@ export function GoalCard({ goal: g, onContribute }: Props) {
 
       <div className="flex justify-between text-xs tabular-nums">
         <span className="text-muted-foreground">
-          {formatAmount(Number(g.current_amount))} / {formatAmount(Number(g.target_amount))}
+          {formatAmount(g.current_amount)} / {formatAmount(g.target_amount)}
         </span>
         <span className="font-medium">{g.percent}%</span>
       </div>
@@ -72,6 +59,7 @@ export function GoalCard({ goal: g, onContribute }: Props) {
 
       {!g.completed && onContribute && (
         <button
+          type="button"
           onClick={() => onContribute(g.id)}
           className="w-full text-sm py-1.5 rounded-xl border border-primary text-primary hover:bg-primary hover:text-white transition-colors font-medium"
         >

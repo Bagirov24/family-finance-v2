@@ -101,12 +101,19 @@
   "goals": {
     "title": "Goals",
     "add": "New Goal",
+    "name": "Goal name",
+    "icon": "Icon",
     "target": "Target",
     "current": "Saved",
     "deadline": "Deadline",
     "forecast": "Forecast",
     "completed": "Achieved!",
-    "auto_save": "Auto-save"
+    "auto_save": "Auto-save",
+    "contribute": "Add money",
+    "contributed": "Contribution added",
+    "created": "Goal created",
+    "empty": "No goals yet",
+    "monthsLeft": "{count, plural, =0 {Due now} one {# month left} other {# months left}}"
   },
   "accounts": {
     "title": "Accounts",

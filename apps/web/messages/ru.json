@@ -72,6 +72,23 @@
     "deadline": "Срок",
     "contribute": "Пополнить"
   },
+  "goals": {
+    "title": "Цели",
+    "add": "Новая цель",
+    "name": "Название цели",
+    "icon": "Иконка",
+    "target": "Цель",
+    "current": "Накоплено",
+    "deadline": "Срок",
+    "forecast": "Прогноз",
+    "completed": "Достигнуто!",
+    "auto_save": "Автосохранение",
+    "contribute": "Пополнить",
+    "contributed": "Пополнение добавлено",
+    "created": "Цель создана",
+    "empty": "Целей пока нет",
+    "monthsLeft": "{count, plural, =0 {Срок наступил} one {# месяц остался} few {# месяца осталось} many {# месяцев осталось} other {# месяца осталось}}"
+  },
   "overview": {
     "totalBalance": "Общий баланс",
     "dailyBudget": "Бюджет на сегодня",
