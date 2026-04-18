@@ -111,7 +111,6 @@ export function useCreateTransaction() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['transactions', userId] })
-      qc.invalidateQueries({ queryKey: ['summary', userId] })
       qc.invalidateQueries({ queryKey: ['accounts', userId] })
     },
   })
@@ -135,7 +134,6 @@ export function useUpdateTransaction() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['transactions', userId] })
-      qc.invalidateQueries({ queryKey: ['summary', userId] })
       qc.invalidateQueries({ queryKey: ['accounts', userId] })
     },
   })
@@ -153,7 +151,6 @@ export function useDeleteTransaction() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['transactions', userId] })
-      qc.invalidateQueries({ queryKey: ['summary', userId] })
       qc.invalidateQueries({ queryKey: ['accounts', userId] })
     },
   })

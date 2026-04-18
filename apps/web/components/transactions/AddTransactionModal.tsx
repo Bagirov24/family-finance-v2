@@ -14,8 +14,9 @@ import { useCategories } from '@/hooks/useCategories'
 import { useFamily } from '@/hooks/useFamily'
 
 export function AddTransactionModal() {
-  const t = useTranslations('transaction')
+  const t = useTranslations('transactions')
   const tc = useTranslations('common')
+  const tcat = useTranslations('categories')
   const { addTransactionOpen, setAddTransactionOpen } = useUIStore()
   const { family } = useFamily()
   const [type, setType] = useState<'income' | 'expense'>('expense')
@@ -100,7 +101,7 @@ export function AddTransactionModal() {
           <div className="space-y-1.5">
             <Label>{tc('account')}</Label>
             <Select value={accountId} onValueChange={setAccountId} required>
-              <SelectTrigger><SelectValue placeholder={t('selectAccount')} /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={tc('account')} /></SelectTrigger>
               <SelectContent>
                 {accounts.map(a => (
                   <SelectItem key={a.id} value={a.id}>{a.icon} {a.name}</SelectItem>
@@ -112,10 +113,12 @@ export function AddTransactionModal() {
           <div className="space-y-1.5">
             <Label>{tc('category')}</Label>
             <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger><SelectValue placeholder={t('selectCategory')} /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={tc('category')} /></SelectTrigger>
               <SelectContent>
                 {categories?.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{c.icon} {c.name_key}</SelectItem>
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.icon} {tcat(c.name_key as Parameters<typeof tcat>[0], { defaultValue: c.name_key })}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -136,7 +139,7 @@ export function AddTransactionModal() {
           </div>
 
           <div className="flex gap-2 pt-1">
-            <Button type="button" variant="outline" className="flex-1" onClick={() => setAddTransactionOpen(false)}>
+            <Button type="button" variant="outline" className="flex-1" onClick={() => { setAddTransactionOpen(false); reset() }}>
               {tc('cancel')}
             </Button>
             <Button type="submit" className="flex-1" disabled={isPending}>

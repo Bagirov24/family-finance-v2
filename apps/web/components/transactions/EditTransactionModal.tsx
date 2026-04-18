@@ -18,8 +18,9 @@ interface Props {
 }
 
 export function EditTransactionModal({ transaction: tx, open, onClose }: Props) {
-  const t = useTranslations('transaction')
+  const t = useTranslations('transactions')
   const tc = useTranslations('common')
+  const tcat = useTranslations('categories')
 
   const [type, setType] = useState<'income' | 'expense'>('expense')
   const [amount, setAmount] = useState('')
@@ -32,7 +33,6 @@ export function EditTransactionModal({ transaction: tx, open, onClose }: Props) 
   const { data: categories = [] } = useCategories(type)
   const { mutateAsync, isPending } = useUpdateTransaction()
 
-  // Populate form when transaction changes
   useEffect(() => {
     if (!tx) return
     setType(tx.type)
@@ -105,7 +105,7 @@ export function EditTransactionModal({ transaction: tx, open, onClose }: Props) 
           <div className="space-y-1.5">
             <Label>{tc('account')}</Label>
             <Select value={accountId} onValueChange={setAccountId}>
-              <SelectTrigger><SelectValue placeholder={t('selectAccount')} /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={tc('account')} /></SelectTrigger>
               <SelectContent>
                 {accounts.map(a => (
                   <SelectItem key={a.id} value={a.id}>{a.icon} {a.name}</SelectItem>
@@ -117,11 +117,13 @@ export function EditTransactionModal({ transaction: tx, open, onClose }: Props) 
           <div className="space-y-1.5">
             <Label>{tc('category')}</Label>
             <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger><SelectValue placeholder={t('selectCategory')} /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={tc('category')} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">{t('noCategory')}</SelectItem>
+                <SelectItem value="">{tc('all')}</SelectItem>
                 {categories?.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{c.icon} {c.name_key}</SelectItem>
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.icon} {tcat(c.name_key as Parameters<typeof tcat>[0], { defaultValue: c.name_key })}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>

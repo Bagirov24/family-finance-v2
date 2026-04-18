@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 export default function TransactionsPage() {
   const t = useTranslations('transactions')
+  const tcat = useTranslations('categories')
   const { family } = useFamily()
   const { data: categories } = useCategories()
 
@@ -55,7 +56,7 @@ export default function TransactionsPage() {
             <SelectItem value="all">{t('allCategories')}</SelectItem>
             {(categories ?? []).map(c => (
               <SelectItem key={c.id} value={c.id}>
-                {c.icon} {t(`categories.${c.name_key}`, { defaultValue: c.name_key })}
+                {c.icon} {tcat(c.name_key as Parameters<typeof tcat>[0], { defaultValue: c.name_key })}
               </SelectItem>
             ))}
           </SelectContent>
@@ -63,7 +64,7 @@ export default function TransactionsPage() {
       </div>
 
       <div className="rounded-2xl border bg-card p-4">
-        <TransactionList categoryId={categoryId} />
+        <TransactionList categoryId={categoryId} type={type} />
       </div>
     </div>
   )
