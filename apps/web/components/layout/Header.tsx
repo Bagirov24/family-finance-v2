@@ -12,6 +12,7 @@ export function Header() {
   const tt = useTranslations('transfers')
   const tx = useTranslations('transaction')
   const tc = useTranslations('common')
+  const tn = useTranslations('notifications')
   const {
     setSidebarOpen,
     setAddTransactionOpen,
@@ -86,7 +87,7 @@ export function Header() {
           <button
             onClick={() => setNotifOpen(v => !v)}
             className="relative p-1.5 rounded-lg hover:bg-accent transition-colors"
-            aria-label="Notifications"
+            aria-label={tn('title')}
           >
             <Bell className="h-5 w-5" />
             {unreadCount > 0 && (
@@ -99,13 +100,13 @@ export function Header() {
           {notifOpen && (
             <div className="absolute right-0 top-10 z-50 w-80 rounded-2xl border border-border bg-card shadow-lg overflow-hidden">
               <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
-                <span className="text-sm font-semibold">Уведомления</span>
+                <span className="text-sm font-semibold">{tn('title')}</span>
                 {unreadCount > 0 && (
                   <button
                     onClick={() => markAllRead.mutate()}
                     className="text-xs text-primary hover:underline"
                   >
-                    Прочитать все
+                    {tn('mark_all_read')}
                   </button>
                 )}
               </div>
@@ -135,7 +136,7 @@ export function Header() {
                         <button
                           onClick={() => markRead.mutate(n.id)}
                           className="mt-0.5 p-1 rounded-lg hover:bg-accent transition-colors shrink-0"
-                          aria-label="Mark as read"
+                          aria-label={tn('mark_read')}
                         >
                           <Check size={12} className="text-primary" />
                         </button>
