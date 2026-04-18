@@ -91,6 +91,11 @@
     "limit": "Limit",
     "spent": "Spent",
     "left": "Left",
+    "of": "of",
+    "other": "Other",
+    "empty": "No budgets for this period yet",
+    "saved": "Budget saved",
+    "overspent": "Over by {amount}",
     "over_budget": "Over by {amount}"
   },
   "goals": {
