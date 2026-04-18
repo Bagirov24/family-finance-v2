@@ -9,11 +9,11 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { AvatarUpload } from '@/components/ui/AvatarUpload'
 import {
   User, Users, Settings2, LogOut, Copy, Check,
-  Crown, Trash2, ChevronRight
+  Crown, Trash2, ChevronRight, Shield, Mail, KeyRound
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-type Tab = 'profile' | 'family' | 'preferences'
+type Tab = 'profile' | 'family' | 'preferences' | 'account'
 
 const CURRENCIES = ['RUB', 'USD', 'EUR', 'KZT', 'BYN', 'UAH']
 const LOCALES = [{ value: 'ru', label: 'Русский' }, { value: 'en', label: 'English' }]
@@ -33,14 +33,20 @@ export default function SettingsPage() {
   const [tab, setTab] = useState<Tab>('profile')
   const [displayName, setDisplayName] = useState('')
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [currentEmail, setCurrentEmail] = useState('')
+  const [newEmail, setNewEmail] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [deleteConfirmation, setDeleteConfirmation] = useState('')
 
-  // Profile save state
   const [profileSaving, setProfileSaving] = useState(false)
   const [profileSaved, setProfileSaved] = useState(false)
-
-  // Family save state
   const [familySaving, setFamilySaving] = useState(false)
   const [familySaved, setFamilySaved] = useState(false)
+  const [emailSaving, setEmailSaving] = useState(false)
+  const [emailSaved, setEmailSaved] = useState(false)
+  const [passwordSaving, setPasswordSaving] = useState(false)
+  const [passwordSaved, setPasswordSaved] = useState(false)
+  const [deleteSaving, setDeleteSaving] = useState(false)
 
   const [copied, setCopied] = useState(false)
   const [familyName, setFamilyName] = useState('')
@@ -48,12 +54,18 @@ export default function SettingsPage() {
   const [locale, setLocale] = useState('ru')
   const [confirmLogout, setConfirmLogout] = useState(false)
   const [localeSaved, setLocaleSaved] = useState(false)
+  const [accountError, setAccountError] = useState<string | null>(null)
 
-  // Init locale from cookie
   useEffect(() => {
     const match = document.cookie.match(/(?:^|;\s*)NEXT_LOCALE=([^;]+)/)
     if (match) setLocale(match[1])
   }, [])
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setCurrentEmail(data.user?.email ?? '')
+    })
+  }, [supabase])
 
   useEffect(() => {
     if (family) {
@@ -106,6 +118,61 @@ export default function SettingsPage() {
     router.replace('/login')
   }
 
+  async function handleEmailChange() {
+    setAccountError(null)
+    if (!newEmail.trim()) return
+
+    setEmailSaving(true)
+    const { error } = await supabase.auth.updateUser({ email: newEmail.trim() })
+    setEmailSaving(false)
+
+    if (error) {
+      setAccountError(error.message)
+      return
+    }
+
+    setEmailSaved(true)
+    setTimeout(() => setEmailSaved(false), 2000)
+    setNewEmail('')
+  }
+
+  async function handlePasswordChange() {
+    setAccountError(null)
+    if (newPassword.trim().length < 6) {
+      setAccountError(t('newPasswordPlaceholder'))
+      return
+    }
+
+    setPasswordSaving(true)
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    setPasswordSaving(false)
+
+    if (error) {
+      setAccountError(error.message)
+      return
+    }
+
+    setPasswordSaved(true)
+    setTimeout(() => setPasswordSaved(false), 2000)
+    setNewPassword('')
+  }
+
+  async function handleDeleteAccount() {
+    setAccountError(null)
+
+    if (deleteConfirmation !== 'DELETE') {
+      setAccountError(t('invalidDeleteConfirmation'))
+      return
+    }
+
+    if (userId) {
+      setDeleteSaving(true)
+      await supabase.from('family_members').delete().eq('user_id', userId)
+      await supabase.auth.signOut()
+      router.replace('/login')
+    }
+  }
+
   function copyInviteCode() {
     if (!family?.invite_code) return
     navigator.clipboard.writeText(family.invite_code)
@@ -125,6 +192,7 @@ export default function SettingsPage() {
     { id: 'profile', label: t('profile'), icon: <User size={16} /> },
     { id: 'family', label: t('family'), icon: <Users size={16} /> },
     { id: 'preferences', label: t('preferences'), icon: <Settings2 size={16} /> },
+    { id: 'account', label: t('account'), icon: <Shield size={16} /> },
   ]
 
   if (isLoading) {
@@ -141,7 +209,6 @@ export default function SettingsPage() {
     <div className="max-w-md mx-auto space-y-6 pb-24">
       <h1 className="text-xl font-bold">{t('title')}</h1>
 
-      {/* Tab bar */}
       <div className="flex gap-1 bg-muted rounded-2xl p-1">
         {tabs.map(({ id, label, icon }) => (
           <button
@@ -160,7 +227,6 @@ export default function SettingsPage() {
         ))}
       </div>
 
-      {/* Profile tab */}
       {tab === 'profile' && (
         <div className="space-y-4">
           <section className="bg-card border rounded-2xl p-4 space-y-4">
@@ -230,7 +296,6 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* Family tab */}
       {tab === 'family' && (
         <div className="space-y-4">
           {family?.invite_code && (
@@ -316,7 +381,6 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* Preferences tab */}
       {tab === 'preferences' && (
         <div className="space-y-4">
           <section className="bg-card border rounded-2xl p-4 space-y-4">
@@ -375,6 +439,95 @@ export default function SettingsPage() {
             )}
             <p className="text-xs text-muted-foreground">{t('languageNote')}</p>
           </section>
+        </div>
+      )}
+
+      {tab === 'account' && (
+        <div className="space-y-4">
+          <section className="bg-card border rounded-2xl p-4 space-y-4">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+              <Mail size={14} /> {t('email')}
+            </h2>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t('email')}</label>
+              <input
+                value={currentEmail}
+                disabled
+                className="w-full px-3 py-2 rounded-xl border bg-muted text-sm text-muted-foreground"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t('newEmail')}</label>
+              <input
+                type="email"
+                value={newEmail}
+                onChange={e => setNewEmail(e.target.value)}
+                placeholder={t('newEmailPlaceholder')}
+                className="w-full px-3 py-2 rounded-xl border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+            </div>
+            <button
+              onClick={handleEmailChange}
+              disabled={emailSaving || !newEmail.trim()}
+              className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50"
+            >
+              {emailSaved
+                ? <span className="flex items-center justify-center gap-1.5"><Check size={14} />{t('emailUpdated')}</span>
+                : t('changeEmail')}
+            </button>
+            <p className="text-xs text-muted-foreground">{t('emailChangeHint')}</p>
+          </section>
+
+          <section className="bg-card border rounded-2xl p-4 space-y-4">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+              <KeyRound size={14} /> {t('password')}
+            </h2>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t('newPassword')}</label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                placeholder={t('newPasswordPlaceholder')}
+                className="w-full px-3 py-2 rounded-xl border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+            </div>
+            <button
+              onClick={handlePasswordChange}
+              disabled={passwordSaving || newPassword.trim().length < 6}
+              className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50"
+            >
+              {passwordSaved
+                ? <span className="flex items-center justify-center gap-1.5"><Check size={14} />{t('passwordUpdated')}</span>
+                : t('changePassword')}
+            </button>
+            <p className="text-xs text-muted-foreground">{t('passwordHint')}</p>
+          </section>
+
+          <section className="bg-card border border-destructive/30 rounded-2xl p-4 space-y-4">
+            <h2 className="text-sm font-semibold text-destructive uppercase tracking-wide">{t('deleteAccount')}</h2>
+            <p className="text-sm text-muted-foreground">{t('deleteAccountWarning')}</p>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t('deleteAccountConfirmLabel')}</label>
+              <input
+                value={deleteConfirmation}
+                onChange={e => setDeleteConfirmation(e.target.value)}
+                placeholder={t('deleteAccountConfirmPlaceholder')}
+                className="w-full px-3 py-2 rounded-xl border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-destructive/30"
+              />
+            </div>
+            <button
+              onClick={handleDeleteAccount}
+              disabled={deleteSaving}
+              className="w-full py-2.5 rounded-xl bg-destructive text-destructive-foreground text-sm font-semibold hover:opacity-90 transition-colors disabled:opacity-50"
+            >
+              {t('deleteAccountAction')}
+            </button>
+          </section>
+
+          {accountError && (
+            <p className="text-sm text-destructive">{accountError}</p>
+          )}
         </div>
       )}
     </div>
