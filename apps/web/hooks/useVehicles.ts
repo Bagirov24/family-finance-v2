@@ -5,6 +5,37 @@ import { calcFuelConsumption } from '@/lib/fuelCalc'
 
 const supabase = createClient()
 
+type ServiceItemInput = {
+  vehicle_id: string
+  name_key: string
+  last_replaced_date?: string | null
+  last_replaced_mileage?: number | null
+  replace_every_km?: number | null
+  replace_every_months?: number | null
+  notes?: string | null
+}
+
+type FineInput = {
+  vehicle_id: string
+  user_id: string
+  family_id?: string
+  account_id?: string
+  external_id?: string | null
+  amount_rub: number
+  discount_amount_rub?: number | null
+  discount_until?: string | null
+  issued_date?: string | null
+  description?: string | null
+  status?: 'unpaid' | 'paid' | 'disputed'
+}
+
+function calcNextDueDate(lastReplacedDate?: string | null, replaceEveryMonths?: number | null) {
+  if (!lastReplacedDate || !replaceEveryMonths) return null
+  const d = new Date(lastReplacedDate)
+  d.setMonth(d.getMonth() + replaceEveryMonths)
+  return d.toISOString().split('T')[0]
+}
+
 export function useVehicles() {
   const queryClient = useQueryClient()
   const userId = useUIStore(s => s.userId)
@@ -193,40 +224,57 @@ export function useServiceItems(vehicleId: string) {
     }
   })
 
+  const createServiceItem = useMutation({
+    mutationFn: async (payload: ServiceItemInput) => {
+      const next_due_date = calcNextDueDate(payload.last_replaced_date, payload.replace_every_months)
+      const { error } = await supabase.from('service_items').insert({
+        ...payload,
+        next_due_date,
+      })
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['service-items', vehicleId] })
+  })
+
   const updateServiceItem = useMutation({
-    mutationFn: async ({
-      id,
-      last_replaced_date,
-      last_replaced_mileage,
-    }: {
-      id: string
-      last_replaced_date: string
-      last_replaced_mileage: number
-    }) => {
-      const item = query.data?.find(i => i.id === id)
-      if (!item) throw new Error('Not found')
-      let next_due_date: string | null = null
-      if (item.replace_every_months && last_replaced_date) {
-        const d = new Date(last_replaced_date)
-        d.setMonth(d.getMonth() + item.replace_every_months)
-        next_due_date = d.toISOString().split('T')[0]
-      }
+    mutationFn: async ({ id, ...patch }: Partial<ServiceItemInput> & { id: string }) => {
+      const current = query.data?.find(i => i.id === id)
+      if (!current) throw new Error('Not found')
+      const last_replaced_date = patch.last_replaced_date ?? current.last_replaced_date
+      const replace_every_months = patch.replace_every_months ?? current.replace_every_months
+      const next_due_date = calcNextDueDate(last_replaced_date, replace_every_months)
+
       const { error } = await supabase
         .from('service_items')
-        .update({ last_replaced_date, last_replaced_mileage, next_due_date })
+        .update({ ...patch, next_due_date })
         .eq('id', id)
       if (error) throw error
     },
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ['service-items', vehicleId] })
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['service-items', vehicleId] })
   })
 
-  return { items: query.data ?? [], isLoading: query.isLoading, updateServiceItem }
+  const deleteServiceItem = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('service_items')
+        .delete()
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['service-items', vehicleId] })
+  })
+
+  return {
+    items: query.data ?? [],
+    isLoading: query.isLoading,
+    createServiceItem,
+    updateServiceItem,
+    deleteServiceItem,
+  }
 }
 
 export function useVehicleExpenses(vehicleId: string) {
   const queryClient = useQueryClient()
-  const userId = useUIStore(s => s.userId)
 
   const query = useQuery({
     queryKey: ['vehicle-expenses', vehicleId],
@@ -312,6 +360,8 @@ export function useVehicleExpenses(vehicleId: string) {
 }
 
 export function useVehicleFines(vehicleId: string) {
+  const queryClient = useQueryClient()
+
   const query = useQuery({
     queryKey: ['vehicle-fines', vehicleId],
     enabled: !!vehicleId,
@@ -327,8 +377,61 @@ export function useVehicleFines(vehicleId: string) {
     }
   })
 
+  const createFine = useMutation({
+    mutationFn: async (payload: FineInput) => {
+      const { error } = await supabase
+        .from('vehicle_fines')
+        .insert({
+          vehicle_id: payload.vehicle_id,
+          user_id: payload.user_id,
+          external_id: payload.external_id,
+          amount_rub: payload.amount_rub,
+          discount_amount_rub: payload.discount_amount_rub,
+          discount_until: payload.discount_until,
+          issued_date: payload.issued_date,
+          description: payload.description,
+          status: payload.status ?? 'unpaid',
+        })
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vehicle-fines', vehicleId] })
+  })
+
+  const updateFine = useMutation({
+    mutationFn: async ({ id, ...patch }: Partial<FineInput> & { id: string }) => {
+      const data: Record<string, unknown> = { ...patch }
+      if (patch.status === 'paid') {
+        data.paid_at = new Date().toISOString()
+      }
+      if (patch.status && patch.status !== 'paid') {
+        data.paid_at = null
+      }
+
+      const { error } = await supabase
+        .from('vehicle_fines')
+        .update(data)
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vehicle-fines', vehicleId] })
+  })
+
+  const deleteFine = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('vehicle_fines')
+        .delete()
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vehicle-fines', vehicleId] })
+  })
+
   return {
     fines: query.data ?? [],
     isLoading: query.isLoading,
+    createFine,
+    updateFine,
+    deleteFine,
   }
 }

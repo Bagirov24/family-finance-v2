@@ -27,6 +27,16 @@ const serviceItemIcons: Record<string, string> = {
   tech_inspection: '🔎',
 }
 
+const serviceItemKeys = [
+  'motor_oil',
+  'air_filter',
+  'brake_pads',
+  'timing_belt',
+  'coolant',
+  'osago',
+  'tech_inspection',
+] as const
+
 export default function VehicleDetailPage() {
   const { vehicleId } = useParams<{ vehicleId: string }>()
   const t = useTranslations('car')
@@ -49,10 +59,39 @@ export default function VehicleDetailPage() {
   const [expenseMileage, setExpenseMileage] = useState('')
   const [expenseNote, setExpenseNote] = useState('')
 
+  const [serviceNameKey, setServiceNameKey] = useState<typeof serviceItemKeys[number]>('motor_oil')
+  const [serviceLastDate, setServiceLastDate] = useState('')
+  const [serviceLastMileage, setServiceLastMileage] = useState('')
+  const [serviceEveryKm, setServiceEveryKm] = useState('')
+  const [serviceEveryMonths, setServiceEveryMonths] = useState('')
+  const [serviceNotes, setServiceNotes] = useState('')
+  const [editingServiceId, setEditingServiceId] = useState<string | null>(null)
+
+  const [fineAmount, setFineAmount] = useState('')
+  const [fineDiscountAmount, setFineDiscountAmount] = useState('')
+  const [fineDiscountUntil, setFineDiscountUntil] = useState('')
+  const [fineIssuedDate, setFineIssuedDate] = useState(new Date().toISOString().split('T')[0])
+  const [fineDescription, setFineDescription] = useState('')
+  const [fineExternalId, setFineExternalId] = useState('')
+  const [fineStatus, setFineStatus] = useState<'unpaid' | 'paid' | 'disputed'>('unpaid')
+  const [editingFineId, setEditingFineId] = useState<string | null>(null)
+
   const { entries, fuelConsumption, isLoading: fuelLoading, addFuelEntry } = useFuelLog(vehicleId)
-  const { items: serviceItems, isLoading: svcLoading } = useServiceItems(vehicleId)
+  const {
+    items: serviceItems,
+    isLoading: svcLoading,
+    createServiceItem,
+    updateServiceItem,
+    deleteServiceItem,
+  } = useServiceItems(vehicleId)
   const { expenses, totalByCategory, total, isLoading: expLoading, addExpense } = useVehicleExpenses(vehicleId)
-  const { fines, isLoading: finesLoading } = useVehicleFines(vehicleId)
+  const {
+    fines,
+    isLoading: finesLoading,
+    createFine,
+    updateFine,
+    deleteFine,
+  } = useVehicleFines(vehicleId)
 
   const unpaidFinesTotal = useMemo(
     () => fines.filter(f => f.status === 'unpaid').reduce((sum, f) => sum + Number(f.discount_amount_rub ?? f.amount_rub), 0),
@@ -61,6 +100,48 @@ export default function VehicleDetailPage() {
 
   const isVehicleReady = !!vehicle
   const defaultMileage = String(vehicle?.current_mileage ?? '')
+
+  function resetServiceForm() {
+    setServiceNameKey('motor_oil')
+    setServiceLastDate('')
+    setServiceLastMileage('')
+    setServiceEveryKm('')
+    setServiceEveryMonths('')
+    setServiceNotes('')
+    setEditingServiceId(null)
+  }
+
+  function fillServiceForm(item: any) {
+    setEditingServiceId(item.id)
+    setServiceNameKey(item.name_key)
+    setServiceLastDate(item.last_replaced_date ?? '')
+    setServiceLastMileage(item.last_replaced_mileage != null ? String(item.last_replaced_mileage) : '')
+    setServiceEveryKm(item.replace_every_km != null ? String(item.replace_every_km) : '')
+    setServiceEveryMonths(item.replace_every_months != null ? String(item.replace_every_months) : '')
+    setServiceNotes(item.notes ?? '')
+  }
+
+  function resetFineForm() {
+    setFineAmount('')
+    setFineDiscountAmount('')
+    setFineDiscountUntil('')
+    setFineIssuedDate(new Date().toISOString().split('T')[0])
+    setFineDescription('')
+    setFineExternalId('')
+    setFineStatus('unpaid')
+    setEditingFineId(null)
+  }
+
+  function fillFineForm(fine: any) {
+    setEditingFineId(fine.id)
+    setFineAmount(String(fine.amount_rub ?? ''))
+    setFineDiscountAmount(fine.discount_amount_rub != null ? String(fine.discount_amount_rub) : '')
+    setFineDiscountUntil(fine.discount_until ?? '')
+    setFineIssuedDate(fine.issued_date ?? '')
+    setFineDescription(fine.description ?? '')
+    setFineExternalId(fine.external_id ?? '')
+    setFineStatus(fine.status)
+  }
 
   async function handleAddFuel(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -106,6 +187,65 @@ export default function VehicleDetailPage() {
     setExpenseMileage(String(vehicle.current_mileage ?? ''))
     setExpenseNote('')
     setExpenseCategory('service')
+  }
+
+  async function handleSaveServiceItem(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (!vehicle) return
+
+    const payload = {
+      vehicle_id: vehicle.id,
+      name_key: serviceNameKey,
+      last_replaced_date: serviceLastDate || null,
+      last_replaced_mileage: serviceLastMileage ? Number(serviceLastMileage) : null,
+      replace_every_km: serviceEveryKm ? Number(serviceEveryKm) : null,
+      replace_every_months: serviceEveryMonths ? Number(serviceEveryMonths) : null,
+      notes: serviceNotes || null,
+    }
+
+    if (editingServiceId) {
+      await updateServiceItem.mutateAsync({ id: editingServiceId, ...payload })
+    } else {
+      await createServiceItem.mutateAsync(payload)
+    }
+
+    resetServiceForm()
+  }
+
+  async function handleDeleteServiceItem(id: string) {
+    await deleteServiceItem.mutateAsync(id)
+    if (editingServiceId === id) resetServiceForm()
+  }
+
+  async function handleSaveFine(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (!vehicle?.user_id) return
+
+    const payload = {
+      vehicle_id: vehicle.id,
+      user_id: vehicle.user_id,
+      family_id: vehicle.family_id,
+      amount_rub: Number(fineAmount),
+      discount_amount_rub: fineDiscountAmount ? Number(fineDiscountAmount) : null,
+      discount_until: fineDiscountUntil || null,
+      issued_date: fineIssuedDate || null,
+      description: fineDescription || null,
+      external_id: fineExternalId || null,
+      status: fineStatus,
+    }
+
+    if (editingFineId) {
+      await updateFine.mutateAsync({ id: editingFineId, ...payload })
+    } else {
+      await createFine.mutateAsync(payload)
+    }
+
+    resetFineForm()
+  }
+
+  async function handleDeleteFine(id: string) {
+    await deleteFine.mutateAsync(id)
+    if (editingFineId === id) resetFineForm()
   }
 
   if (vehicleLoading && !vehicle) {
@@ -210,58 +350,26 @@ export default function VehicleDetailPage() {
               </label>
               <label className="space-y-1">
                 <span className="text-sm text-muted-foreground">{t('mileage')}</span>
-                <input
-                  className="w-full rounded-xl border bg-background px-3 py-2 text-sm"
-                  type="number"
-                  min={0}
-                  value={fuelMileage}
-                  onChange={(e) => setFuelMileage(e.target.value)}
-                  placeholder={defaultMileage}
-                  required
-                />
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min={0} value={fuelMileage} onChange={(e) => setFuelMileage(e.target.value)} placeholder={defaultMileage} required />
               </label>
               <label className="space-y-1">
                 <span className="text-sm text-muted-foreground">{t('liters')}</span>
-                <input
-                  className="w-full rounded-xl border bg-background px-3 py-2 text-sm"
-                  type="number"
-                  min="0"
-                  step="0.1"
-                  value={fuelLiters}
-                  onChange={(e) => setFuelLiters(e.target.value)}
-                  required
-                />
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min="0" step="0.1" value={fuelLiters} onChange={(e) => setFuelLiters(e.target.value)} required />
               </label>
               <label className="space-y-1">
                 <span className="text-sm text-muted-foreground">{t('pricePerLiter')}</span>
-                <input
-                  className="w-full rounded-xl border bg-background px-3 py-2 text-sm"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={fuelPrice}
-                  onChange={(e) => setFuelPrice(e.target.value)}
-                  required
-                />
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min="0" step="0.01" value={fuelPrice} onChange={(e) => setFuelPrice(e.target.value)} required />
               </label>
             </div>
             <label className="space-y-1 block">
               <span className="text-sm text-muted-foreground">{common('note')}</span>
-              <input
-                className="w-full rounded-xl border bg-background px-3 py-2 text-sm"
-                value={fuelNote}
-                onChange={(e) => setFuelNote(e.target.value)}
-              />
+              <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={fuelNote} onChange={(e) => setFuelNote(e.target.value)} />
             </label>
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={fuelFullTank} onChange={(e) => setFuelFullTank(e.target.checked)} />
               <span>{t('fullTank')}</span>
             </label>
-            <button
-              type="submit"
-              disabled={addFuelEntry.isPending || !isVehicleReady}
-              className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
-            >
+            <button type="submit" disabled={addFuelEntry.isPending || !isVehicleReady} className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
               {addFuelEntry.isPending ? common('loading') : t('addFuelEntry')}
             </button>
           </form>
@@ -279,16 +387,60 @@ export default function VehicleDetailPage() {
                       {e.expense?.date ? ` • ${formatDate(e.expense.date)}` : ''}
                     </p>
                   </div>
-                  <p className="font-semibold tabular-nums text-sm">
-                    {formatAmount(Number(e.liters) * Number(e.price_per_liter))}
-                  </p>
+                  <p className="font-semibold tabular-nums text-sm">{formatAmount(Number(e.liters) * Number(e.price_per_liter))}</p>
                 </li>
               ))}
             </ul>
           )}
         </TabsContent>
 
-        <TabsContent value="service" className="space-y-2 mt-4">
+        <TabsContent value="service" className="space-y-4 mt-4">
+          <form onSubmit={handleSaveServiceItem} className="rounded-2xl border bg-card p-4 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                {editingServiceId ? t('editServiceItem', { defaultValue: 'Edit service item' }) : t('addServiceItem', { defaultValue: 'Add service item' })}
+              </h2>
+              {editingServiceId ? (
+                <button type="button" onClick={resetServiceForm} className="text-sm text-muted-foreground hover:text-foreground">
+                  {common('cancel')}
+                </button>
+              ) : null}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="space-y-1">
+                <span className="text-sm text-muted-foreground">{common('category')}</span>
+                <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={serviceNameKey} onChange={(e) => setServiceNameKey(e.target.value as typeof serviceItemKeys[number])}>
+                  {serviceItemKeys.map(key => (
+                    <option key={key} value={key}>{t(`serviceItems.${key}`, { defaultValue: key })}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-1">
+                <span className="text-sm text-muted-foreground">{t('lastReplaced')}</span>
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="date" value={serviceLastDate} onChange={(e) => setServiceLastDate(e.target.value)} />
+              </label>
+              <label className="space-y-1">
+                <span className="text-sm text-muted-foreground">{t('mileage')}</span>
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min={0} value={serviceLastMileage} onChange={(e) => setServiceLastMileage(e.target.value)} />
+              </label>
+              <label className="space-y-1">
+                <span className="text-sm text-muted-foreground">{t('replaceEveryKm', { defaultValue: 'Replace every, km' })}</span>
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min={0} value={serviceEveryKm} onChange={(e) => setServiceEveryKm(e.target.value)} />
+              </label>
+              <label className="space-y-1">
+                <span className="text-sm text-muted-foreground">{t('replaceEveryMonths', { defaultValue: 'Replace every, months' })}</span>
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min={0} value={serviceEveryMonths} onChange={(e) => setServiceEveryMonths(e.target.value)} />
+              </label>
+            </div>
+            <label className="space-y-1 block">
+              <span className="text-sm text-muted-foreground">{common('note')}</span>
+              <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={serviceNotes} onChange={(e) => setServiceNotes(e.target.value)} />
+            </label>
+            <button type="submit" disabled={createServiceItem.isPending || updateServiceItem.isPending} className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
+              {editingServiceId ? common('save') : t('addServiceItem', { defaultValue: 'Add service item' })}
+            </button>
+          </form>
+
           {svcLoading ? <Skeleton className="h-32 w-full" /> : serviceItems.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">{t('noServiceItems')}</p>
           ) : (
@@ -304,32 +456,24 @@ export default function VehicleDetailPage() {
                   : null
 
                 return (
-                  <li
-                    key={item.id}
-                    className={cn(
-                      'rounded-xl border bg-card p-3',
-                      isDue && 'border-red-300 dark:border-red-700'
-                    )}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-medium">
-                        {serviceItemIcons[item.name_key] ?? '🔧'} {t(`serviceItems.${item.name_key}`, { defaultValue: item.name_key })}
-                      </p>
-                      {isDue && (
-                        <span className="text-xs bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400 px-2 py-0.5 rounded-full font-semibold">
-                          {t('due')}
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-1 space-y-1 text-xs text-muted-foreground">
-                      <p>
-                        {item.last_replaced_date
-                          ? `${t('lastReplaced')}: ${formatDate(item.last_replaced_date)}`
-                          : t('neverReplaced')}
-                      </p>
-                      {item.next_due_date ? <p>{t('nextDue')}: {formatDate(item.next_due_date)}</p> : null}
-                      {nextMileage ? <p>{t('nextDueMileage')}: {formatKm(nextMileage)}</p> : null}
-                      {item.notes ? <p>{item.notes}</p> : null}
+                  <li key={item.id} className={cn('rounded-xl border bg-card p-3', isDue && 'border-red-300 dark:border-red-700')}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium">{serviceItemIcons[item.name_key] ?? '🔧'} {t(`serviceItems.${item.name_key}`, { defaultValue: item.name_key })}</p>
+                        <div className="mt-1 space-y-1 text-xs text-muted-foreground">
+                          <p>{item.last_replaced_date ? `${t('lastReplaced')}: ${formatDate(item.last_replaced_date)}` : t('neverReplaced')}</p>
+                          {item.next_due_date ? <p>{t('nextDue')}: {formatDate(item.next_due_date)}</p> : null}
+                          {nextMileage ? <p>{t('nextDueMileage')}: {formatKm(nextMileage)}</p> : null}
+                          {item.notes ? <p>{item.notes}</p> : null}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        {isDue ? <span className="text-xs bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400 px-2 py-0.5 rounded-full font-semibold">{t('due')}</span> : null}
+                        <div className="flex gap-2">
+                          <button type="button" onClick={() => fillServiceForm(item)} className="rounded-lg border px-3 py-1 text-xs">{common('edit')}</button>
+                          <button type="button" onClick={() => handleDeleteServiceItem(item.id)} className="rounded-lg border px-3 py-1 text-xs text-red-600">{common('delete')}</button>
+                        </div>
+                      </div>
                     </div>
                   </li>
                 )
@@ -344,12 +488,7 @@ export default function VehicleDetailPage() {
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="space-y-1">
                 <span className="text-sm text-muted-foreground">{common('account')}</span>
-                <select
-                  className="w-full rounded-xl border bg-background px-3 py-2 text-sm"
-                  value={expenseAccountId}
-                  onChange={(e) => setExpenseAccountId(e.target.value)}
-                  required
-                >
+                <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={expenseAccountId} onChange={(e) => setExpenseAccountId(e.target.value)} required>
                   <option value="">{t('selectAccount')}</option>
                   {accounts.map(account => (
                     <option key={account.id} value={account.id}>{account.name}</option>
@@ -358,66 +497,30 @@ export default function VehicleDetailPage() {
               </label>
               <label className="space-y-1">
                 <span className="text-sm text-muted-foreground">{common('category')}</span>
-                <select
-                  className="w-full rounded-xl border bg-background px-3 py-2 text-sm"
-                  value={expenseCategory}
-                  onChange={(e) => setExpenseCategory(e.target.value)}
-                  required
-                >
+                <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={expenseCategory} onChange={(e) => setExpenseCategory(e.target.value)} required>
                   {['service', 'insurance', 'documents', 'parking', 'wash', 'tires', 'fine', 'equipment', 'other'].map(category => (
-                    <option key={category} value={category}>
-                      {t(`expenseCategories.${category}`, { defaultValue: category })}
-                    </option>
+                    <option key={category} value={category}>{t(`expenseCategories.${category}`, { defaultValue: category })}</option>
                   ))}
                 </select>
               </label>
               <label className="space-y-1">
                 <span className="text-sm text-muted-foreground">{common('amount')}</span>
-                <input
-                  className="w-full rounded-xl border bg-background px-3 py-2 text-sm"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={expenseAmount}
-                  onChange={(e) => setExpenseAmount(e.target.value)}
-                  required
-                />
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min="0" step="0.01" value={expenseAmount} onChange={(e) => setExpenseAmount(e.target.value)} required />
               </label>
               <label className="space-y-1">
                 <span className="text-sm text-muted-foreground">{common('date')}</span>
-                <input
-                  className="w-full rounded-xl border bg-background px-3 py-2 text-sm"
-                  type="date"
-                  value={expenseDate}
-                  onChange={(e) => setExpenseDate(e.target.value)}
-                  required
-                />
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="date" value={expenseDate} onChange={(e) => setExpenseDate(e.target.value)} required />
               </label>
               <label className="space-y-1">
                 <span className="text-sm text-muted-foreground">{t('mileageOptional')}</span>
-                <input
-                  className="w-full rounded-xl border bg-background px-3 py-2 text-sm"
-                  type="number"
-                  min={0}
-                  value={expenseMileage}
-                  onChange={(e) => setExpenseMileage(e.target.value)}
-                  placeholder={defaultMileage}
-                />
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min={0} value={expenseMileage} onChange={(e) => setExpenseMileage(e.target.value)} placeholder={defaultMileage} />
               </label>
             </div>
             <label className="space-y-1 block">
               <span className="text-sm text-muted-foreground">{common('note')}</span>
-              <input
-                className="w-full rounded-xl border bg-background px-3 py-2 text-sm"
-                value={expenseNote}
-                onChange={(e) => setExpenseNote(e.target.value)}
-              />
+              <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={expenseNote} onChange={(e) => setExpenseNote(e.target.value)} />
             </label>
-            <button
-              type="submit"
-              disabled={addExpense.isPending || !isVehicleReady}
-              className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
-            >
+            <button type="submit" disabled={addExpense.isPending || !isVehicleReady} className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
               {addExpense.isPending ? common('loading') : t('addExpense')}
             </button>
           </form>
@@ -432,16 +535,12 @@ export default function VehicleDetailPage() {
                   </div>
                 ))}
               </div>
-              {expenses.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">{t('noExpenses')}</p>
-              ) : (
+              {expenses.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">{t('noExpenses')}</p> : (
                 <ul className="space-y-2">
                   {expenses.slice(0, 20).map(e => (
                     <li key={e.id} className="rounded-xl border bg-card p-3 flex justify-between gap-4">
                       <div>
-                        <p className="text-sm font-medium capitalize">
-                          {t(`expenseCategories.${e.category}`, { defaultValue: e.category })}
-                        </p>
+                        <p className="text-sm font-medium capitalize">{t(`expenseCategories.${e.category}`, { defaultValue: e.category })}</p>
                         <p className="text-xs text-muted-foreground">
                           {formatDate(e.date)}
                           {e.mileage_at_moment ? ` • ${formatKm(Number(e.mileage_at_moment))}` : ''}
@@ -457,7 +556,57 @@ export default function VehicleDetailPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="fines" className="space-y-3 mt-4">
+        <TabsContent value="fines" className="space-y-4 mt-4">
+          <form onSubmit={handleSaveFine} className="rounded-2xl border bg-card p-4 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                {editingFineId ? t('editFine', { defaultValue: 'Edit fine' }) : t('addFine', { defaultValue: 'Add fine' })}
+              </h2>
+              {editingFineId ? (
+                <button type="button" onClick={resetFineForm} className="text-sm text-muted-foreground hover:text-foreground">
+                  {common('cancel')}
+                </button>
+              ) : null}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="space-y-1">
+                <span className="text-sm text-muted-foreground">{common('amount')}</span>
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min="0" step="0.01" value={fineAmount} onChange={(e) => setFineAmount(e.target.value)} required />
+              </label>
+              <label className="space-y-1">
+                <span className="text-sm text-muted-foreground">{t('discountedAmount', { defaultValue: 'Discounted amount' })}</span>
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min="0" step="0.01" value={fineDiscountAmount} onChange={(e) => setFineDiscountAmount(e.target.value)} />
+              </label>
+              <label className="space-y-1">
+                <span className="text-sm text-muted-foreground">{t('issuedDate')}</span>
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="date" value={fineIssuedDate} onChange={(e) => setFineIssuedDate(e.target.value)} />
+              </label>
+              <label className="space-y-1">
+                <span className="text-sm text-muted-foreground">{t('discountUntil')}</span>
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="date" value={fineDiscountUntil} onChange={(e) => setFineDiscountUntil(e.target.value)} />
+              </label>
+              <label className="space-y-1">
+                <span className="text-sm text-muted-foreground">ID</span>
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={fineExternalId} onChange={(e) => setFineExternalId(e.target.value)} />
+              </label>
+              <label className="space-y-1">
+                <span className="text-sm text-muted-foreground">{t('status', { defaultValue: 'Status' })}</span>
+                <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={fineStatus} onChange={(e) => setFineStatus(e.target.value as 'unpaid' | 'paid' | 'disputed')}>
+                  {['unpaid', 'paid', 'disputed'].map(status => (
+                    <option key={status} value={status}>{t(`fineStatuses.${status}`, { defaultValue: status })}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <label className="space-y-1 block">
+              <span className="text-sm text-muted-foreground">{common('note')}</span>
+              <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={fineDescription} onChange={(e) => setFineDescription(e.target.value)} />
+            </label>
+            <button type="submit" disabled={createFine.isPending || updateFine.isPending} className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
+              {editingFineId ? common('save') : t('addFine', { defaultValue: 'Add fine' })}
+            </button>
+          </form>
+
           {finesLoading ? <Skeleton className="h-32 w-full" /> : fines.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">{t('noFines')}</p>
           ) : (
@@ -473,13 +622,12 @@ export default function VehicleDetailPage() {
                         <p className="text-xs text-muted-foreground mt-1">
                           {fine.issued_date ? `${t('issuedDate')}: ${formatDate(fine.issued_date)}` : t('issuedDateUnknown')}
                           {fine.discount_until ? ` • ${t('discountUntil')}: ${formatDate(fine.discount_until)}` : ''}
+                          {fine.external_id ? ` • ID: ${fine.external_id}` : ''}
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="font-semibold tabular-nums">{formatAmount(discountedAmount)}</p>
-                        {hasDiscount ? (
-                          <p className="text-xs text-muted-foreground line-through">{formatAmount(Number(fine.amount_rub))}</p>
-                        ) : null}
+                        {hasDiscount ? <p className="text-xs text-muted-foreground line-through">{formatAmount(Number(fine.amount_rub))}</p> : null}
                         <span className={cn(
                           'inline-flex rounded-full px-2 py-0.5 text-xs font-semibold mt-1',
                           fine.status === 'paid' && 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400',
@@ -488,6 +636,10 @@ export default function VehicleDetailPage() {
                         )}>
                           {t(`fineStatuses.${fine.status}`, { defaultValue: fine.status })}
                         </span>
+                        <div className="mt-2 flex justify-end gap-2">
+                          <button type="button" onClick={() => fillFineForm(fine)} className="rounded-lg border px-3 py-1 text-xs">{common('edit')}</button>
+                          <button type="button" onClick={() => handleDeleteFine(fine.id)} className="rounded-lg border px-3 py-1 text-xs text-red-600">{common('delete')}</button>
+                        </div>
                       </div>
                     </div>
                   </li>
