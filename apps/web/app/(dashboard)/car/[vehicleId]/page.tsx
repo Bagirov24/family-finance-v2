@@ -13,8 +13,10 @@ import {
   useVehicleFines,
   useVehicles,
   type FineStatus,
+  type FuelType,
   type ServiceItem,
   type ServiceItemNameKey,
+  type VehicleExpenseCategory,
   type VehicleFine,
 } from '@/hooks/useVehicles'
 import { formatAmount, formatDate, formatKm, formatLper100 } from '@/lib/formatters'
@@ -41,9 +43,10 @@ const serviceItemKeys: readonly ServiceItemNameKey[] = [
   'tech_inspection',
 ] as const
 
+const fuelTypes: readonly FuelType[] = ['gasoline', 'diesel', 'gas', 'electric', 'hybrid'] as const
 const fineStatuses: readonly FineStatus[] = ['unpaid', 'paid', 'disputed'] as const
 
-const expenseCategories = [
+const expenseCategories: readonly VehicleExpenseCategory[] = [
   'service',
   'insurance',
   'documents',
@@ -54,6 +57,14 @@ const expenseCategories = [
   'equipment',
   'other',
 ] as const
+
+function isFuelType(value: string): value is FuelType {
+  return fuelTypes.includes(value as FuelType)
+}
+
+function isExpenseCategory(value: string): value is VehicleExpenseCategory {
+  return expenseCategories.includes(value as VehicleExpenseCategory)
+}
 
 export default function VehicleDetailPage() {
   const { vehicleId } = useParams<{ vehicleId: string }>()
@@ -71,7 +82,7 @@ export default function VehicleDetailPage() {
   const [fuelFullTank, setFuelFullTank] = useState(true)
 
   const [expenseAccountId, setExpenseAccountId] = useState('')
-  const [expenseCategory, setExpenseCategory] = useState<(typeof expenseCategories)[number]>('service')
+  const [expenseCategory, setExpenseCategory] = useState<VehicleExpenseCategory>('service')
   const [expenseAmount, setExpenseAmount] = useState('')
   const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split('T')[0])
   const [expenseMileage, setExpenseMileage] = useState('')
@@ -515,7 +526,7 @@ export default function VehicleDetailPage() {
               </label>
               <label className="space-y-1">
                 <span className="text-sm text-muted-foreground">{common('category')}</span>
-                <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={expenseCategory} onChange={(e) => setExpenseCategory(e.target.value as (typeof expenseCategories)[number])} required>
+                <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={expenseCategory} onChange={(e) => setExpenseCategory(e.target.value as VehicleExpenseCategory)} required>
                   {expenseCategories.map((category) => (
                     <option key={category} value={category}>{t(`expenseCategories.${category}` as const)}</option>
                   ))}
@@ -546,12 +557,15 @@ export default function VehicleDetailPage() {
           {expLoading ? <Skeleton className="h-32 w-full" /> : (
             <>
               <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-                {Object.entries(totalByCategory).map(([cat, sum]) => (
-                  <div key={cat} className="rounded-xl border bg-card p-3">
-                    <p className="text-xs text-muted-foreground capitalize">{t(`expenseCategories.${cat}` as const)}</p>
-                    <p className="font-bold tabular-nums">{formatAmount(sum)}</p>
-                  </div>
-                ))}
+                {Object.entries(totalByCategory).map(([cat, sum]) => {
+                  if (!isExpenseCategory(cat)) return null
+                  return (
+                    <div key={cat} className="rounded-xl border bg-card p-3">
+                      <p className="text-xs text-muted-foreground capitalize">{t(`expenseCategories.${cat}` as const)}</p>
+                      <p className="font-bold tabular-nums">{formatAmount(sum)}</p>
+                    </div>
+                  )
+                })}
               </div>
               {expenses.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">{t('noExpenses')}</p> : (
                 <ul className="space-y-2">

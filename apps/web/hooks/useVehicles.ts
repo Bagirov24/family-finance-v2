@@ -5,6 +5,20 @@ import { calcFuelConsumption } from '@/lib/fuelCalc'
 
 const supabase = createClient()
 
+export type FuelType = 'gasoline' | 'diesel' | 'gas' | 'electric' | 'hybrid'
+
+export type VehicleExpenseCategory =
+  | 'fuel'
+  | 'service'
+  | 'insurance'
+  | 'documents'
+  | 'parking'
+  | 'wash'
+  | 'tires'
+  | 'fine'
+  | 'equipment'
+  | 'other'
+
 export type Vehicle = {
   id: string
   user_id: string | null
@@ -19,7 +33,7 @@ export type Vehicle = {
   purchase_date: string | null
   initial_mileage: number
   current_mileage: number
-  fuel_type: string | null
+  fuel_type: FuelType | null
   is_active: boolean | null
   created_at: string | null
 }
@@ -68,7 +82,7 @@ export type VehicleExpense = {
   vehicle_id: string | null
   user_id: string | null
   transaction_id: string | null
-  category: string
+  category: VehicleExpenseCategory
   amount_rub: number | string
   date: string
   mileage_at_moment: number | null
@@ -152,7 +166,7 @@ export function useVehicles() {
       make: string
       model: string
       year: number
-      fuel_type?: string
+      fuel_type?: FuelType
       initial_mileage?: number
       vin?: string
       license_plate?: string
@@ -381,12 +395,12 @@ export function useVehicleExpenses(vehicleId: string) {
     }
   })
 
-  const totalByCategory = (query.data ?? []).reduce<Record<string, number>>(
+  const totalByCategory = (query.data ?? []).reduce<Record<VehicleExpenseCategory, number>>(
     (acc, e) => {
       acc[e.category] = (acc[e.category] ?? 0) + Number(e.amount_rub)
       return acc
     },
-    {}
+    {} as Record<VehicleExpenseCategory, number>
   )
 
   const total = Object.values(totalByCategory).reduce((s, v) => s + v, 0)
@@ -397,7 +411,7 @@ export function useVehicleExpenses(vehicleId: string) {
       user_id: string
       family_id: string
       account_id: string
-      category: string
+      category: VehicleExpenseCategory
       amount_rub: number
       date: string
       note?: string
