@@ -18,7 +18,7 @@ interface Props {
 }
 
 export function EditTransactionModal({ transaction: tx, open, onClose }: Props) {
-  const t = useTranslations('transactions')
+  const t = useTranslations('transaction')
   const tc = useTranslations('common')
   const tcat = useTranslations('categories')
 
@@ -105,7 +105,7 @@ export function EditTransactionModal({ transaction: tx, open, onClose }: Props) 
           <div className="space-y-1.5">
             <Label>{tc('account')}</Label>
             <Select value={accountId} onValueChange={setAccountId}>
-              <SelectTrigger><SelectValue placeholder={tc('account')} /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t('selectAccount')} /></SelectTrigger>
               <SelectContent>
                 {accounts.map(a => (
                   <SelectItem key={a.id} value={a.id}>{a.icon} {a.name}</SelectItem>
@@ -117,10 +117,10 @@ export function EditTransactionModal({ transaction: tx, open, onClose }: Props) 
           <div className="space-y-1.5">
             <Label>{tc('category')}</Label>
             <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger><SelectValue placeholder={tc('category')} /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t('selectCategory')} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">{tc('all')}</SelectItem>
-                {categories?.map(c => (
+                <SelectItem value="">{t('noCategory')}</SelectItem>
+                {categories.map(c => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.icon} {tcat(c.name_key as Parameters<typeof tcat>[0], { defaultValue: c.name_key })}
                   </SelectItem>

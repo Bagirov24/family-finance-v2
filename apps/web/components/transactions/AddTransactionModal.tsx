@@ -14,7 +14,7 @@ import { useCategories } from '@/hooks/useCategories'
 import { useFamily } from '@/hooks/useFamily'
 
 export function AddTransactionModal() {
-  const t = useTranslations('transactions')
+  const t = useTranslations('transaction')
   const tc = useTranslations('common')
   const tcat = useTranslations('categories')
   const { addTransactionOpen, setAddTransactionOpen } = useUIStore()
@@ -59,7 +59,7 @@ export function AddTransactionModal() {
   }
 
   return (
-    <Dialog open={addTransactionOpen} onOpenChange={setAddTransactionOpen}>
+    <Dialog open={addTransactionOpen} onOpenChange={open => { if (!open) { setAddTransactionOpen(false); reset() } else { setAddTransactionOpen(true) } }}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>{t('add')}</DialogTitle>
@@ -101,7 +101,7 @@ export function AddTransactionModal() {
           <div className="space-y-1.5">
             <Label>{tc('account')}</Label>
             <Select value={accountId} onValueChange={setAccountId} required>
-              <SelectTrigger><SelectValue placeholder={tc('account')} /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t('selectAccount')} /></SelectTrigger>
               <SelectContent>
                 {accounts.map(a => (
                   <SelectItem key={a.id} value={a.id}>{a.icon} {a.name}</SelectItem>
@@ -113,9 +113,9 @@ export function AddTransactionModal() {
           <div className="space-y-1.5">
             <Label>{tc('category')}</Label>
             <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger><SelectValue placeholder={tc('category')} /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t('selectCategory')} /></SelectTrigger>
               <SelectContent>
-                {categories?.map(c => (
+                {categories.map(c => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.icon} {tcat(c.name_key as Parameters<typeof tcat>[0], { defaultValue: c.name_key })}
                   </SelectItem>

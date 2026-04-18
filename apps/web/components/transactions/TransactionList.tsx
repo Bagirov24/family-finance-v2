@@ -54,10 +54,9 @@ export function TransactionList({ limit, showDate = true, categoryId, type }: Pr
     <>
       <ul className="space-y-2">
         {transactions.map(tx => {
-          const categoryLabel = tx.note
-            || (tx.category?.name_key
-              ? tcat(tx.category.name_key as Parameters<typeof tcat>[0], { defaultValue: tx.category.name_key })
-              : tcat('other'))
+          const categoryLabel = tx.category
+            ? tcat(tx.category.name_key as Parameters<typeof tcat>[0], { defaultValue: tx.category.name_key })
+            : tcat('other')
 
           return (
             <li
@@ -68,7 +67,9 @@ export function TransactionList({ limit, showDate = true, categoryId, type }: Pr
                 {tx.category?.icon ?? (tx.type === 'income' ? '💰' : '💸')}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm truncate">{categoryLabel}</p>
+                <p className="font-medium text-sm truncate">
+                  {tx.note || categoryLabel}
+                </p>
                 {showDate && (
                   <p className="text-xs text-muted-foreground">{formatDate(tx.date)}</p>
                 )}
@@ -84,7 +85,7 @@ export function TransactionList({ limit, showDate = true, categoryId, type }: Pr
                   type="button"
                   onClick={() => setEditTx(tx)}
                   className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                  aria-label="Edit"
+                  aria-label="Edit transaction"
                 >
                   <Pencil size={13} />
                 </button>
@@ -93,7 +94,7 @@ export function TransactionList({ limit, showDate = true, categoryId, type }: Pr
                   onClick={() => deleteTransaction(tx.id)}
                   disabled={isDeleting}
                   className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
-                  aria-label="Delete"
+                  aria-label="Delete transaction"
                 >
                   <Trash2 size={13} />
                 </button>
