@@ -1,67 +1,73 @@
 'use client'
 import { useTranslations } from 'next-intl'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { useUIStore } from '@/store/ui.store'
-import { useCreateTransaction } from '@/hooks/useTransactions'
+import { useUpdateTransaction, Transaction } from '@/hooks/useTransactions'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useCategories } from '@/hooks/useCategories'
-import { useFamily } from '@/hooks/useFamily'
 
-export function AddTransactionModal() {
+interface Props {
+  transaction: Transaction | null
+  open: boolean
+  onClose: () => void
+}
+
+export function EditTransactionModal({ transaction: tx, open, onClose }: Props) {
   const t = useTranslations('transaction')
   const tc = useTranslations('common')
-  const { addTransactionOpen, setAddTransactionOpen } = useUIStore()
-  const { family } = useFamily()
+
   const [type, setType] = useState<'income' | 'expense'>('expense')
   const [amount, setAmount] = useState('')
   const [accountId, setAccountId] = useState('')
   const [categoryId, setCategoryId] = useState('')
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+  const [date, setDate] = useState('')
   const [note, setNote] = useState('')
 
   const { data: accounts = [] } = useAccounts()
   const { data: categories = [] } = useCategories(type)
-  const { mutateAsync, isPending } = useCreateTransaction()
+  const { mutateAsync, isPending } = useUpdateTransaction()
 
-  function reset() {
-    setAmount('')
-    setCategoryId('')
-    setNote('')
-    setDate(new Date().toISOString().split('T')[0])
-  }
+  // Populate form when transaction changes
+  useEffect(() => {
+    if (!tx) return
+    setType(tx.type)
+    setAmount(String(tx.amount))
+    setAccountId(tx.account_id)
+    setCategoryId(tx.category_id ?? '')
+    setDate(tx.date)
+    setNote(tx.note ?? '')
+  }, [tx])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!amount || !accountId || !family?.id) return
+    if (!tx || !amount || !accountId) return
     try {
       await mutateAsync({
-        family_id: family.id,
+        id: tx.id,
         account_id: accountId,
-        category_id: categoryId || undefined,
+        category_id: categoryId || null,
         amount: parseFloat(amount),
         type,
         date,
-        note: note || undefined,
+        note: note || null,
       })
-      toast.success(type === 'income' ? t('addedIncome') : t('addedExpense'))
-      setAddTransactionOpen(false)
-      reset()
+      toast.success(t('updated'))
+      onClose()
     } catch {
       toast.error(tc('error'))
     }
   }
 
   return (
-    <Dialog open={addTransactionOpen} onOpenChange={setAddTransactionOpen}>
+    <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>{t('add')}</DialogTitle>
+          <DialogTitle>{t('edit')}</DialogTitle>
         </DialogHeader>
 
         <div className="flex rounded-xl overflow-hidden border border-border">
@@ -93,13 +99,12 @@ export function AddTransactionModal() {
               onChange={e => setAmount(e.target.value)}
               required
               className="text-lg font-semibold tabular-nums"
-              autoFocus
             />
           </div>
 
           <div className="space-y-1.5">
             <Label>{tc('account')}</Label>
-            <Select value={accountId} onValueChange={setAccountId} required>
+            <Select value={accountId} onValueChange={setAccountId}>
               <SelectTrigger><SelectValue placeholder={t('selectAccount')} /></SelectTrigger>
               <SelectContent>
                 {accounts.map(a => (
@@ -114,6 +119,7 @@ export function AddTransactionModal() {
             <Select value={categoryId} onValueChange={setCategoryId}>
               <SelectTrigger><SelectValue placeholder={t('selectCategory')} /></SelectTrigger>
               <SelectContent>
+                <SelectItem value="">{t('noCategory')}</SelectItem>
                 {categories?.map(c => (
                   <SelectItem key={c.id} value={c.id}>{c.icon} {c.name_key}</SelectItem>
                 ))}
@@ -136,11 +142,11 @@ export function AddTransactionModal() {
           </div>
 
           <div className="flex gap-2 pt-1">
-            <Button type="button" variant="outline" className="flex-1" onClick={() => setAddTransactionOpen(false)}>
+            <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
               {tc('cancel')}
             </Button>
             <Button type="submit" className="flex-1" disabled={isPending}>
-              {isPending ? tc('loading') : tc('add')}
+              {isPending ? tc('loading') : tc('save')}
             </Button>
           </div>
         </form>

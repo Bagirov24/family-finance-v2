@@ -12,7 +12,6 @@ export interface Transaction {
   type: 'income' | 'expense'
   date: string
   note: string | null
-  comment: string | null
   created_at: string
   category?: { name_key: string; icon: string; color: string } | null
   account?: { name: string; currency: string } | null
@@ -25,7 +24,7 @@ export interface CreateTransactionInput {
   amount: number
   type: 'income' | 'expense'
   date: string
-  comment?: string
+  note?: string
 }
 
 export interface UpdateTransactionInput {
@@ -35,7 +34,7 @@ export interface UpdateTransactionInput {
   amount?: number
   type?: 'income' | 'expense'
   date?: string
-  comment?: string | null
+  note?: string | null
 }
 
 interface UseTransactionsParams {
@@ -92,12 +91,7 @@ export function useTransactions(params?: UseTransactionsParams) {
     .filter(t => t.type === 'expense')
     .reduce((sum, t) => sum + Number(t.amount), 0)
 
-  return {
-    ...query,
-    transactions,
-    totalIncome,
-    totalExpense,
-  }
+  return { ...query, transactions, totalIncome, totalExpense }
 }
 
 export function useCreateTransaction() {
@@ -130,14 +124,9 @@ export function useUpdateTransaction() {
   return useMutation({
     mutationFn: async ({ id, ...patch }: UpdateTransactionInput) => {
       const supabase = createClient()
-      const payload = {
-        ...patch,
-        category_id: patch.category_id === undefined ? undefined : patch.category_id,
-        comment: patch.comment === undefined ? undefined : patch.comment,
-      }
       const { data, error } = await supabase
         .from('transactions')
-        .update(payload)
+        .update(patch)
         .eq('id', id)
         .select()
         .single()

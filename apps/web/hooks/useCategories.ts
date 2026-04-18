@@ -4,22 +4,38 @@ import { useUIStore } from '@/store/ui.store'
 
 export interface Category {
   id: string
-  user_id: string | null
-  name: string
-  emoji: string
+  family_id: string | null
+  name_key: string
+  icon: string
   color: string
   type: 'income' | 'expense' | 'both'
-  is_system: boolean
+  is_default: boolean
 }
 
 async function fetchCategories(userId: string) {
   const supabase = createClient()
-  const { data, error } = await supabase
+  // fetch family_id for this user first via family_members
+  const { data: memberData } = await supabase
+    .from('family_members')
+    .select('family_id')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  const familyId = memberData?.family_id
+
+  let query = supabase
     .from('categories')
-    .select('*')
-    .or(`user_id.eq.${userId},is_system.eq.true`)
-    .order('is_system', { ascending: false })
-    .order('name')
+    .select('id, family_id, name_key, icon, color, type, is_default')
+    .order('is_default', { ascending: false })
+    .order('name_key')
+
+  if (familyId) {
+    query = query.or(`is_default.eq.true,family_id.eq.${familyId}`)
+  } else {
+    query = query.eq('is_default', true)
+  }
+
+  const { data, error } = await query
   if (error) throw error
   return data as Category[]
 }
