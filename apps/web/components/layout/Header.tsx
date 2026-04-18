@@ -1,14 +1,17 @@
 'use client'
-import { Menu, Plus, ArrowLeftRight, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { Menu, Plus, ArrowLeftRight, ChevronLeft, ChevronRight, Bell, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useUIStore } from '@/store/ui.store'
 import { getMonthName } from '@/lib/utils'
 import { useTranslations } from 'next-intl'
+import { useNotifications } from '@/hooks/useNotifications'
+import { cn } from '@/lib/utils'
 
 export function Header() {
-  const t = useTranslations('common')
   const tt = useTranslations('transfers')
   const tx = useTranslations('transaction')
+  const tc = useTranslations('common')
   const {
     setSidebarOpen,
     setAddTransactionOpen,
@@ -16,6 +19,20 @@ export function Header() {
     activePeriod,
     setActivePeriod,
   } = useUIStore()
+
+  const { notifications, unreadCount, markRead, markAllRead } = useNotifications()
+  const [notifOpen, setNotifOpen] = useState(false)
+  const notifRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
 
   function prevMonth() {
     const { month, year } = activePeriod
@@ -64,6 +81,73 @@ export function Header() {
       </div>
 
       <div className="ml-auto flex items-center gap-2">
+        {/* Notifications bell */}
+        <div className="relative" ref={notifRef}>
+          <button
+            onClick={() => setNotifOpen(v => !v)}
+            className="relative p-1.5 rounded-lg hover:bg-accent transition-colors"
+            aria-label="Notifications"
+          >
+            <Bell className="h-5 w-5" />
+            {unreadCount > 0 && (
+              <span className="absolute top-0.5 right-0.5 h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center leading-none">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
+
+          {notifOpen && (
+            <div className="absolute right-0 top-10 z-50 w-80 rounded-2xl border border-border bg-card shadow-lg overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
+                <span className="text-sm font-semibold">Уведомления</span>
+                {unreadCount > 0 && (
+                  <button
+                    onClick={() => markAllRead.mutate()}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Прочитать все
+                  </button>
+                )}
+              </div>
+
+              <div className="max-h-80 overflow-y-auto divide-y divide-border">
+                {notifications.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">{tc('empty')}</p>
+                ) : (
+                  notifications.map(n => (
+                    <div
+                      key={n.id}
+                      className={cn(
+                        'flex items-start gap-3 px-4 py-3 transition-colors',
+                        !n.is_read ? 'bg-primary/5' : 'hover:bg-accent/50'
+                      )}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className={cn('text-sm', !n.is_read && 'font-medium')}>{n.title}</p>
+                        {n.body && (
+                          <p className="text-xs text-muted-foreground mt-0.5 truncate">{n.body}</p>
+                        )}
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          {new Date(n.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      {!n.is_read && (
+                        <button
+                          onClick={() => markRead.mutate(n.id)}
+                          className="mt-0.5 p-1 rounded-lg hover:bg-accent transition-colors shrink-0"
+                          aria-label="Mark as read"
+                        >
+                          <Check size={12} className="text-primary" />
+                        </button>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
         <Button
           size="sm"
           variant="outline"
