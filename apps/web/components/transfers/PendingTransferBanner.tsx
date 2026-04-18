@@ -21,7 +21,7 @@ export function PendingTransferBanner() {
         >
           <div className="min-w-0">
             <p className="text-sm font-semibold">
-              {t('transfer_received', { from: tx.from_user_id })} — {formatAmount(Number(tx.amount))}
+              {t('transfer_received', { from: tx.from_user_id, amount: formatAmount(Number(tx.amount)) })}
             </p>
             {tx.note && <p className="text-xs text-muted-foreground truncate">{tx.note}</p>}
           </div>
@@ -33,7 +33,7 @@ export function PendingTransferBanner() {
               onClick={() =>
                 respondTransfer.mutate(
                   { transfer_id: tx.id, action: 'declined' },
-                  { onSuccess: () => toast.success(t('declined')), onError: () => toast.error(tc('error')) }
+                  { onError: () => toast.error(tc('error')) }
                 )
               }
             >
@@ -45,7 +45,7 @@ export function PendingTransferBanner() {
               onClick={() =>
                 respondTransfer.mutate(
                   { transfer_id: tx.id, action: 'confirmed' },
-                  { onSuccess: () => toast.success(t('confirmed')), onError: () => toast.error(tc('error')) }
+                  { onError: () => toast.error(tc('error')) }
                 )
               }
             >

@@ -1,12 +1,14 @@
 'use client'
 import { useTranslations } from 'next-intl'
 import { useTransfers } from '@/hooks/useTransfers'
+import { useUIStore } from '@/store/ui.store'
 import { TransferCard } from './TransferCard'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export function TransfersList() {
   const t = useTranslations('transfers')
-  const { history, isLoading, userId } = useTransfers()
+  const { userId } = useUIStore()
+  const { history, isLoading } = useTransfers()
 
   if (isLoading) {
     return (
@@ -25,7 +27,7 @@ export function TransfersList() {
     )
   }
 
-  if (!history.length) {
+  if (!userId || !history.length) {
     return (
       <p className="text-sm text-muted-foreground py-6 text-center">
         💸 {t('no_transfers')}
@@ -37,7 +39,7 @@ export function TransfersList() {
     <ul className="space-y-2">
       {history.map(tx => (
         <li key={tx.id}>
-          <TransferCard transfer={tx} myUserId={userId ?? ''} />
+          <TransferCard transfer={tx} myUserId={userId} />
         </li>
       ))}
     </ul>

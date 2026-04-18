@@ -10,23 +10,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useUIStore } from '@/store/ui.store'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useFamily } from '@/hooks/useFamily'
-import { useFamily as useFamilyMembers } from '@/hooks/useFamily'
 import { useTransfers } from '@/hooks/useTransfers'
 
 export function TransferModal() {
   const t = useTranslations('transfers')
   const tc = useTranslations('common')
   const { addTransferOpen, setAddTransferOpen } = useUIStore()
-  const { family, members, currentUserId } = useFamilyMembers()
+  const { family, members, currentUserId } = useFamily()
+  const { accounts } = useAccounts()
+  const { createTransfer } = useTransfers()
 
   const [fromAccountId, setFromAccountId] = useState('')
   const [toAccountId, setToAccountId] = useState('')
   const [toUserId, setToUserId] = useState('')
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
-
-  const { accounts = [] } = useAccounts()
-  const { createTransfer } = useTransfers()
 
   const otherMembers = members.filter(m => m.user_id !== currentUserId)
 
@@ -41,13 +39,12 @@ export function TransferModal() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!fromAccountId || !toAccountId || !toUserId || !amount || !family?.id) return
-    if (fromAccountId === toAccountId) return
     try {
       await createTransfer.mutateAsync({
         family_id: family.id,
-        to_user_id: toUserId,
         from_account_id: fromAccountId,
         to_account_id: toAccountId,
+        to_user_id: toUserId,
         amount: parseFloat(amount),
         note: note || undefined,
       })
@@ -63,7 +60,7 @@ export function TransferModal() {
     <Dialog open={addTransferOpen} onOpenChange={setAddTransferOpen}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>{t('send')}</DialogTitle>
+          <DialogTitle>{t('title')}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-3">
@@ -82,25 +79,11 @@ export function TransferModal() {
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label>{t('recipient')}</Label>
-            <Select value={toUserId} onValueChange={setToUserId} required>
-              <SelectTrigger><SelectValue placeholder={t('selectRecipient')} /></SelectTrigger>
-              <SelectContent>
-                {otherMembers.map(m => (
-                  <SelectItem key={m.user_id} value={m.user_id}>
-                    {m.display_name ?? m.user_id}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>{t('from_account')}</Label>
               <Select value={fromAccountId} onValueChange={setFromAccountId} required>
-                <SelectTrigger><SelectValue placeholder={t('selectFrom')} /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
                 <SelectContent>
                   {accounts.map(a => (
                     <SelectItem key={a.id} value={a.id} disabled={a.id === toAccountId}>
@@ -113,7 +96,7 @@ export function TransferModal() {
             <div className="space-y-1.5">
               <Label>{t('to_account')}</Label>
               <Select value={toAccountId} onValueChange={setToAccountId} required>
-                <SelectTrigger><SelectValue placeholder={t('selectTo')} /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
                 <SelectContent>
                   {accounts.map(a => (
                     <SelectItem key={a.id} value={a.id} disabled={a.id === fromAccountId}>
@@ -125,6 +108,22 @@ export function TransferModal() {
             </div>
           </div>
 
+          {otherMembers.length > 0 && (
+            <div className="space-y-1.5">
+              <Label>{t('recipient')}</Label>
+              <Select value={toUserId} onValueChange={setToUserId} required>
+                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectContent>
+                  {otherMembers.map(m => (
+                    <SelectItem key={m.user_id} value={m.user_id}>
+                      {m.display_name ?? m.user_id}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div className="space-y-1.5">
             <Label>{tc('note')}</Label>
             <Input
@@ -135,7 +134,7 @@ export function TransferModal() {
           </div>
 
           <div className="flex gap-2 pt-1">
-            <Button type="button" variant="outline" className="flex-1" onClick={() => { setAddTransferOpen(false); reset() }}>
+            <Button type="button" variant="outline" className="flex-1" onClick={() => setAddTransferOpen(false)}>
               {tc('cancel')}
             </Button>
             <Button type="submit" className="flex-1" disabled={createTransfer.isPending}>

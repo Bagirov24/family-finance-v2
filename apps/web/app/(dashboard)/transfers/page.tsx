@@ -2,7 +2,7 @@ import { getTranslations } from 'next-intl/server'
 import { PendingTransferBanner } from '@/components/transfers/PendingTransferBanner'
 import { TransfersList } from '@/components/transfers/TransfersList'
 import { TransferModal } from '@/components/transfers/TransferModal'
-import { SendTransferButton } from '@/components/transfers/SendTransferButton'
+import { OpenTransferModalButton } from '@/components/transfers/OpenTransferModalButton'
 
 export async function generateMetadata() {
   const t = await getTranslations('transfers')
@@ -11,11 +11,12 @@ export async function generateMetadata() {
 
 export default async function TransfersPage() {
   const t = await getTranslations('transfers')
+
   return (
     <div className="space-y-4 max-w-2xl mx-auto">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">{t('title')}</h1>
-        <SendTransferButton />
+        <OpenTransferModalButton />
       </div>
 
       <PendingTransferBanner />
