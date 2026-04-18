@@ -1,5 +1,8 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import type { CookieMethodsServer } from '@supabase/ssr'
+
+type CookieToSet = Parameters<NonNullable<CookieMethodsServer['setAll']>>[0][number]
 
 const SUPPORTED_LOCALES = ['ru', 'en']
 const DEFAULT_LOCALE = 'ru'
@@ -13,7 +16,7 @@ export async function middleware(request: NextRequest) {
     {
       cookies: {
         getAll() { return request.cookies.getAll() },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: CookieToSet[]) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
@@ -42,12 +45,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Устанавливаем дефолтный locale cookie если ещё нет
   const existingLocale = request.cookies.get('NEXT_LOCALE')?.value
   if (!existingLocale || !SUPPORTED_LOCALES.includes(existingLocale)) {
     supabaseResponse.cookies.set('NEXT_LOCALE', DEFAULT_LOCALE, {
       path: '/',
-      maxAge: 60 * 60 * 24 * 365, // 1 год
+      maxAge: 60 * 60 * 24 * 365,
       sameSite: 'lax',
     })
   }
