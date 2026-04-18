@@ -142,6 +142,13 @@
   "cashback": {
     "title": "Cashback",
     "add_card": "Add Card",
+    "my_cards": "My Cards",
+    "no_cards": "No cashback cards yet",
+    "card_name": "Card name",
+    "bank": "Bank",
+    "card_type": "Card type",
+    "card_color": "Card color",
+    "default_cashback": "Base cashback",
     "best_card": "Best Card",
     "earned": "Earned",
     "limit": "Limit",

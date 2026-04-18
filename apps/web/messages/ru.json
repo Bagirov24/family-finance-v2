@@ -116,6 +116,21 @@
     "personal_inflation": "Личная инфляция",
     "period_comparison": "Сравнение периодов"
   },
+  "cashback": {
+    "title": "Кэшбэк",
+    "add_card": "Добавить карту",
+    "my_cards": "Мои карты",
+    "no_cards": "Кэшбэк-карт пока нет",
+    "card_name": "Название карты",
+    "bank": "Банк",
+    "card_type": "Тип карты",
+    "card_color": "Цвет карты",
+    "default_cashback": "Базовый кэшбэк",
+    "best_card": "Лучшая карта",
+    "earned": "Начислено",
+    "limit": "Лимит",
+    "optimizer": "Оптимизатор"
+  },
   "car": {
     "title": "Авто",
     "add": "Добавить авто",
@@ -266,5 +281,25 @@
     "no_transactions": "Транзакций пока нет",
     "filter": "Фильтр",
     "search": "Поиск"
+  },
+  "categories": {
+    "groceries": "Продукты",
+    "transport": "Транспорт",
+    "cafe": "Кафе и рестораны",
+    "entertainment": "Развлечения",
+    "health": "Здоровье",
+    "clothes": "Одежда",
+    "utilities": "Коммунальные услуги",
+    "communication": "Связь",
+    "education": "Образование",
+    "travel": "Путешествия",
+    "subscriptions": "Подписки",
+    "car": "Авто",
+    "other": "Другое",
+    "salary": "Зарплата",
+    "freelance": "Фриланс",
+    "investment": "Инвестиции",
+    "gifts": "Подарки",
+    "other_income": "Прочие доходы"
   }
 }
