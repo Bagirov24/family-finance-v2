@@ -10,7 +10,8 @@
     "cashback": "Cashback",
     "car": "Car",
     "family": "Family",
-    "settings": "Settings"
+    "settings": "Settings",
+    "more": "More"
   },
   "common": {
     "save": "Save",
@@ -39,6 +40,11 @@
     "hide": "Hide",
     "currency": "Currency"
   },
+  "notifications": {
+    "title": "Notifications",
+    "mark_all_read": "Mark all as read",
+    "mark_read": "Mark as read"
+  },
   "auth": {
     "login": "Sign In",
     "register": "Sign Up",
@@ -59,6 +65,7 @@
     "recent_transactions": "Recent Transactions",
     "expenses": "Expenses",
     "days_left": "{count, plural, one {# day left} other {# days left}}",
+    "view_all": "View all",
     "rule_5030": "50/30/20 Rule",
     "needs": "Needs",
     "wants": "Wants",

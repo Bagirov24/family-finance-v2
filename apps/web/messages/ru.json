@@ -10,7 +10,8 @@
     "cashback": "Кэшбэк",
     "family": "Семья",
     "car": "Авто",
-    "settings": "Настройки"
+    "settings": "Настройки",
+    "more": "Ещё"
   },
   "common": {
     "save": "Сохранить",
@@ -39,6 +40,11 @@
     "all": "Все",
     "show": "Показать",
     "hide": "Скрыть"
+  },
+  "notifications": {
+    "title": "Уведомления",
+    "mark_all_read": "Прочитать все",
+    "mark_read": "Отметить прочитанным"
   },
   "transaction": {
     "add": "Добавить транзакцию",
@@ -105,7 +111,8 @@
     "top_categories": "Топ категорий",
     "recent_transactions": "Последние операции",
     "expenses": "Расходы",
-    "days_left": "{count, plural, one {# день остался} few {# дня осталось} many {# дней осталось} other {# дня осталось}}"
+    "days_left": "{count, plural, one {# день остался} few {# дня осталось} many {# дней осталось} other {# дня осталось}}",
+    "view_all": "Смотреть все"
   },
   "analytics": {
     "title": "Аналитика",
