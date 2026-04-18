@@ -64,6 +64,20 @@
     "wants": "Wants",
     "savings": "Savings"
   },
+  "transaction": {
+    "add": "Add Transaction",
+    "edit": "Edit Transaction",
+    "income": "Income",
+    "expense": "Expense",
+    "transfer": "Transfer",
+    "enterAmount": "Enter amount",
+    "selectCategory": "Select category",
+    "selectAccount": "Select account",
+    "addedIncome": "Income added",
+    "addedExpense": "Expense added",
+    "updated": "Transaction updated",
+    "noCategory": "No category"
+  },
   "transactions": {
     "title": "Transactions",
     "add": "Add Transaction",
