@@ -127,6 +127,11 @@ export default function VehicleDetailPage() {
     [fines]
   )
 
+  const totalKm = vehicle
+    ? Number(vehicle.current_mileage ?? 0) - Number(vehicle.initial_mileage ?? 0)
+    : 0
+  const costPerKm = total > 0 && totalKm > 0 ? (total / totalKm).toFixed(1) : null
+
   const isVehicleReady = !!vehicle
   const defaultMileage = String(vehicle?.current_mileage ?? '')
 
@@ -333,12 +338,12 @@ export default function VehicleDetailPage() {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <div className="rounded-2xl border bg-card p-3 text-center">
           <p className="text-xs text-muted-foreground mb-1">{t('avgConsumption')}</p>
-          <p className="font-bold tabular-nums">{fuelConsumption ? formatLper100(fuelConsumption.avgLper100) : '—'}</p>
+          <p className="font-bold tabular-nums">{fuelConsumption != null ? formatLper100(fuelConsumption) : '—'}</p>
         </div>
         <div className="rounded-2xl border bg-card p-3 text-center">
           <p className="text-xs text-muted-foreground mb-1">{t('costPerKm')}</p>
           <p className="font-bold tabular-nums">
-            {fuelConsumption ? `${fuelConsumption.costPerKm.toFixed(1)} ₽` : '—'}
+            {costPerKm != null ? `${costPerKm} ₽` : '—'}
           </p>
         </div>
         <div className="rounded-2xl border bg-card p-3 text-center">
