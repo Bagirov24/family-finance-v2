@@ -89,7 +89,12 @@
     "to_account": "To account",
     "history": "Transfer History",
     "no_transfers": "No transfers yet",
-    "transfer_received": "{from} sent you {amount}"
+    "transfer_received": "{from} sent you {amount}",
+    "created": "Transfer sent",
+    "sentTo": "Sent to {name}",
+    "receivedFrom": "Received from {name}",
+    "no_family": "Join a family to send transfers",
+    "no_recipient": "Select a recipient"
   },
   "budgets": {
     "title": "Budgets",
