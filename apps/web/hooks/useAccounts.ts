@@ -10,8 +10,8 @@ export interface Account {
   type: 'cash' | 'card' | 'savings' | 'investment' | 'credit'
   balance: number
   currency: string
-  color: string
-  icon: string
+  color: string | null
+  icon: string | null
   is_archived: boolean
   created_at: string
 }
@@ -39,11 +39,17 @@ async function fetchAccounts(userId: string) {
 
 export function useAccounts() {
   const userId = useUIStore(s => s.userId)
-  return useQuery({
+
+  const query = useQuery({
     queryKey: ['accounts', userId],
     queryFn: () => fetchAccounts(userId!),
     enabled: !!userId,
   })
+
+  const accounts = query.data ?? []
+  const totalBalance = accounts.reduce((sum, a) => sum + Number(a.balance), 0)
+
+  return { ...query, accounts, totalBalance }
 }
 
 export function useCreateAccount() {
@@ -80,6 +86,23 @@ export function useUpdateAccount() {
         .single()
       if (error) throw error
       return data
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['accounts', userId] }),
+  })
+}
+
+export function useArchiveAccount() {
+  const qc = useQueryClient()
+  const userId = useUIStore(s => s.userId)
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('accounts')
+        .update({ is_archived: true })
+        .eq('id', id)
+      if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['accounts', userId] }),
   })
