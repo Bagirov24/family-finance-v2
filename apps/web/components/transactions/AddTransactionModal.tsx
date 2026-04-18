@@ -1,4 +1,5 @@
 'use client'
+import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -10,9 +11,13 @@ import { useUIStore } from '@/store/ui.store'
 import { useCreateTransaction } from '@/hooks/useTransactions'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useCategories } from '@/hooks/useCategories'
+import { useFamily } from '@/hooks/useFamily'
 
 export function AddTransactionModal() {
+  const t = useTranslations('transaction')
+  const tc = useTranslations('common')
   const { addTransactionOpen, setAddTransactionOpen } = useUIStore()
+  const { family } = useFamily()
   const [type, setType] = useState<'income' | 'expense'>('expense')
   const [amount, setAmount] = useState('')
   const [accountId, setAccountId] = useState('')
@@ -33,9 +38,10 @@ export function AddTransactionModal() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!amount || !accountId) return
+    if (!amount || !accountId || !family?.id) return
     try {
       await mutateAsync({
+        family_id: family.id,
         account_id: accountId,
         category_id: categoryId || undefined,
         amount: parseFloat(amount),
@@ -43,11 +49,11 @@ export function AddTransactionModal() {
         date,
         comment: comment || undefined,
       })
-      toast.success(type === 'income' ? 'Доход добавлен' : 'Расход добавлен')
+      toast.success(type === 'income' ? t('income') : t('expense'))
       setAddTransactionOpen(false)
       reset()
     } catch {
-      toast.error('Ошибка при сохранении')
+      toast.error(tc('error'))
     }
   }
 
@@ -55,31 +61,29 @@ export function AddTransactionModal() {
     <Dialog open={addTransactionOpen} onOpenChange={setAddTransactionOpen}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Добавить транзакцию</DialogTitle>
+          <DialogTitle>{t('add')}</DialogTitle>
         </DialogHeader>
 
-        {/* Type toggle */}
         <div className="flex rounded-xl overflow-hidden border border-border">
-          {(['expense', 'income'] as const).map(t => (
+          {(['expense', 'income'] as const).map(currentType => (
             <button
-              key={t}
+              key={currentType}
               type="button"
-              onClick={() => { setType(t); setCategoryId('') }}
+              onClick={() => { setType(currentType); setCategoryId('') }}
               className={`flex-1 py-2 text-sm font-medium transition-colors ${
-                type === t
-                  ? t === 'expense' ? 'bg-red-500 text-white' : 'bg-green-500 text-white'
+                type === currentType
+                  ? currentType === 'expense' ? 'bg-red-500 text-white' : 'bg-green-500 text-white'
                   : 'hover:bg-accent text-muted-foreground'
               }`}
             >
-              {t === 'expense' ? '− Расход' : '+ Доход'}
+              {currentType === 'expense' ? `− ${t('expense')}` : `+ ${t('income')}`}
             </button>
           ))}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3">
-          {/* Amount */}
           <div className="space-y-1.5">
-            <Label>Сумма</Label>
+            <Label>{tc('amount')}</Label>
             <Input
               type="number"
               min="0.01"
@@ -93,12 +97,11 @@ export function AddTransactionModal() {
             />
           </div>
 
-          {/* Account */}
           <div className="space-y-1.5">
-            <Label>Счёт</Label>
+            <Label>{tc('account')}</Label>
             <Select value={accountId} onValueChange={setAccountId} required>
               <SelectTrigger>
-                <SelectValue placeholder="Выберите счёт" />
+                <SelectValue placeholder={t('selectAccount')} />
               </SelectTrigger>
               <SelectContent>
                 {accounts.map(a => (
@@ -110,12 +113,11 @@ export function AddTransactionModal() {
             </Select>
           </div>
 
-          {/* Category */}
           <div className="space-y-1.5">
-            <Label>Категория</Label>
+            <Label>{tc('category')}</Label>
             <Select value={categoryId} onValueChange={setCategoryId}>
               <SelectTrigger>
-                <SelectValue placeholder="Без категории" />
+                <SelectValue placeholder={t('selectCategory')} />
               </SelectTrigger>
               <SelectContent>
                 {categories?.map(c => (
@@ -127,9 +129,8 @@ export function AddTransactionModal() {
             </Select>
           </div>
 
-          {/* Date */}
           <div className="space-y-1.5">
-            <Label>Дата</Label>
+            <Label>{tc('date')}</Label>
             <Input
               type="date"
               value={date}
@@ -138,11 +139,10 @@ export function AddTransactionModal() {
             />
           </div>
 
-          {/* Comment */}
           <div className="space-y-1.5">
-            <Label>Комментарий</Label>
+            <Label>{tc('comment')}</Label>
             <Input
-              placeholder="Необязательно"
+              placeholder={tc('note')}
               value={comment}
               onChange={e => setComment(e.target.value)}
             />
@@ -150,10 +150,10 @@ export function AddTransactionModal() {
 
           <div className="flex gap-2 pt-1">
             <Button type="button" variant="outline" className="flex-1" onClick={() => setAddTransactionOpen(false)}>
-              Отмена
+              {tc('cancel')}
             </Button>
             <Button type="submit" className="flex-1" disabled={isPending}>
-              {isPending ? 'Сохранение...' : 'Добавить'}
+              {isPending ? tc('loading') : tc('add')}
             </Button>
           </div>
         </form>

@@ -1,11 +1,11 @@
 'use client'
 import { useTranslations } from 'next-intl'
-import { useTransactions } from '@/hooks/useTransactions'
+import { useTransactions, useDeleteTransaction } from '@/hooks/useTransactions'
 import { useFamily } from '@/hooks/useFamily'
 import { formatAmount, formatDate } from '@/lib/formatters'
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
-import { TrendingUp, TrendingDown } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 
 interface Props {
   limit?: number
@@ -21,6 +21,7 @@ export function TransactionList({ limit, showDate = true, categoryId }: Props) {
     categoryId,
     limit,
   })
+  const { mutate: deleteTransaction, isPending: isDeleting } = useDeleteTransaction()
 
   if (isLoading) {
     return (
@@ -43,7 +44,7 @@ export function TransactionList({ limit, showDate = true, categoryId }: Props) {
     return (
       <div className="py-12 text-center text-muted-foreground">
         <p className="text-4xl mb-3">💸</p>
-        <p>{t('empty')}</p>
+        <p>{t('no_transactions')}</p>
       </div>
     )
   }
@@ -56,23 +57,32 @@ export function TransactionList({ limit, showDate = true, categoryId }: Props) {
           className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted/50 transition-colors"
         >
           <div className="h-10 w-10 rounded-full flex items-center justify-center text-lg bg-muted shrink-0">
-            {(tx.category as { icon?: string } | null)?.icon ?? (tx.type === 'income' ? '💰' : '💸')}
+            {tx.category?.icon ?? (tx.type === 'income' ? '💰' : '💸')}
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-medium text-sm truncate">
-              {tx.note ||
-                t(`categories.${ (tx.category as { name_key?: string } | null)?.name_key ?? 'other'}`,
-                  { defaultValue: t('noCategory') })}
+              {tx.note || t(`categories.${tx.category?.name_key ?? 'other'}`, { defaultValue: t('no_transactions') })}
             </p>
             {showDate && (
               <p className="text-xs text-muted-foreground">{formatDate(tx.date)}</p>
             )}
           </div>
-          <div className={cn(
-            'font-semibold text-sm tabular-nums shrink-0',
-            tx.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-foreground'
-          )}>
-            {tx.type === 'income' ? '+' : '−'}{formatAmount(Number(tx.amount))}
+          <div className="flex items-center gap-2 shrink-0">
+            <div className={cn(
+              'font-semibold text-sm tabular-nums',
+              tx.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-foreground'
+            )}>
+              {tx.type === 'income' ? '+' : '−'}{formatAmount(Number(tx.amount))}
+            </div>
+            <button
+              type="button"
+              onClick={() => deleteTransaction(tx.id)}
+              disabled={isDeleting}
+              className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+              aria-label="Delete transaction"
+            >
+              <Trash2 size={14} />
+            </button>
           </div>
         </li>
       ))}

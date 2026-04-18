@@ -61,6 +61,11 @@
   "transactions": {
     "title": "Transactions",
     "add": "Add",
+    "income": "Income",
+    "expense": "Expense",
+    "expenses": "Expenses",
+    "allTypes": "All types",
+    "allCategories": "All categories",
     "no_transactions": "No transactions yet",
     "filter": "Filter",
     "search": "Search"

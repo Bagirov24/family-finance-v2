@@ -203,5 +203,17 @@
     "invalidDeleteConfirmation": "Неверное подтверждение удаления",
     "emailUpdated": "Запрос на смену email отправлен",
     "passwordUpdated": "Пароль обновлён"
+  },
+  "transactions": {
+    "title": "Транзакции",
+    "add": "Добавить",
+    "income": "Доход",
+    "expense": "Расход",
+    "expenses": "Расходы",
+    "allTypes": "Все типы",
+    "allCategories": "Все категории",
+    "no_transactions": "Транзакций пока нет",
+    "filter": "Фильтр",
+    "search": "Поиск"
   }
 }
