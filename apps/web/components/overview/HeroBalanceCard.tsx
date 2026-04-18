@@ -19,11 +19,17 @@ export function HeroBalanceCard() {
   const { totalBalance, isLoading: accountsLoading } = useAccounts()
   const { family } = useFamily()
   const { activePeriod } = useUIStore()
+  const currency = family?.currency ?? 'RUB'
+
   const { data: summary, isLoading: summaryLoading } = useMonthlySummary(
     family?.id ?? '',
     activePeriod.month,
     activePeriod.year
   )
+
+  const prevMonth = activePeriod.month === 1 ? 12 : activePeriod.month - 1
+  const prevYear = activePeriod.month === 1 ? activePeriod.year - 1 : activePeriod.year
+  const { data: prevSummary } = useMonthlySummary(family?.id ?? '', prevMonth, prevYear)
 
   useEffect(() => {
     try {
@@ -41,11 +47,6 @@ export function HeroBalanceCard() {
 
   const isLoading = accountsLoading || summaryLoading
 
-  // prev month summary for delta
-  const prevMonth = activePeriod.month === 1 ? 12 : activePeriod.month - 1
-  const prevYear = activePeriod.month === 1 ? activePeriod.year - 1 : activePeriod.year
-  const { data: prevSummary } = useMonthlySummary(family?.id ?? '', prevMonth, prevYear)
-
   const net = summary ? summary.total_income - summary.total_expense : null
   const prevNet = prevSummary ? prevSummary.total_income - prevSummary.total_expense : null
   const delta = net !== null && prevNet !== null && prevNet !== 0
@@ -62,7 +63,7 @@ export function HeroBalanceCard() {
           ) : (
             <div className="flex items-baseline gap-2 mt-1">
               <p className={cn('text-4xl font-bold tabular-nums transition-all', hidden && 'blur-md select-none')}>
-                {hidden ? '••••••' : formatAmount(totalBalance)}
+                {hidden ? '••••••' : formatAmount(totalBalance, currency)}
               </p>
               {delta !== null && (
                 <span className={cn(
@@ -97,7 +98,7 @@ export function HeroBalanceCard() {
             <div>
               <p className="text-xs opacity-70">{tc('income')}</p>
               <p className={cn('text-sm font-semibold tabular-nums', hidden && 'blur-sm select-none')}>
-                {hidden ? '••••' : formatAmount(summary.total_income)}
+                {hidden ? '••••' : formatAmount(summary.total_income, currency)}
               </p>
             </div>
           </div>
@@ -106,7 +107,7 @@ export function HeroBalanceCard() {
             <div>
               <p className="text-xs opacity-70">{t('expenses')}</p>
               <p className={cn('text-sm font-semibold tabular-nums', hidden && 'blur-sm select-none')}>
-                {hidden ? '••••' : formatAmount(summary.total_expense)}
+                {hidden ? '••••' : formatAmount(summary.total_expense, currency)}
               </p>
             </div>
           </div>

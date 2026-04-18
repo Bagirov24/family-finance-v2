@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { useEffect, useState } from 'react'
+import { useUIStore } from '@/store/ui.store'
 
 const supabase = createClient()
 
@@ -25,14 +25,8 @@ export type FamilyMember = {
 }
 
 export function useFamily() {
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const currentUserId = useUIStore(s => s.userId)
   const queryClient = useQueryClient()
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setCurrentUserId(data.user?.id ?? null)
-    })
-  }, [])
 
   const membersQuery = useQuery({
     queryKey: ['family-members'],
@@ -43,7 +37,8 @@ export function useFamily() {
         .order('joined_at')
       if (error) throw error
       return data as FamilyMember[]
-    }
+    },
+    enabled: !!currentUserId,
   })
 
   const family = membersQuery.data?.[0]?.family ?? null

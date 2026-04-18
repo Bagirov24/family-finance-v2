@@ -18,14 +18,14 @@ export default async function OverviewPage() {
       <DailyBudgetPulse />
 
       <section>
-        <h2 className="text-base font-semibold mb-3">📅 {t('top_categories')}</h2>
+        <h2 className="text-base font-semibold mb-3">{t('top_categories')}</h2>
         <div className="rounded-2xl border bg-card p-4">
           <TopCategories />
         </div>
       </section>
 
       <section>
-        <h2 className="text-base font-semibold mb-3">🕐 {t('recent_transactions')}</h2>
+        <h2 className="text-base font-semibold mb-3">{t('recent_transactions')}</h2>
         <div className="rounded-2xl border bg-card p-4">
           <TransactionList limit={10} />
         </div>

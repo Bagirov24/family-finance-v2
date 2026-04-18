@@ -1,6 +1,7 @@
 'use client'
 import { useTranslations } from 'next-intl'
 import { useBudgets } from '@/hooks/useBudgets'
+import { useFamily } from '@/hooks/useFamily'
 import { formatAmount } from '@/lib/formatters'
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -8,17 +9,17 @@ import { Skeleton } from '@/components/ui/skeleton'
 export function DailyBudgetPulse() {
   const t = useTranslations('overview')
   const { budgets, isLoading } = useBudgets()
+  const { family } = useFamily()
+  const currency = family?.currency ?? 'RUB'
 
   const now = new Date()
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
   const daysLeft = daysInMonth - now.getDate() + 1
 
   const totalBudget = budgets.reduce((s, b) => s + Number(b.amount ?? 0), 0)
-  const totalSpent = budgets.reduce((s, b) => s + Math.max(0, Number(b.amount ?? 0) - Math.max(0, b.remaining)), 0)
   const totalRemaining = budgets.reduce((s, b) => s + Math.max(0, b.remaining), 0)
   const dailyBudget = daysLeft > 0 ? totalRemaining / daysLeft : 0
 
-  // ideal daily = total budget / days in month
   const idealDaily = totalBudget > 0 ? totalBudget / daysInMonth : 0
   const ratio = idealDaily > 0 ? dailyBudget / idealDaily : 1
 
@@ -30,7 +31,6 @@ export function DailyBudgetPulse() {
     return null
   }
 
-  // danger: remaining < 0; warning: ratio < 0.5; ok otherwise
   const status = totalRemaining <= 0 ? 'danger' : ratio < 0.5 ? 'warning' : 'ok'
 
   return (
@@ -51,7 +51,7 @@ export function DailyBudgetPulse() {
           ? 'text-yellow-700 dark:text-yellow-400'
           : 'text-red-700 dark:text-red-400'
       )}>
-        {totalRemaining <= 0 ? formatAmount(0) : formatAmount(dailyBudget)}
+        {totalRemaining <= 0 ? formatAmount(0, currency) : formatAmount(dailyBudget, currency)}
       </p>
       <p className="text-xs text-muted-foreground mt-1">
         {t('daily_budget_left')} · {t('days_left', { count: daysLeft })}
