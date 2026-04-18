@@ -55,7 +55,9 @@ export default function FamilyPage() {
                     <span className="ml-2 text-xs text-muted-foreground">({t('you')})</span>
                   )}
                 </p>
-                <p className="text-xs text-muted-foreground capitalize">{m.role}</p>
+                <p className="text-xs text-muted-foreground">
+                  {m.role === 'owner' ? t('owner') : t('member')}
+                </p>
               </div>
               {m.role === 'owner' && (
                 <Crown size={16} className="text-yellow-500 shrink-0" />
