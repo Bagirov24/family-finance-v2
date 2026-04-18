@@ -23,6 +23,7 @@
     "loading": "Загрузка...",
     "error": "Ошибка",
     "success": "Сохранено!",
+    "empty": "Нет данных",
     "noData": "Нет данных",
     "total": "Итого",
     "income": "Доход",
@@ -33,7 +34,7 @@
     "account": "Счёт",
     "date": "Дата",
     "note": "Заметка",
-    "comment": "Коммент",
+    "comment": "Комментарий",
     "currency": "Валюта",
     "all": "Все",
     "show": "Показать",
@@ -106,12 +107,6 @@
     "expenses": "Расходы",
     "days_left": "{count, plural, one {# день остался} few {# дня осталось} many {# дней осталось} other {# дня осталось}}"
   },
-  "overview_legacy": {
-    "totalBalance": "Общий баланс",
-    "dailyBudget": "Бюджет на сегодня",
-    "thisMonth": "В этом месяце",
-    "topCategories": "Топ категорий"
-  },
   "analytics": {
     "title": "Аналитика",
     "by_category": "По категориям",
@@ -178,6 +173,7 @@
     "title": "Авто",
     "add": "Добавить авто",
     "noVehicles": "Автомобилей пока нет",
+    "vehicle": "Автомобиль",
     "backToCars": "Назад к авто",
     "vehicleNotFound": "Автомобиль не найден",
     "licensePlate": "Номер",
@@ -230,6 +226,18 @@
       "paid": "Оплачен",
       "disputed": "Оспаривается"
     },
+    "categories": {
+      "fuel": "Топливо",
+      "service": "Сервис",
+      "insurance": "Страховка",
+      "documents": "Документы",
+      "parking": "Парковка",
+      "wash": "Мойка",
+      "tires": "Шины",
+      "fine": "Штрафы",
+      "equipment": "Оборудование",
+      "other": "Другое"
+    },
     "expenseCategories": {
       "fuel": "Топливо",
       "service": "Сервис",
@@ -253,15 +261,11 @@
     }
   },
   "family": {
-    "title": "Семья",
-    "invite": "Пригласить",
     "myFamily": "Моя семья",
     "inviteCode": "Код приглашения",
-    "join": "Вступить",
     "members": "Участники",
     "owner": "Владелец",
     "member": "Участник",
-    "leave": "Покинуть семью",
     "you": "вы"
   },
   "settings": {

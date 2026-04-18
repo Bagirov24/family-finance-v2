@@ -3,8 +3,12 @@ import { Menu, Plus, ArrowLeftRight, ChevronLeft, ChevronRight } from 'lucide-re
 import { Button } from '@/components/ui/button'
 import { useUIStore } from '@/store/ui.store'
 import { getMonthName } from '@/lib/utils'
+import { useTranslations } from 'next-intl'
 
 export function Header() {
+  const t = useTranslations('common')
+  const tt = useTranslations('transfers')
+  const tx = useTranslations('transaction')
   const {
     setSidebarOpen,
     setAddTransactionOpen,
@@ -67,7 +71,7 @@ export function Header() {
           className="hidden sm:flex gap-1.5"
         >
           <ArrowLeftRight className="h-3.5 w-3.5" />
-          Перевод
+          {tt('send')}
         </Button>
         <Button
           size="sm"
@@ -75,7 +79,7 @@ export function Header() {
           className="gap-1.5"
         >
           <Plus className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Транзакция</span>
+          <span className="hidden sm:inline">{tx('add')}</span>
         </Button>
       </div>
     </header>
