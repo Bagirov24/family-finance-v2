@@ -5,9 +5,99 @@ import { calcFuelConsumption } from '@/lib/fuelCalc'
 
 const supabase = createClient()
 
+export type Vehicle = {
+  id: string
+  user_id: string | null
+  family_id: string | null
+  name: string
+  make: string
+  model: string
+  year: number
+  vin: string | null
+  license_plate: string | null
+  photo_url: string | null
+  purchase_date: string | null
+  initial_mileage: number
+  current_mileage: number
+  fuel_type: string | null
+  is_active: boolean | null
+  created_at: string | null
+}
+
+export type FuelEntry = {
+  id: string
+  expense_id: string | null
+  vehicle_id: string | null
+  liters: number | string
+  price_per_liter: number | string
+  full_tank: boolean
+  mileage: number
+  fuel_consumption_calculated: number | string | null
+  created_at: string | null
+  expense?: {
+    date: string
+    amount_rub: number | string
+    note: string | null
+  } | null
+}
+
+export type ServiceItemNameKey =
+  | 'motor_oil'
+  | 'air_filter'
+  | 'brake_pads'
+  | 'timing_belt'
+  | 'coolant'
+  | 'osago'
+  | 'tech_inspection'
+
+export type ServiceItem = {
+  id: string
+  vehicle_id: string | null
+  name_key: ServiceItemNameKey
+  last_replaced_date: string | null
+  last_replaced_mileage: number | null
+  replace_every_km: number | null
+  replace_every_months: number | null
+  next_due_date: string | null
+  notes: string | null
+  created_at: string | null
+}
+
+export type VehicleExpense = {
+  id: string
+  vehicle_id: string | null
+  user_id: string | null
+  transaction_id: string | null
+  category: string
+  amount_rub: number | string
+  date: string
+  mileage_at_moment: number | null
+  note: string | null
+  photo_url: string | null
+  created_at: string | null
+}
+
+export type FineStatus = 'unpaid' | 'paid' | 'disputed'
+
+export type VehicleFine = {
+  id: string
+  vehicle_id: string | null
+  user_id: string | null
+  external_id: string | null
+  amount_rub: number | string
+  discount_amount_rub: number | string | null
+  discount_until: string | null
+  issued_date: string | null
+  description: string | null
+  status: FineStatus
+  paid_at: string | null
+  transaction_id: string | null
+  created_at: string | null
+}
+
 type ServiceItemInput = {
   vehicle_id: string
-  name_key: string
+  name_key: ServiceItemNameKey
   last_replaced_date?: string | null
   last_replaced_mileage?: number | null
   replace_every_km?: number | null
@@ -18,15 +108,15 @@ type ServiceItemInput = {
 type FineInput = {
   vehicle_id: string
   user_id: string
-  family_id?: string
-  account_id?: string
+  family_id?: string | null
+  account_id?: string | null
   external_id?: string | null
   amount_rub: number
   discount_amount_rub?: number | null
   discount_until?: string | null
   issued_date?: string | null
   description?: string | null
-  status?: 'unpaid' | 'paid' | 'disputed'
+  status?: FineStatus
 }
 
 function calcNextDueDate(lastReplacedDate?: string | null, replaceEveryMonths?: number | null) {
@@ -40,7 +130,7 @@ export function useVehicles() {
   const queryClient = useQueryClient()
   const userId = useUIStore(s => s.userId)
 
-  const query = useQuery({
+  const query = useQuery<Vehicle[]>({
     queryKey: ['vehicles', userId],
     enabled: !!userId,
     queryFn: async () => {
@@ -51,7 +141,7 @@ export function useVehicles() {
         .eq('is_active', true)
         .order('created_at')
       if (error) throw error
-      return data
+      return (data ?? []) as Vehicle[]
     }
   })
 
@@ -109,7 +199,7 @@ export function useFuelLog(vehicleId: string) {
   const queryClient = useQueryClient()
   const userId = useUIStore(s => s.userId)
 
-  const query = useQuery({
+  const query = useQuery<FuelEntry[]>({
     queryKey: ['fuel-log', vehicleId],
     enabled: !!vehicleId,
     queryFn: async () => {
@@ -120,7 +210,7 @@ export function useFuelLog(vehicleId: string) {
         .order('mileage', { ascending: false })
         .limit(50)
       if (error) throw error
-      return data
+      return (data ?? []) as FuelEntry[]
     }
   })
 
@@ -210,7 +300,7 @@ export function useFuelLog(vehicleId: string) {
 export function useServiceItems(vehicleId: string) {
   const queryClient = useQueryClient()
 
-  const query = useQuery({
+  const query = useQuery<ServiceItem[]>({
     queryKey: ['service-items', vehicleId],
     enabled: !!vehicleId,
     queryFn: async () => {
@@ -220,7 +310,7 @@ export function useServiceItems(vehicleId: string) {
         .eq('vehicle_id', vehicleId)
         .order('created_at')
       if (error) throw error
-      return data
+      return (data ?? []) as ServiceItem[]
     }
   })
 
@@ -238,7 +328,7 @@ export function useServiceItems(vehicleId: string) {
 
   const updateServiceItem = useMutation({
     mutationFn: async ({ id, ...patch }: Partial<ServiceItemInput> & { id: string }) => {
-      const current = query.data?.find(i => i.id === id)
+      const current = query.data?.find((i) => i.id === id)
       if (!current) throw new Error('Not found')
       const last_replaced_date = patch.last_replaced_date ?? current.last_replaced_date
       const replace_every_months = patch.replace_every_months ?? current.replace_every_months
@@ -276,7 +366,7 @@ export function useServiceItems(vehicleId: string) {
 export function useVehicleExpenses(vehicleId: string) {
   const queryClient = useQueryClient()
 
-  const query = useQuery({
+  const query = useQuery<VehicleExpense[]>({
     queryKey: ['vehicle-expenses', vehicleId],
     enabled: !!vehicleId,
     queryFn: async () => {
@@ -287,7 +377,7 @@ export function useVehicleExpenses(vehicleId: string) {
         .order('date', { ascending: false })
         .limit(100)
       if (error) throw error
-      return data
+      return (data ?? []) as VehicleExpense[]
     }
   })
 
@@ -362,7 +452,7 @@ export function useVehicleExpenses(vehicleId: string) {
 export function useVehicleFines(vehicleId: string) {
   const queryClient = useQueryClient()
 
-  const query = useQuery({
+  const query = useQuery<VehicleFine[]>({
     queryKey: ['vehicle-fines', vehicleId],
     enabled: !!vehicleId,
     queryFn: async () => {
@@ -373,7 +463,7 @@ export function useVehicleFines(vehicleId: string) {
         .order('issued_date', { ascending: false })
         .limit(100)
       if (error) throw error
-      return data
+      return (data ?? []) as VehicleFine[]
     }
   })
 

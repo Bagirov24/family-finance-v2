@@ -12,12 +12,16 @@ import {
   useVehicleExpenses,
   useVehicleFines,
   useVehicles,
+  type FineStatus,
+  type ServiceItem,
+  type ServiceItemNameKey,
+  type VehicleFine,
 } from '@/hooks/useVehicles'
 import { formatAmount, formatDate, formatKm, formatLper100 } from '@/lib/formatters'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
-const serviceItemIcons: Record<string, string> = {
+const serviceItemIcons: Record<ServiceItemNameKey, string> = {
   motor_oil: '🛢️',
   air_filter: '🌬️',
   brake_pads: '🛑',
@@ -27,7 +31,7 @@ const serviceItemIcons: Record<string, string> = {
   tech_inspection: '🔎',
 }
 
-const serviceItemKeys = [
+const serviceItemKeys: readonly ServiceItemNameKey[] = [
   'motor_oil',
   'air_filter',
   'brake_pads',
@@ -37,13 +41,27 @@ const serviceItemKeys = [
   'tech_inspection',
 ] as const
 
+const fineStatuses: readonly FineStatus[] = ['unpaid', 'paid', 'disputed'] as const
+
+const expenseCategories = [
+  'service',
+  'insurance',
+  'documents',
+  'parking',
+  'wash',
+  'tires',
+  'fine',
+  'equipment',
+  'other',
+] as const
+
 export default function VehicleDetailPage() {
   const { vehicleId } = useParams<{ vehicleId: string }>()
   const t = useTranslations('car')
   const common = useTranslations('common')
   const { vehicles, isLoading: vehicleLoading } = useVehicles()
   const { data: accounts = [] } = useAccounts()
-  const vehicle = vehicles.find(v => v.id === vehicleId)
+  const vehicle = vehicles.find((v) => v.id === vehicleId)
 
   const [fuelAccountId, setFuelAccountId] = useState('')
   const [fuelLiters, setFuelLiters] = useState('')
@@ -53,13 +71,13 @@ export default function VehicleDetailPage() {
   const [fuelFullTank, setFuelFullTank] = useState(true)
 
   const [expenseAccountId, setExpenseAccountId] = useState('')
-  const [expenseCategory, setExpenseCategory] = useState('service')
+  const [expenseCategory, setExpenseCategory] = useState<(typeof expenseCategories)[number]>('service')
   const [expenseAmount, setExpenseAmount] = useState('')
   const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split('T')[0])
   const [expenseMileage, setExpenseMileage] = useState('')
   const [expenseNote, setExpenseNote] = useState('')
 
-  const [serviceNameKey, setServiceNameKey] = useState<typeof serviceItemKeys[number]>('motor_oil')
+  const [serviceNameKey, setServiceNameKey] = useState<ServiceItemNameKey>('motor_oil')
   const [serviceLastDate, setServiceLastDate] = useState('')
   const [serviceLastMileage, setServiceLastMileage] = useState('')
   const [serviceEveryKm, setServiceEveryKm] = useState('')
@@ -73,7 +91,7 @@ export default function VehicleDetailPage() {
   const [fineIssuedDate, setFineIssuedDate] = useState(new Date().toISOString().split('T')[0])
   const [fineDescription, setFineDescription] = useState('')
   const [fineExternalId, setFineExternalId] = useState('')
-  const [fineStatus, setFineStatus] = useState<'unpaid' | 'paid' | 'disputed'>('unpaid')
+  const [fineStatus, setFineStatus] = useState<FineStatus>('unpaid')
   const [editingFineId, setEditingFineId] = useState<string | null>(null)
 
   const { entries, fuelConsumption, isLoading: fuelLoading, addFuelEntry } = useFuelLog(vehicleId)
@@ -94,7 +112,7 @@ export default function VehicleDetailPage() {
   } = useVehicleFines(vehicleId)
 
   const unpaidFinesTotal = useMemo(
-    () => fines.filter(f => f.status === 'unpaid').reduce((sum, f) => sum + Number(f.discount_amount_rub ?? f.amount_rub), 0),
+    () => fines.filter((f) => f.status === 'unpaid').reduce((sum, f) => sum + Number(f.discount_amount_rub ?? f.amount_rub), 0),
     [fines]
   )
 
@@ -111,7 +129,7 @@ export default function VehicleDetailPage() {
     setEditingServiceId(null)
   }
 
-  function fillServiceForm(item: any) {
+  function fillServiceForm(item: ServiceItem) {
     setEditingServiceId(item.id)
     setServiceNameKey(item.name_key)
     setServiceLastDate(item.last_replaced_date ?? '')
@@ -132,7 +150,7 @@ export default function VehicleDetailPage() {
     setEditingFineId(null)
   }
 
-  function fillFineForm(fine: any) {
+  function fillFineForm(fine: VehicleFine) {
     setEditingFineId(fine.id)
     setFineAmount(String(fine.amount_rub ?? ''))
     setFineDiscountAmount(fine.discount_amount_rub != null ? String(fine.discount_amount_rub) : '')
@@ -295,7 +313,7 @@ export default function VehicleDetailPage() {
             <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
               <span>{t('mileage')}: {formatKm(Number(vehicle.current_mileage ?? 0))}</span>
               {vehicle.license_plate ? <span>• {t('licensePlate')}: {vehicle.license_plate}</span> : null}
-              {vehicle.fuel_type ? <span>• {t(`fuelTypes.${vehicle.fuel_type}`, { defaultValue: vehicle.fuel_type })}</span> : null}
+              {vehicle.fuel_type ? <span>• {t(`fuelTypes.${vehicle.fuel_type}` as const)}</span> : null}
             </div>
           </div>
         </div>
@@ -343,7 +361,7 @@ export default function VehicleDetailPage() {
                   required
                 >
                   <option value="">{t('selectAccount')}</option>
-                  {accounts.map(account => (
+                  {accounts.map((account) => (
                     <option key={account.id} value={account.id}>{account.name}</option>
                   ))}
                 </select>
@@ -378,7 +396,7 @@ export default function VehicleDetailPage() {
             <p className="text-sm text-muted-foreground text-center py-8">{t('noFuelEntries')}</p>
           ) : (
             <ul className="space-y-2">
-              {entries.map(e => (
+              {entries.map((e) => (
                 <li key={e.id} className="rounded-xl border bg-card p-3 flex justify-between items-center gap-4">
                   <div>
                     <p className="text-sm font-medium">{e.liters} L · {Number(e.price_per_liter).toFixed(1)} ₽/L</p>
@@ -398,7 +416,7 @@ export default function VehicleDetailPage() {
           <form onSubmit={handleSaveServiceItem} className="rounded-2xl border bg-card p-4 space-y-3">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                {editingServiceId ? t('editServiceItem', { defaultValue: 'Edit service item' }) : t('addServiceItem', { defaultValue: 'Add service item' })}
+                {editingServiceId ? t('editServiceItem') : t('addServiceItem')}
               </h2>
               {editingServiceId ? (
                 <button type="button" onClick={resetServiceForm} className="text-sm text-muted-foreground hover:text-foreground">
@@ -409,9 +427,9 @@ export default function VehicleDetailPage() {
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="space-y-1">
                 <span className="text-sm text-muted-foreground">{common('category')}</span>
-                <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={serviceNameKey} onChange={(e) => setServiceNameKey(e.target.value as typeof serviceItemKeys[number])}>
-                  {serviceItemKeys.map(key => (
-                    <option key={key} value={key}>{t(`serviceItems.${key}`, { defaultValue: key })}</option>
+                <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={serviceNameKey} onChange={(e) => setServiceNameKey(e.target.value as ServiceItemNameKey)}>
+                  {serviceItemKeys.map((key) => (
+                    <option key={key} value={key}>{t(`serviceItems.${key}` as const)}</option>
                   ))}
                 </select>
               </label>
@@ -424,11 +442,11 @@ export default function VehicleDetailPage() {
                 <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min={0} value={serviceLastMileage} onChange={(e) => setServiceLastMileage(e.target.value)} />
               </label>
               <label className="space-y-1">
-                <span className="text-sm text-muted-foreground">{t('replaceEveryKm', { defaultValue: 'Replace every, km' })}</span>
+                <span className="text-sm text-muted-foreground">{t('replaceEveryKm')}</span>
                 <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min={0} value={serviceEveryKm} onChange={(e) => setServiceEveryKm(e.target.value)} />
               </label>
               <label className="space-y-1">
-                <span className="text-sm text-muted-foreground">{t('replaceEveryMonths', { defaultValue: 'Replace every, months' })}</span>
+                <span className="text-sm text-muted-foreground">{t('replaceEveryMonths')}</span>
                 <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min={0} value={serviceEveryMonths} onChange={(e) => setServiceEveryMonths(e.target.value)} />
               </label>
             </div>
@@ -437,7 +455,7 @@ export default function VehicleDetailPage() {
               <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={serviceNotes} onChange={(e) => setServiceNotes(e.target.value)} />
             </label>
             <button type="submit" disabled={createServiceItem.isPending || updateServiceItem.isPending} className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
-              {editingServiceId ? common('save') : t('addServiceItem', { defaultValue: 'Add service item' })}
+              {editingServiceId ? common('save') : t('addServiceItem')}
             </button>
           </form>
 
@@ -445,8 +463,8 @@ export default function VehicleDetailPage() {
             <p className="text-sm text-muted-foreground text-center py-8">{t('noServiceItems')}</p>
           ) : (
             <ul className="space-y-2">
-              {serviceItems.map(item => {
-                const isDueByDate = item.next_due_date && new Date(item.next_due_date) <= new Date()
+              {serviceItems.map((item) => {
+                const isDueByDate = item.next_due_date ? new Date(item.next_due_date) <= new Date() : false
                 const isDueByMileage = item.replace_every_km && item.last_replaced_mileage != null
                   ? Number(vehicle.current_mileage ?? 0) >= item.last_replaced_mileage + item.replace_every_km
                   : false
@@ -459,7 +477,7 @@ export default function VehicleDetailPage() {
                   <li key={item.id} className={cn('rounded-xl border bg-card p-3', isDue && 'border-red-300 dark:border-red-700')}>
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-sm font-medium">{serviceItemIcons[item.name_key] ?? '🔧'} {t(`serviceItems.${item.name_key}`, { defaultValue: item.name_key })}</p>
+                        <p className="text-sm font-medium">{serviceItemIcons[item.name_key]} {t(`serviceItems.${item.name_key}` as const)}</p>
                         <div className="mt-1 space-y-1 text-xs text-muted-foreground">
                           <p>{item.last_replaced_date ? `${t('lastReplaced')}: ${formatDate(item.last_replaced_date)}` : t('neverReplaced')}</p>
                           {item.next_due_date ? <p>{t('nextDue')}: {formatDate(item.next_due_date)}</p> : null}
@@ -490,16 +508,16 @@ export default function VehicleDetailPage() {
                 <span className="text-sm text-muted-foreground">{common('account')}</span>
                 <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={expenseAccountId} onChange={(e) => setExpenseAccountId(e.target.value)} required>
                   <option value="">{t('selectAccount')}</option>
-                  {accounts.map(account => (
+                  {accounts.map((account) => (
                     <option key={account.id} value={account.id}>{account.name}</option>
                   ))}
                 </select>
               </label>
               <label className="space-y-1">
                 <span className="text-sm text-muted-foreground">{common('category')}</span>
-                <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={expenseCategory} onChange={(e) => setExpenseCategory(e.target.value)} required>
-                  {['service', 'insurance', 'documents', 'parking', 'wash', 'tires', 'fine', 'equipment', 'other'].map(category => (
-                    <option key={category} value={category}>{t(`expenseCategories.${category}`, { defaultValue: category })}</option>
+                <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={expenseCategory} onChange={(e) => setExpenseCategory(e.target.value as (typeof expenseCategories)[number])} required>
+                  {expenseCategories.map((category) => (
+                    <option key={category} value={category}>{t(`expenseCategories.${category}` as const)}</option>
                   ))}
                 </select>
               </label>
@@ -530,17 +548,17 @@ export default function VehicleDetailPage() {
               <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
                 {Object.entries(totalByCategory).map(([cat, sum]) => (
                   <div key={cat} className="rounded-xl border bg-card p-3">
-                    <p className="text-xs text-muted-foreground capitalize">{t(`expenseCategories.${cat}`, { defaultValue: cat })}</p>
+                    <p className="text-xs text-muted-foreground capitalize">{t(`expenseCategories.${cat}` as const)}</p>
                     <p className="font-bold tabular-nums">{formatAmount(sum)}</p>
                   </div>
                 ))}
               </div>
               {expenses.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">{t('noExpenses')}</p> : (
                 <ul className="space-y-2">
-                  {expenses.slice(0, 20).map(e => (
+                  {expenses.slice(0, 20).map((e) => (
                     <li key={e.id} className="rounded-xl border bg-card p-3 flex justify-between gap-4">
                       <div>
-                        <p className="text-sm font-medium capitalize">{t(`expenseCategories.${e.category}`, { defaultValue: e.category })}</p>
+                        <p className="text-sm font-medium capitalize">{t(`expenseCategories.${e.category}` as const)}</p>
                         <p className="text-xs text-muted-foreground">
                           {formatDate(e.date)}
                           {e.mileage_at_moment ? ` • ${formatKm(Number(e.mileage_at_moment))}` : ''}
@@ -560,7 +578,7 @@ export default function VehicleDetailPage() {
           <form onSubmit={handleSaveFine} className="rounded-2xl border bg-card p-4 space-y-3">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                {editingFineId ? t('editFine', { defaultValue: 'Edit fine' }) : t('addFine', { defaultValue: 'Add fine' })}
+                {editingFineId ? t('editFine') : t('addFine')}
               </h2>
               {editingFineId ? (
                 <button type="button" onClick={resetFineForm} className="text-sm text-muted-foreground hover:text-foreground">
@@ -574,7 +592,7 @@ export default function VehicleDetailPage() {
                 <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min="0" step="0.01" value={fineAmount} onChange={(e) => setFineAmount(e.target.value)} required />
               </label>
               <label className="space-y-1">
-                <span className="text-sm text-muted-foreground">{t('discountedAmount', { defaultValue: 'Discounted amount' })}</span>
+                <span className="text-sm text-muted-foreground">{t('discountedAmount')}</span>
                 <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min="0" step="0.01" value={fineDiscountAmount} onChange={(e) => setFineDiscountAmount(e.target.value)} />
               </label>
               <label className="space-y-1">
@@ -590,10 +608,10 @@ export default function VehicleDetailPage() {
                 <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={fineExternalId} onChange={(e) => setFineExternalId(e.target.value)} />
               </label>
               <label className="space-y-1">
-                <span className="text-sm text-muted-foreground">{t('status', { defaultValue: 'Status' })}</span>
-                <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={fineStatus} onChange={(e) => setFineStatus(e.target.value as 'unpaid' | 'paid' | 'disputed')}>
-                  {['unpaid', 'paid', 'disputed'].map(status => (
-                    <option key={status} value={status}>{t(`fineStatuses.${status}`, { defaultValue: status })}</option>
+                <span className="text-sm text-muted-foreground">{t('status')}</span>
+                <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={fineStatus} onChange={(e) => setFineStatus(e.target.value as FineStatus)}>
+                  {fineStatuses.map((status) => (
+                    <option key={status} value={status}>{t(`fineStatuses.${status}` as const)}</option>
                   ))}
                 </select>
               </label>
@@ -603,7 +621,7 @@ export default function VehicleDetailPage() {
               <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={fineDescription} onChange={(e) => setFineDescription(e.target.value)} />
             </label>
             <button type="submit" disabled={createFine.isPending || updateFine.isPending} className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
-              {editingFineId ? common('save') : t('addFine', { defaultValue: 'Add fine' })}
+              {editingFineId ? common('save') : t('addFine')}
             </button>
           </form>
 
@@ -611,7 +629,7 @@ export default function VehicleDetailPage() {
             <p className="text-sm text-muted-foreground text-center py-8">{t('noFines')}</p>
           ) : (
             <ul className="space-y-2">
-              {fines.map(fine => {
+              {fines.map((fine) => {
                 const discountedAmount = Number(fine.discount_amount_rub ?? fine.amount_rub)
                 const hasDiscount = fine.discount_amount_rub != null && Number(fine.discount_amount_rub) < Number(fine.amount_rub)
                 return (
@@ -634,7 +652,7 @@ export default function VehicleDetailPage() {
                           fine.status === 'disputed' && 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-400',
                           fine.status === 'unpaid' && 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400'
                         )}>
-                          {t(`fineStatuses.${fine.status}`, { defaultValue: fine.status })}
+                          {t(`fineStatuses.${fine.status}` as const)}
                         </span>
                         <div className="mt-2 flex justify-end gap-2">
                           <button type="button" onClick={() => fillFineForm(fine)} className="rounded-lg border px-3 py-1 text-xs">{common('edit')}</button>
