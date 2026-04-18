@@ -1,4 +1,5 @@
 'use client'
+import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -8,49 +9,53 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useUIStore } from '@/store/ui.store'
 import { useAccounts } from '@/hooks/useAccounts'
-import { createClient } from '@/lib/supabase/client'
-import { useQueryClient } from '@tanstack/react-query'
+import { useFamily } from '@/hooks/useFamily'
+import { useFamily as useFamilyMembers } from '@/hooks/useFamily'
+import { useTransfers } from '@/hooks/useTransfers'
 
 export function TransferModal() {
-  const { addTransferOpen, setAddTransferOpen, userId } = useUIStore()
-  const [fromId, setFromId] = useState('')
-  const [toId, setToId] = useState('')
-  const [amount, setAmount] = useState('')
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
-  const [comment, setComment] = useState('')
-  const [loading, setLoading] = useState(false)
+  const t = useTranslations('transfers')
+  const tc = useTranslations('common')
+  const { addTransferOpen, setAddTransferOpen } = useUIStore()
+  const { family, members, currentUserId } = useFamilyMembers()
 
-  const { data: accounts = [] } = useAccounts()
-  const qc = useQueryClient()
+  const [fromAccountId, setFromAccountId] = useState('')
+  const [toAccountId, setToAccountId] = useState('')
+  const [toUserId, setToUserId] = useState('')
+  const [amount, setAmount] = useState('')
+  const [note, setNote] = useState('')
+
+  const { accounts = [] } = useAccounts()
+  const { createTransfer } = useTransfers()
+
+  const otherMembers = members.filter(m => m.user_id !== currentUserId)
+
+  function reset() {
+    setFromAccountId('')
+    setToAccountId('')
+    setToUserId('')
+    setAmount('')
+    setNote('')
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!fromId || !toId || fromId === toId || !amount) return
-    setLoading(true)
-
+    if (!fromAccountId || !toAccountId || !toUserId || !amount || !family?.id) return
+    if (fromAccountId === toAccountId) return
     try {
-      const supabase = createClient()
-      const { error } = await supabase.from('transfers').insert({
-        user_id: userId,
-        from_account_id: fromId,
-        to_account_id: toId,
+      await createTransfer.mutateAsync({
+        family_id: family.id,
+        to_user_id: toUserId,
+        from_account_id: fromAccountId,
+        to_account_id: toAccountId,
         amount: parseFloat(amount),
-        date,
-        comment: comment || null,
-        status: 'pending',
+        note: note || undefined,
       })
-      if (error) throw error
-
-      toast.success('Перевод создан')
-      qc.invalidateQueries({ queryKey: ['transfers', userId] })
-      qc.invalidateQueries({ queryKey: ['accounts', userId] })
+      toast.success(t('created'))
       setAddTransferOpen(false)
-      setAmount('')
-      setComment('')
+      reset()
     } catch {
-      toast.error('Ошибка при создании перевода')
-    } finally {
-      setLoading(false)
+      toast.error(tc('error'))
     }
   }
 
@@ -58,12 +63,12 @@ export function TransferModal() {
     <Dialog open={addTransferOpen} onOpenChange={setAddTransferOpen}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Перевод между счетами</DialogTitle>
+          <DialogTitle>{t('send')}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="space-y-1.5">
-            <Label>Сумма</Label>
+            <Label>{tc('amount')}</Label>
             <Input
               type="number"
               min="0.01"
@@ -77,28 +82,42 @@ export function TransferModal() {
             />
           </div>
 
+          <div className="space-y-1.5">
+            <Label>{t('recipient')}</Label>
+            <Select value={toUserId} onValueChange={setToUserId} required>
+              <SelectTrigger><SelectValue placeholder={t('selectRecipient')} /></SelectTrigger>
+              <SelectContent>
+                {otherMembers.map(m => (
+                  <SelectItem key={m.user_id} value={m.user_id}>
+                    {m.display_name ?? m.user_id}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>С счёта</Label>
-              <Select value={fromId} onValueChange={setFromId} required>
-                <SelectTrigger><SelectValue placeholder="Откуда" /></SelectTrigger>
+              <Label>{t('from_account')}</Label>
+              <Select value={fromAccountId} onValueChange={setFromAccountId} required>
+                <SelectTrigger><SelectValue placeholder={t('selectFrom')} /></SelectTrigger>
                 <SelectContent>
                   {accounts.map(a => (
-                    <SelectItem key={a.id} value={a.id} disabled={a.id === toId}>
-                      {a.emoji} {a.name}
+                    <SelectItem key={a.id} value={a.id} disabled={a.id === toAccountId}>
+                      {a.icon ?? '💳'} {a.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>На счёт</Label>
-              <Select value={toId} onValueChange={setToId} required>
-                <SelectTrigger><SelectValue placeholder="Куда" /></SelectTrigger>
+              <Label>{t('to_account')}</Label>
+              <Select value={toAccountId} onValueChange={setToAccountId} required>
+                <SelectTrigger><SelectValue placeholder={t('selectTo')} /></SelectTrigger>
                 <SelectContent>
                   {accounts.map(a => (
-                    <SelectItem key={a.id} value={a.id} disabled={a.id === fromId}>
-                      {a.emoji} {a.name}
+                    <SelectItem key={a.id} value={a.id} disabled={a.id === fromAccountId}>
+                      {a.icon ?? '💳'} {a.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -107,21 +126,20 @@ export function TransferModal() {
           </div>
 
           <div className="space-y-1.5">
-            <Label>Дата</Label>
-            <Input type="date" value={date} onChange={e => setDate(e.target.value)} required />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Комментарий</Label>
-            <Input placeholder="Необязательно" value={comment} onChange={e => setComment(e.target.value)} />
+            <Label>{tc('note')}</Label>
+            <Input
+              placeholder={tc('note')}
+              value={note}
+              onChange={e => setNote(e.target.value)}
+            />
           </div>
 
           <div className="flex gap-2 pt-1">
-            <Button type="button" variant="outline" className="flex-1" onClick={() => setAddTransferOpen(false)}>
-              Отмена
+            <Button type="button" variant="outline" className="flex-1" onClick={() => { setAddTransferOpen(false); reset() }}>
+              {tc('cancel')}
             </Button>
-            <Button type="submit" className="flex-1" disabled={loading}>
-              {loading ? 'Отправка...' : 'Перевести'}
+            <Button type="submit" className="flex-1" disabled={createTransfer.isPending}>
+              {createTransfer.isPending ? tc('loading') : t('send')}
             </Button>
           </div>
         </form>
