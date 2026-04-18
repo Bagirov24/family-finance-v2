@@ -28,13 +28,20 @@ export default function SettingsPage() {
   const router = useRouter()
   const supabase = createClient()
   const userId = useUIStore(s => s.userId)
-  const { family, members, isOwner, isLoading } = useFamily()
+  const { family, members, isOwner, isLoading, invalidateMembers } = useFamily()
 
   const [tab, setTab] = useState<Tab>('profile')
   const [displayName, setDisplayName] = useState('')
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
+
+  // Profile save state
+  const [profileSaving, setProfileSaving] = useState(false)
+  const [profileSaved, setProfileSaved] = useState(false)
+
+  // Family save state
+  const [familySaving, setFamilySaving] = useState(false)
+  const [familySaved, setFamilySaved] = useState(false)
+
   const [copied, setCopied] = useState(false)
   const [familyName, setFamilyName] = useState('')
   const [currency, setCurrency] = useState('RUB')
@@ -42,16 +49,10 @@ export default function SettingsPage() {
   const [confirmLogout, setConfirmLogout] = useState(false)
   const [localeSaved, setLocaleSaved] = useState(false)
 
-  // Инициализируем locale из cookie
+  // Init locale from cookie
   useEffect(() => {
     const match = document.cookie.match(/(?:^|;\s*)NEXT_LOCALE=([^;]+)/)
     if (match) setLocale(match[1])
-  }, [])
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) return
-    })
   }, [])
 
   useEffect(() => {
@@ -64,33 +65,40 @@ export default function SettingsPage() {
   useEffect(() => {
     const member = members.find(m => m.user_id === userId)
     if (member?.display_name) setDisplayName(member.display_name)
-    if (member && 'avatar_url' in member) setAvatarUrl((member as { avatar_url?: string | null }).avatar_url ?? null)
+    if (member?.avatar_url != null) setAvatarUrl(member.avatar_url)
   }, [members, userId])
 
   async function saveProfile() {
-    setSaving(true)
+    setProfileSaving(true)
     const { error } = await supabase
       .from('family_members')
       .update({ display_name: displayName })
       .eq('user_id', userId!)
-    setSaving(false)
-    if (!error) { setSaved(true); setTimeout(() => setSaved(false), 2000) }
+    setProfileSaving(false)
+    if (!error) {
+      setProfileSaved(true)
+      setTimeout(() => setProfileSaved(false), 2000)
+    }
   }
 
   async function saveFamily() {
     if (!family || !isOwner) return
-    setSaving(true)
+    setFamilySaving(true)
     const { error } = await supabase
       .from('families')
       .update({ name: familyName, currency })
       .eq('id', family.id)
-    setSaving(false)
-    if (!error) { setSaved(true); setTimeout(() => setSaved(false), 2000) }
+    setFamilySaving(false)
+    if (!error) {
+      setFamilySaved(true)
+      setTimeout(() => setFamilySaved(false), 2000)
+    }
   }
 
   async function removeMember(memberId: string) {
     if (!isOwner || memberId === userId) return
     await supabase.from('family_members').delete().eq('user_id', memberId)
+    invalidateMembers()
   }
 
   async function handleLogout() {
@@ -158,7 +166,6 @@ export default function SettingsPage() {
           <section className="bg-card border rounded-2xl p-4 space-y-4">
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">{t('profile')}</h2>
 
-            {/* Avatar */}
             {userId && (
               <div className="flex justify-center pt-1 pb-2">
                 <AvatarUpload
@@ -182,10 +189,12 @@ export default function SettingsPage() {
             </div>
             <button
               onClick={saveProfile}
-              disabled={saving}
+              disabled={profileSaving}
               className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50"
             >
-              {saved ? <span className="flex items-center justify-center gap-1.5"><Check size={14} />{tc('success')}</span> : tc('save')}
+              {profileSaved
+                ? <span className="flex items-center justify-center gap-1.5"><Check size={14} />{tc('success')}</span>
+                : tc('save')}
             </button>
           </section>
 
@@ -252,10 +261,12 @@ export default function SettingsPage() {
               />
               <button
                 onClick={saveFamily}
-                disabled={saving}
+                disabled={familySaving}
                 className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50"
               >
-                {saved ? <span className="flex items-center justify-center gap-1.5"><Check size={14} />{tc('success')}</span> : tc('save')}
+                {familySaved
+                  ? <span className="flex items-center justify-center gap-1.5"><Check size={14} />{tc('success')}</span>
+                  : tc('save')}
               </button>
             </section>
           )}
@@ -263,46 +274,43 @@ export default function SettingsPage() {
           <section>
             <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">{t('members')}</h2>
             <div className="space-y-2">
-              {members.map(m => {
-                const memberAvatarUrl = 'avatar_url' in m ? (m as { avatar_url?: string | null }).avatar_url : null
-                return (
-                  <div
-                    key={m.user_id}
-                    className={cn(
-                      'flex items-center gap-3 p-3 rounded-2xl border bg-card',
-                      m.user_id === userId && 'border-primary/30 bg-primary/5'
-                    )}
-                  >
-                    <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0 overflow-hidden">
-                      {memberAvatarUrl
-                        ? <img src={memberAvatarUrl} alt={m.display_name ?? ''} className="w-full h-full object-cover" />
-                        : <User size={16} className="text-muted-foreground" />
-                      }
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {m.display_name ?? m.user_id.slice(0, 8)}
-                        {m.user_id === userId && (
-                          <span className="ml-1.5 text-xs text-muted-foreground">({t('you')})</span>
-                        )}
-                      </p>
-                      <p className="text-xs text-muted-foreground capitalize">{m.role}</p>
-                    </div>
-                    {m.role === 'owner'
-                      ? <Crown size={15} className="text-yellow-500 shrink-0" />
-                      : isOwner && m.user_id !== userId && (
-                        <button
-                          onClick={() => removeMember(m.user_id)}
-                          className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                          aria-label="Remove member"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      )
+              {members.map(m => (
+                <div
+                  key={m.user_id}
+                  className={cn(
+                    'flex items-center gap-3 p-3 rounded-2xl border bg-card',
+                    m.user_id === userId && 'border-primary/30 bg-primary/5'
+                  )}
+                >
+                  <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+                    {m.avatar_url
+                      ? <img src={m.avatar_url} alt={m.display_name ?? ''} className="w-full h-full object-cover" />
+                      : <User size={16} className="text-muted-foreground" />
                     }
                   </div>
-                )
-              })}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {m.display_name ?? m.user_id.slice(0, 8)}
+                      {m.user_id === userId && (
+                        <span className="ml-1.5 text-xs text-muted-foreground">({t('you')})</span>
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground capitalize">{m.role}</p>
+                  </div>
+                  {m.role === 'owner'
+                    ? <Crown size={15} className="text-yellow-500 shrink-0" />
+                    : isOwner && m.user_id !== userId && (
+                      <button
+                        onClick={() => removeMember(m.user_id)}
+                        className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                        aria-label="Remove member"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )
+                  }
+                </div>
+              ))}
             </div>
           </section>
         </div>
@@ -332,10 +340,12 @@ export default function SettingsPage() {
             {isOwner && (
               <button
                 onClick={saveFamily}
-                disabled={saving}
+                disabled={familySaving}
                 className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50"
               >
-                {saved ? <span className="flex items-center justify-center gap-1.5"><Check size={14} />{tc('success')}</span> : tc('save')}
+                {familySaved
+                  ? <span className="flex items-center justify-center gap-1.5"><Check size={14} />{tc('success')}</span>
+                  : tc('save')}
               </button>
             )}
           </section>
