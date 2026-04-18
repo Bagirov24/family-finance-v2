@@ -34,7 +34,9 @@
     "date": "Date",
     "category": "Category",
     "account": "Account",
-    "all": "All"
+    "all": "All",
+    "show": "Show",
+    "hide": "Hide"
   },
   "auth": {
     "login": "Sign In",
@@ -53,6 +55,9 @@
     "daily_budget": "Daily Budget",
     "daily_budget_left": "left today",
     "top_categories": "Top Spending",
+    "recent_transactions": "Recent Transactions",
+    "expenses": "Expenses",
+    "days_left": "{count, plural, one {# day left} other {# days left}}",
     "rule_5030": "50/30/20 Rule",
     "needs": "Needs",
     "wants": "Wants",

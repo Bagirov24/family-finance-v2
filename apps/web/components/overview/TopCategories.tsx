@@ -2,17 +2,20 @@
 import { useTranslations } from 'next-intl'
 import { useCategoryBreakdown } from '@/hooks/useAnalytics'
 import { useFamily } from '@/hooks/useFamily'
+import { useUIStore } from '@/store/ui.store'
 import { formatAmount } from '@/lib/formatters'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export function TopCategories() {
   const t = useTranslations('overview')
+  const tc = useTranslations('categories')
+  const tCommon = useTranslations('common')
   const { family } = useFamily()
-  const now = new Date()
+  const { activePeriod } = useUIStore()
   const { data, isLoading } = useCategoryBreakdown(
     family?.id ?? '',
-    now.getMonth() + 1,
-    now.getFullYear()
+    activePeriod.month,
+    activePeriod.year
   )
 
   const top = (data ?? []).slice(0, 5)
@@ -33,7 +36,7 @@ export function TopCategories() {
   }
 
   if (!top.length) {
-    return <p className="text-sm text-muted-foreground py-4 text-center">{t('noData')}</p>
+    return <p className="text-sm text-muted-foreground py-4 text-center">{tCommon('empty')}</p>
   }
 
   return (
@@ -44,7 +47,7 @@ export function TopCategories() {
           <div className="flex-1 min-w-0">
             <div className="flex justify-between items-center mb-1">
               <span className="text-sm font-medium truncate">
-                {t(`categories.${cat.name_key}`, { defaultValue: cat.name_key })}
+                {tc(cat.name_key, { defaultValue: cat.name_key })}
               </span>
               <span className="text-sm font-semibold tabular-nums shrink-0 ml-2">
                 {formatAmount(cat.total)}

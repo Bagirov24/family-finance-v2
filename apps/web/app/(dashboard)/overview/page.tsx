@@ -1,4 +1,3 @@
-import { useTranslations } from 'next-intl'
 import { getTranslations } from 'next-intl/server'
 import { HeroBalanceCard } from '@/components/overview/HeroBalanceCard'
 import { DailyBudgetPulse } from '@/components/overview/DailyBudgetPulse'
@@ -10,21 +9,23 @@ export async function generateMetadata() {
   return { title: t('title') }
 }
 
-export default function OverviewPage() {
+export default async function OverviewPage() {
+  const t = await getTranslations('overview')
+
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
       <HeroBalanceCard />
       <DailyBudgetPulse />
 
       <section>
-        <h2 className="text-base font-semibold mb-3">📅 Топ категорий за месяц</h2>
+        <h2 className="text-base font-semibold mb-3">📅 {t('top_categories')}</h2>
         <div className="rounded-2xl border bg-card p-4">
           <TopCategories />
         </div>
       </section>
 
       <section>
-        <h2 className="text-base font-semibold mb-3">🕐 Последние операции</h2>
+        <h2 className="text-base font-semibold mb-3">🕐 {t('recent_transactions')}</h2>
         <div className="rounded-2xl border bg-card p-4">
           <TransactionList limit={10} />
         </div>

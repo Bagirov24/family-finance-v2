@@ -1,13 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 
-const supabase = createClient()
-
 export function useMonthlyTrend(familyId: string, months = 6) {
   return useQuery({
     queryKey: ['monthly-trend', familyId, months],
     enabled: !!familyId,
     queryFn: async () => {
+      const supabase = createClient()
       const { data, error } = await supabase.rpc('get_income_expense_trend', {
         p_family_id: familyId,
         p_months: months,
@@ -23,6 +22,7 @@ export function useMonthlySummary(familyId: string, month: number, year: number)
     queryKey: ['monthly-summary', familyId, month, year],
     enabled: !!familyId,
     queryFn: async () => {
+      const supabase = createClient()
       const { data, error } = await supabase.rpc('get_monthly_summary', {
         p_family_id: familyId,
         p_month: month,
@@ -39,6 +39,7 @@ export function useWeekdaySpending(familyId: string) {
     queryKey: ['weekday-spending', familyId],
     enabled: !!familyId,
     queryFn: async () => {
+      const supabase = createClient()
       const { data, error } = await supabase.rpc('get_weekday_spending', {
         p_family_id: familyId,
       })
@@ -53,8 +54,10 @@ export function useCategoryBreakdown(familyId: string, month: number, year: numb
     queryKey: ['category-breakdown', familyId, month, year],
     enabled: !!familyId,
     queryFn: async () => {
+      const supabase = createClient()
       const startDate = `${year}-${String(month).padStart(2, '0')}-01`
-      const endDate   = `${year}-${String(month).padStart(2, '0')}-31`
+      const endDate = new Date(year, month, 0).toISOString().split('T')[0]
+
       const { data, error } = await supabase
         .from('transactions')
         .select('amount, category:categories(name_key, icon, color)')
@@ -62,6 +65,7 @@ export function useCategoryBreakdown(familyId: string, month: number, year: numb
         .eq('type', 'expense')
         .gte('date', startDate)
         .lte('date', endDate)
+
       if (error) throw error
 
       const map: Record<string, { name_key: string; icon: string; color: string; total: number }> = {}
@@ -71,6 +75,7 @@ export function useCategoryBreakdown(familyId: string, month: number, year: numb
         if (!map[cat.name_key]) map[cat.name_key] = { ...cat, total: 0 }
         map[cat.name_key].total += Number(t.amount)
       }
+
       return Object.values(map).sort((a, b) => b.total - a.total)
     },
   })
