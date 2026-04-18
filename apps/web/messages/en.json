@@ -80,8 +80,6 @@
   },
   "transactions": {
     "title": "Transactions",
-    "add": "Add Transaction",
-    "edit": "Edit Transaction",
     "income": "Income",
     "expense": "Expense",
     "expenses": "Expenses",
@@ -89,10 +87,7 @@
     "allCategories": "All categories",
     "no_transactions": "No transactions yet",
     "filter": "Filter",
-    "search": "Search",
-    "addedIncome": "Income added",
-    "addedExpense": "Expense added",
-    "updated": "Transaction updated"
+    "search": "Search"
   },
   "transfers": {
     "title": "Transfers",
