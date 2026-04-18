@@ -149,6 +149,26 @@
       "credit": "Кредитный"
     }
   },
+  "transfers": {
+    "title": "Переводы",
+    "send": "Отправить",
+    "accept": "Принять",
+    "decline": "Отклонить",
+    "pending": "Ожидает подтверждения",
+    "confirmed": "Подтверждён",
+    "declined": "Отклонён",
+    "recipient": "Получатель",
+    "from_account": "Со счёта",
+    "to_account": "На счёт",
+    "history": "История переводов",
+    "no_transfers": "Переводов пока нет",
+    "transfer_received": "{from} отправил(а) вам {amount}",
+    "created": "Перевод отправлен",
+    "sentTo": "Отправлено {name}",
+    "receivedFrom": "Получено от {name}",
+    "no_family": "Войдите в семью, чтобы отправлять переводы",
+    "no_recipient": "Выберите получателя"
+  },
   "car": {
     "title": "Авто",
     "add": "Добавить авто",
