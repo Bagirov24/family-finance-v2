@@ -4,13 +4,14 @@ import { useUIStore } from '@/store/ui.store'
 
 export interface Account {
   id: string
-  user_id: string
+  owner_user_id: string
+  family_id: string | null
   name: string
   type: 'cash' | 'card' | 'savings' | 'investment' | 'credit'
   balance: number
   currency: string
   color: string
-  emoji: string
+  icon: string
   is_archived: boolean
   created_at: string
 }
@@ -21,7 +22,7 @@ export interface CreateAccountInput {
   balance?: number
   currency?: string
   color?: string
-  emoji?: string
+  icon?: string
 }
 
 async function fetchAccounts(userId: string) {
@@ -29,7 +30,7 @@ async function fetchAccounts(userId: string) {
   const { data, error } = await supabase
     .from('accounts')
     .select('*')
-    .eq('user_id', userId)
+    .eq('owner_user_id', userId)
     .eq('is_archived', false)
     .order('created_at')
   if (error) throw error
@@ -54,7 +55,7 @@ export function useCreateAccount() {
       const supabase = createClient()
       const { data, error } = await supabase
         .from('accounts')
-        .insert({ ...input, user_id: userId })
+        .insert({ ...input, owner_user_id: userId })
         .select()
         .single()
       if (error) throw error
