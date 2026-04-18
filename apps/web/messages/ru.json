@@ -41,12 +41,17 @@
   },
   "transaction": {
     "add": "Добавить транзакцию",
+    "edit": "Редактировать транзакцию",
     "income": "Доход",
     "expense": "Расход",
     "transfer": "Перевод",
     "enterAmount": "Введите сумму",
     "selectCategory": "Выберите категорию",
-    "selectAccount": "Выберите счёт"
+    "selectAccount": "Выберите счёт",
+    "addedIncome": "Доход добавлен",
+    "addedExpense": "Расход добавлен",
+    "updated": "Транзакция обновлена",
+    "noCategory": "Без категории"
   },
   "budget": {
     "title": "Бюджеты",
