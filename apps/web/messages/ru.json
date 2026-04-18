@@ -107,6 +107,15 @@
     "thisMonth": "В этом месяце",
     "topCategories": "Топ категорий"
   },
+  "analytics": {
+    "title": "Аналитика",
+    "by_category": "По категориям",
+    "by_weekday": "По дням недели",
+    "income_expense": "Доходы и расходы",
+    "heatmap": "Тепловая карта трат",
+    "personal_inflation": "Личная инфляция",
+    "period_comparison": "Сравнение периодов"
+  },
   "car": {
     "title": "Авто",
     "add": "Добавить авто",
