@@ -90,18 +90,38 @@ export function useFuelLog(vehicleId: string) {
       mileage: number; full_tank: boolean; note?: string
     }) => {
       const amount = payload.liters * payload.price_per_liter
+
+      const { data: transaction, error: txError } = await supabase
+        .from('transactions')
+        .insert({
+          family_id: payload.family_id,
+          account_id: payload.account_id,
+          user_id: payload.user_id,
+          type: 'expense',
+          amount,
+          note: payload.note ?? `Топливо ${payload.liters}л`,
+          date: new Date().toISOString().split('T')[0],
+          source: 'vehicle',
+          vehicle_id: payload.vehicle_id
+        })
+        .select('id')
+        .single()
+      if (txError || !transaction) throw txError
+
       const { data: expense, error: expError } = await supabase
         .from('vehicle_expenses')
         .insert({
           vehicle_id: payload.vehicle_id,
           user_id: payload.user_id,
+          transaction_id: transaction.id,
           category: 'fuel',
           amount_rub: amount,
           date: new Date().toISOString().split('T')[0],
           mileage_at_moment: payload.mileage,
           note: payload.note
         })
-        .select().single()
+        .select('id')
+        .single()
       if (expError || !expense) throw expError
 
       const { error: fuelError } = await supabase.from('fuel_entries').insert({
@@ -114,20 +134,6 @@ export function useFuelLog(vehicleId: string) {
       })
       if (fuelError) throw fuelError
 
-      // Also record in general transactions
-      await supabase.from('transactions').insert({
-        family_id: payload.family_id,
-        account_id: payload.account_id,
-        user_id: payload.user_id,
-        type: 'expense',
-        amount,
-        note: payload.note ?? `Топливо ${payload.liters}л`,
-        date: new Date().toISOString().split('T')[0],
-        source: 'vehicle',
-        vehicle_id: payload.vehicle_id
-      })
-
-      // Update mileage
       await supabase
         .from('vehicles')
         .update({ current_mileage: payload.mileage })
@@ -216,30 +222,36 @@ export function useVehicleExpenses(vehicleId: string) {
       account_id: string; category: string;
       amount_rub: number; date: string; note?: string; mileage_at_moment?: number
     }) => {
+      const { data: transaction, error: txError } = await supabase
+        .from('transactions')
+        .insert({
+          family_id: payload.family_id,
+          account_id: payload.account_id,
+          user_id: payload.user_id,
+          type: 'expense',
+          amount: payload.amount_rub,
+          note: payload.note ?? payload.category,
+          date: payload.date,
+          source: 'vehicle',
+          vehicle_id: payload.vehicle_id
+        })
+        .select('id')
+        .single()
+      if (txError || !transaction) throw txError
+
       const { error: expError } = await supabase
         .from('vehicle_expenses')
         .insert({
           vehicle_id: payload.vehicle_id,
           user_id: payload.user_id,
-          category: payload.category as 'fuel',
+          transaction_id: transaction.id,
+          category: payload.category,
           amount_rub: payload.amount_rub,
           date: payload.date,
           note: payload.note,
           mileage_at_moment: payload.mileage_at_moment
         })
       if (expError) throw expError
-      // Mirror to transactions
-      await supabase.from('transactions').insert({
-        family_id: payload.family_id,
-        account_id: payload.account_id,
-        user_id: payload.user_id,
-        type: 'expense',
-        amount: payload.amount_rub,
-        note: payload.note ?? payload.category,
-        date: payload.date,
-        source: 'vehicle',
-        vehicle_id: payload.vehicle_id
-      })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicle-expenses', vehicleId] })
@@ -248,4 +260,26 @@ export function useVehicleExpenses(vehicleId: string) {
   })
 
   return { expenses: query.data ?? [], totalByCategory, total, isLoading: query.isLoading, addExpense }
+}
+
+export function useVehicleFines(vehicleId: string) {
+  const query = useQuery({
+    queryKey: ['vehicle-fines', vehicleId],
+    enabled: !!vehicleId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('vehicle_fines')
+        .select('*')
+        .eq('vehicle_id', vehicleId)
+        .order('issued_date', { ascending: false })
+        .limit(100)
+      if (error) throw error
+      return data
+    }
+  })
+
+  return {
+    fines: query.data ?? [],
+    isLoading: query.isLoading,
+  }
 }
