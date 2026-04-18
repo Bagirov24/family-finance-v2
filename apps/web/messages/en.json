@@ -184,6 +184,7 @@
   "car": {
     "title": "Car",
     "add": "Add Car",
+    "noVehicles": "No vehicles yet",
     "vehicle": "Vehicle",
     "backToCars": "Back to cars",
     "vehicleNotFound": "Vehicle not found",
