@@ -13,6 +13,7 @@ export interface BudgetView {
   spent: number
   remaining: number
   percent: number
+  displayPercent: number
   category: {
     name_key: string
     icon: string
@@ -28,7 +29,7 @@ async function fetchBudgets(familyId: string, month: number, year: number) {
   const [{ data: budgets, error: bErr }, { data: txs, error: tErr }] = await Promise.all([
     supabase
       .from('budgets')
-      .select('id,family_id,category_id,amount,period_month,period_year, categories(name_key,icon,color)')
+      .select('id,family_id,category_id,amount,period_month,period_year,categories(name_key,icon,color)')
       .eq('family_id', familyId)
       .eq('period_month', month)
       .eq('period_year', year),
@@ -55,7 +56,8 @@ async function fetchBudgets(familyId: string, month: number, year: number) {
     const amount = Number(b.amount)
     const spent = Number(spentMap[b.category_id] ?? 0)
     const remaining = amount - spent
-    const percent = amount > 0 ? Math.min(999, Math.round((spent / amount) * 100)) : 0
+    const rawPercent = amount > 0 ? Math.round((spent / amount) * 100) : 0
+    const displayPercent = Math.min(100, rawPercent)
 
     return {
       id: b.id,
@@ -66,13 +68,10 @@ async function fetchBudgets(familyId: string, month: number, year: number) {
       period_year: b.period_year,
       spent,
       remaining,
-      percent,
+      percent: rawPercent,
+      displayPercent,
       category: b.categories
-        ? {
-            name_key: b.categories.name_key,
-            icon: b.categories.icon,
-            color: b.categories.color,
-          }
+        ? { name_key: b.categories.name_key, icon: b.categories.icon, color: b.categories.color }
         : null,
     }
   }) as BudgetView[]
@@ -89,10 +88,7 @@ export function useBudgets() {
     enabled: !!family?.id,
   })
 
-  return {
-    ...query,
-    budgets: query.data ?? [],
-  }
+  return { ...query, budgets: query.data ?? [] }
 }
 
 export function useUpsertBudget() {
@@ -119,6 +115,19 @@ export function useUpsertBudget() {
         .single()
       if (error) throw error
       return data
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['budgets'] }),
+  })
+}
+
+export function useDeleteBudget() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const supabase = createClient()
+      const { error } = await supabase.from('budgets').delete().eq('id', id)
+      if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['budgets'] }),
   })

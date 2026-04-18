@@ -14,7 +14,7 @@ import { useUpsertBudget } from '@/hooks/useBudgets'
 export function UpsertBudgetModal() {
   const t = useTranslations('budgets')
   const tc = useTranslations('common')
-  const tg = useTranslations('categories')
+  const tcat = useTranslations('categories')
   const [open, setOpen] = useState(false)
   const [categoryId, setCategoryId] = useState('')
   const [amount, setAmount] = useState('')
@@ -27,14 +27,18 @@ export function UpsertBudgetModal() {
     setAmount('')
   }
 
+  function handleOpenChange(v: boolean) {
+    setOpen(v)
+    if (!v) reset()
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!categoryId || !amount) return
     try {
       await upsertBudget.mutateAsync({ category_id: categoryId, amount: parseFloat(amount) })
       toast.success(t('saved'))
-      setOpen(false)
-      reset()
+      handleOpenChange(false)
     } catch {
       toast.error(tc('error'))
     }
@@ -46,7 +50,7 @@ export function UpsertBudgetModal() {
         <Plus size={16} className="mr-1" />{t('add')}
       </Button>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>{t('add')}</DialogTitle>
@@ -55,12 +59,12 @@ export function UpsertBudgetModal() {
           <form onSubmit={handleSubmit} className="space-y-3">
             <div className="space-y-1.5">
               <Label>{tc('category')}</Label>
-              <Select value={categoryId} onValueChange={setCategoryId} required>
+              <Select value={categoryId} onValueChange={setCategoryId}>
                 <SelectTrigger><SelectValue placeholder={tc('category')} /></SelectTrigger>
                 <SelectContent>
                   {categories.map(c => (
                     <SelectItem key={c.id} value={c.id}>
-                      {c.icon} {tg(c.name_key, { defaultValue: c.name_key })}
+                      {c.icon} {tcat(c.name_key as Parameters<typeof tcat>[0], { defaultValue: c.name_key })}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -83,7 +87,7 @@ export function UpsertBudgetModal() {
             </div>
 
             <div className="flex gap-2 pt-1">
-              <Button type="button" variant="outline" className="flex-1" onClick={() => setOpen(false)}>
+              <Button type="button" variant="outline" className="flex-1" onClick={() => handleOpenChange(false)}>
                 {tc('cancel')}
               </Button>
               <Button type="submit" className="flex-1" disabled={upsertBudget.isPending}>
