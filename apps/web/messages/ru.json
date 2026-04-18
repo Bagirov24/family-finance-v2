@@ -178,7 +178,6 @@
     "title": "Авто",
     "add": "Добавить авто",
     "noVehicles": "Автомобилей пока нет",
-    "vehicle": "Автомобиль",
     "backToCars": "Назад к авто",
     "vehicleNotFound": "Автомобиль не найден",
     "licensePlate": "Номер",
@@ -230,18 +229,6 @@
       "unpaid": "Не оплачен",
       "paid": "Оплачен",
       "disputed": "Оспаривается"
-    },
-    "categories": {
-      "fuel": "Топливо",
-      "service": "Сервис",
-      "insurance": "Страховка",
-      "documents": "Документы",
-      "parking": "Парковка",
-      "wash": "Мойка",
-      "tires": "Шины",
-      "fine": "Штрафы",
-      "equipment": "Оборудование",
-      "other": "Другое"
     },
     "expenseCategories": {
       "fuel": "Топливо",

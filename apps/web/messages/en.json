@@ -185,7 +185,6 @@
     "title": "Car",
     "add": "Add Car",
     "noVehicles": "No vehicles yet",
-    "vehicle": "Vehicle",
     "backToCars": "Back to cars",
     "vehicleNotFound": "Vehicle not found",
     "licensePlate": "Plate",
@@ -237,18 +236,6 @@
       "unpaid": "Unpaid",
       "paid": "Paid",
       "disputed": "Disputed"
-    },
-    "categories": {
-      "fuel": "Fuel",
-      "service": "Service",
-      "insurance": "Insurance",
-      "documents": "Documents",
-      "parking": "Parking",
-      "wash": "Car Wash",
-      "tires": "Tires",
-      "fine": "Fines",
-      "equipment": "Equipment",
-      "other": "Other"
     },
     "expenseCategories": {
       "fuel": "Fuel",
