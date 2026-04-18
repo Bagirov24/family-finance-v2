@@ -70,7 +70,8 @@ export function useCategoryBreakdown(familyId: string, month: number, year: numb
 
       const map: Record<string, { name_key: string; icon: string; color: string; total: number }> = {}
       for (const t of data ?? []) {
-        const cat = t.category as { name_key: string; icon: string; color: string } | null
+        const categoryRaw = t.category as { name_key: string; icon: string; color: string }[] | { name_key: string; icon: string; color: string } | null
+        const cat = Array.isArray(categoryRaw) ? categoryRaw[0] ?? null : categoryRaw
         if (!cat) continue
         if (!map[cat.name_key]) map[cat.name_key] = { ...cat, total: 0 }
         map[cat.name_key].total += Number(t.amount)
