@@ -3,8 +3,8 @@ import { useTranslations } from 'next-intl'
 import { useVehicles } from '@/hooks/useVehicles'
 import { Skeleton } from '@/components/ui/skeleton'
 import Link from 'next/link'
-import { Car, Plus } from 'lucide-react'
-import { formatAmount } from '@/lib/formatters'
+import { Car } from 'lucide-react'
+import { AddVehicleModal } from '@/components/car/AddVehicleModal'
 
 export default function CarPage() {
   const t = useTranslations('car')
@@ -14,6 +14,7 @@ export default function CarPage() {
     <div className="max-w-2xl mx-auto space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">{t('title')}</h1>
+        <AddVehicleModal />
       </div>
 
       {isLoading ? (
