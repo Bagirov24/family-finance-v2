@@ -1,6 +1,6 @@
 [build]
   base    = "apps/web"
-  command = "rm -rf node_modules && npm install && npm install next@15.3.2 --save-exact && npm run build"
+  command = "npm install next@15.3.3 --save-exact && npm run build"
   publish = ".next"
 
 [build.environment]
