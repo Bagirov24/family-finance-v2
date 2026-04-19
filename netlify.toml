@@ -1,6 +1,6 @@
 [build]
   base    = "/"
-  command = "corepack enable && pnpm install --frozen-lockfile && pnpm --filter web build"
+  command = "corepack enable && pnpm install --no-frozen-lockfile && pnpm --filter web build"
   publish = "apps/web/.next"
 
 [build.environment]
