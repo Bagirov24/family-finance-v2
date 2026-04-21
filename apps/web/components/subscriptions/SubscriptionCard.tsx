@@ -1,8 +1,20 @@
 'use client'
 import { useTranslations } from 'next-intl'
+import { useState } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { formatAmount } from '@/lib/formatters'
+import { formatAmount, formatFullDate } from '@/lib/formatters'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import type { Subscription } from '@/hooks/useSubscriptions'
 
 interface Props {
@@ -11,9 +23,18 @@ interface Props {
   onDelete?: (id: string) => void
 }
 
+const CYCLE_KEYS = {
+  monthly: 'monthly',
+  yearly: 'yearly',
+  weekly: 'weekly',
+} as const
+
 export function SubscriptionCard({ subscription: s, onEdit, onDelete }: Props) {
   const t = useTranslations('subscriptions')
   const tc = useTranslations('common')
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
+  const cycleKey = CYCLE_KEYS[s.billing_cycle] ?? 'monthly'
 
   return (
     <div className={cn(
@@ -42,30 +63,48 @@ export function SubscriptionCard({ subscription: s, onEdit, onDelete }: Props) {
             </button>
           )}
           {onDelete && (
-            <button
-              type="button"
-              onClick={() => onDelete(s.id)}
-              className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive"
-              aria-label={tc('delete')}
-            >
-              <Trash2 size={14} />
-            </button>
+            <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+              <AlertDialogTrigger asChild>
+                <button
+                  type="button"
+                  className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive"
+                  aria-label={tc('delete')}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{t('deleteTitle')}</AlertDialogTitle>
+                  <AlertDialogDescription>{t('deleteDescription')}</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{tc('cancel')}</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    onClick={() => onDelete(s.id)}
+                  >
+                    {tc('delete')}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           )}
         </div>
       </div>
 
       <div className="flex items-end justify-between">
         <span className="text-xl font-bold tabular-nums">
-          {formatAmount(s.amount)}
+          {formatAmount(s.amount, s.currency)}
         </span>
         <span className="text-xs text-muted-foreground">
-          {t(s.billing_cycle)}
+          {t(cycleKey)}
         </span>
       </div>
 
       {s.next_billing_date && (
         <p className="text-xs text-muted-foreground">
-          {t('next_billing')}: {s.next_billing_date}
+          {t('next_billing')}: {formatFullDate(s.next_billing_date)}
         </p>
       )}
     </div>

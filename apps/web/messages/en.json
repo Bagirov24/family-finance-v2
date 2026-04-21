@@ -366,6 +366,8 @@
     "name_label": "Name",
     "name_placeholder": "For example, Netflix",
     "icon": "Icon",
-    "category_placeholder": "Streaming"
+    "category_placeholder": "Streaming",
+    "deleteTitle": "Delete subscription?",
+    "deleteDescription": "This action cannot be undone."
   }
 }
