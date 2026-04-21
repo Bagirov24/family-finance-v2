@@ -34,6 +34,7 @@ export function useFamily() {
       const { data, error } = await supabase
         .from('family_members')
         .select('*, family:families(id, name, invite_code, currency)')
+        .eq('user_id', currentUserId!)
         .order('joined_at')
       if (error) throw error
       return data as FamilyMember[]

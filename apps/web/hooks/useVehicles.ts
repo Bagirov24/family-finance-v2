@@ -161,7 +161,7 @@ export function useVehicles() {
 
   const createVehicle = useMutation({
     mutationFn: async (payload: {
-      family_id: string
+      family_id: string | null
       name: string
       make: string
       model: string

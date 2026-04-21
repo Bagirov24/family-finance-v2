@@ -42,11 +42,10 @@ export function AddVehicleModal() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!name.trim() || !make.trim() || !model.trim()) return
-    if (!family?.id) { toast.error('Нет семьи'); return }
     setLoading(true)
     try {
       await createVehicle.mutateAsync({
-        family_id: family.id,
+        family_id: family?.id ?? null,
         name: name.trim(),
         make: make.trim(),
         model: model.trim(),
