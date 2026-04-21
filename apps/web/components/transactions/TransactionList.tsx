@@ -8,16 +8,7 @@ import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Trash2, Pencil } from 'lucide-react'
 import { EditTransactionModal } from './EditTransactionModal'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { DeleteConfirmDialog } from '@/components/shared/DeleteConfirmDialog'
 
 interface Props {
   limit?: number
@@ -56,7 +47,7 @@ export function TransactionList({ limit, showDate = true, categoryId, type }: Pr
   if (!transactions.length) {
     return (
       <div className="py-12 text-center text-muted-foreground">
-        <p className="text-4xl mb-3">💸</p>
+        <p className="text-4xl mb-3">\uD83D\uDCB8</p>
         <p>{t('no_transactions')}</p>
       </div>
     )
@@ -76,7 +67,7 @@ export function TransactionList({ limit, showDate = true, categoryId, type }: Pr
               className="group flex items-center gap-3 p-3 rounded-xl border border-transparent hover:border-border hover:bg-muted/30 transition-colors"
             >
               <div className="h-10 w-10 rounded-full flex items-center justify-center text-lg bg-muted shrink-0">
-                {tx.category?.icon ?? (tx.type === 'income' ? '💰' : '💸')}
+                {tx.category?.icon ?? (tx.type === 'income' ? '\uD83D\uDCB0' : '\uD83D\uDCB8')}
               </div>
 
               <div className="flex-1 min-w-0">
@@ -94,7 +85,7 @@ export function TransactionList({ limit, showDate = true, categoryId, type }: Pr
                     tx.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-foreground'
                   )}
                 >
-                  {tx.type === 'income' ? '+' : '−'}{formatAmount(Number(tx.amount))}
+                  {tx.type === 'income' ? '+' : '\u2212'}{formatAmount(Number(tx.amount))}
                 </div>
                 <button
                   type="button"
@@ -120,29 +111,21 @@ export function TransactionList({ limit, showDate = true, categoryId, type }: Pr
 
       <EditTransactionModal transaction={editTx} open={!!editTx} onClose={() => setEditTx(null)} />
 
-      <AlertDialog open={!!deleteTx} onOpenChange={open => { if (!open) setDeleteTx(null) }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('deleteTitle')}</AlertDialogTitle>
-            <AlertDialogDescription>{t('deleteDescription')}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{tc('cancel')}</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={isDeleting}
-              onClick={() => {
-                if (deleteTx) {
-                  deleteTransaction(deleteTx.id)
-                  setDeleteTx(null)
-                }
-              }}
-            >
-              {tc('delete')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        open={!!deleteTx}
+        onOpenChange={open => { if (!open) setDeleteTx(null) }}
+        title={t('deleteTitle')}
+        description={t('deleteDescription')}
+        confirmLabel={tc('delete')}
+        cancelLabel={tc('cancel')}
+        onConfirm={() => {
+          if (deleteTx) {
+            deleteTransaction(deleteTx.id)
+            setDeleteTx(null)
+          }
+        }}
+        isLoading={isDeleting}
+      />
     </>
   )
 }
