@@ -8,6 +8,16 @@ import { useUIStore } from '@/store/ui.store'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AvatarUpload } from '@/components/ui/AvatarUpload'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
   User, Users, Settings2, LogOut, Copy, Check,
   Crown, Trash2, ChevronRight, Shield, Mail, KeyRound
 } from 'lucide-react'
@@ -55,6 +65,9 @@ export default function SettingsPage() {
   const [confirmLogout, setConfirmLogout] = useState(false)
   const [localeSaved, setLocaleSaved] = useState(false)
   const [accountError, setAccountError] = useState<string | null>(null)
+
+  // AlertDialog state for kicking a member
+  const [kickMemberId, setKickMemberId] = useState<string | null>(null)
 
   useEffect(() => {
     const match = document.cookie.match(/(?:^|;\s*)NEXT_LOCALE=([^;]+)/)
@@ -107,10 +120,11 @@ export default function SettingsPage() {
     }
   }
 
-  async function removeMember(memberId: string) {
-    if (!isOwner || memberId === userId) return
-    await supabase.from('family_members').delete().eq('user_id', memberId)
+  async function confirmRemoveMember() {
+    if (!kickMemberId || !isOwner || kickMemberId === userId) return
+    await supabase.from('family_members').delete().eq('user_id', kickMemberId)
     invalidateMembers()
+    setKickMemberId(null)
   }
 
   async function handleLogout() {
@@ -121,16 +135,10 @@ export default function SettingsPage() {
   async function handleEmailChange() {
     setAccountError(null)
     if (!newEmail.trim()) return
-
     setEmailSaving(true)
     const { error } = await supabase.auth.updateUser({ email: newEmail.trim() })
     setEmailSaving(false)
-
-    if (error) {
-      setAccountError(error.message)
-      return
-    }
-
+    if (error) { setAccountError(error.message); return }
     setEmailSaved(true)
     setTimeout(() => setEmailSaved(false), 2000)
     setNewEmail('')
@@ -142,16 +150,10 @@ export default function SettingsPage() {
       setAccountError(t('newPasswordPlaceholder'))
       return
     }
-
     setPasswordSaving(true)
     const { error } = await supabase.auth.updateUser({ password: newPassword })
     setPasswordSaving(false)
-
-    if (error) {
-      setAccountError(error.message)
-      return
-    }
-
+    if (error) { setAccountError(error.message); return }
     setPasswordSaved(true)
     setTimeout(() => setPasswordSaved(false), 2000)
     setNewPassword('')
@@ -159,12 +161,10 @@ export default function SettingsPage() {
 
   async function handleDeleteAccount() {
     setAccountError(null)
-
     if (deleteConfirmation !== 'DELETE') {
       setAccountError(t('invalidDeleteConfirmation'))
       return
     }
-
     if (userId) {
       setDeleteSaving(true)
       await supabase.from('family_members').delete().eq('user_id', userId)
@@ -231,7 +231,6 @@ export default function SettingsPage() {
         <div className="space-y-4">
           <section className="bg-card border rounded-2xl p-4 space-y-4">
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">{t('profile')}</h2>
-
             {userId && (
               <div className="flex justify-center pt-1 pb-2">
                 <AvatarUpload
@@ -243,7 +242,6 @@ export default function SettingsPage() {
                 />
               </div>
             )}
-
             <div className="space-y-2">
               <label className="text-sm font-medium">{t('displayName')}</label>
               <input
@@ -366,9 +364,9 @@ export default function SettingsPage() {
                     ? <Crown size={15} className="text-yellow-500 shrink-0" />
                     : isOwner && m.user_id !== userId && (
                       <button
-                        onClick={() => removeMember(m.user_id)}
-                        className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                        aria-label="Remove member"
+                        onClick={() => setKickMemberId(m.user_id)}
+                        className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                        aria-label={t('removeMember')}
                       >
                         <Trash2 size={14} />
                       </button>
@@ -530,6 +528,25 @@ export default function SettingsPage() {
           )}
         </div>
       )}
+
+      {/* AlertDialog: kick member confirmation */}
+      <AlertDialog open={!!kickMemberId} onOpenChange={open => { if (!open) setKickMemberId(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('removeMemberTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('removeMemberDescription')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{tc('cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={confirmRemoveMember}
+            >
+              {t('removeMember')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

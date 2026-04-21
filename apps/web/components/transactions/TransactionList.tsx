@@ -8,6 +8,16 @@ import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Trash2, Pencil } from 'lucide-react'
 import { EditTransactionModal } from './EditTransactionModal'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 interface Props {
   limit?: number
@@ -18,11 +28,13 @@ interface Props {
 
 export function TransactionList({ limit, showDate = true, categoryId, type }: Props) {
   const t = useTranslations('transactions')
+  const tc = useTranslations('common')
   const tcat = useTranslations('categories')
   const { family } = useFamily()
   const { transactions, isLoading } = useTransactions({ familyId: family?.id, categoryId, limit, type })
   const { mutate: deleteTransaction, isPending: isDeleting } = useDeleteTransaction()
   const [editTx, setEditTx] = useState<Transaction | null>(null)
+  const [deleteTx, setDeleteTx] = useState<Transaction | null>(null)
 
   if (isLoading) {
     return (
@@ -84,19 +96,18 @@ export function TransactionList({ limit, showDate = true, categoryId, type }: Pr
                 <button
                   type="button"
                   onClick={() => setEditTx(tx)}
-                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                  aria-label="Edit transaction"
+                  className="p-2.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  aria-label={t('edit')}
                 >
-                  <Pencil size={13} />
+                  <Pencil size={14} />
                 </button>
                 <button
                   type="button"
-                  onClick={() => deleteTransaction(tx.id)}
-                  disabled={isDeleting}
-                  className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
-                  aria-label="Delete transaction"
+                  onClick={() => setDeleteTx(tx)}
+                  className="p-2.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                  aria-label={t('delete')}
                 >
-                  <Trash2 size={13} />
+                  <Trash2 size={14} />
                 </button>
               </div>
             </li>
@@ -109,6 +120,32 @@ export function TransactionList({ limit, showDate = true, categoryId, type }: Pr
         open={!!editTx}
         onClose={() => setEditTx(null)}
       />
+
+      <AlertDialog open={!!deleteTx} onOpenChange={open => { if (!open) setDeleteTx(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('deleteTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('deleteDescription')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{tc('cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
+              onClick={() => {
+                if (deleteTx) {
+                  deleteTransaction(deleteTx.id)
+                  setDeleteTx(null)
+                }
+              }}
+            >
+              {tc('delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

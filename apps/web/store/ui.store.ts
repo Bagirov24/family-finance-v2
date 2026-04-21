@@ -1,5 +1,14 @@
 import { create } from 'zustand'
 
+const THEME_KEY = 'ff-theme'
+
+function getPersistedTheme(): 'light' | 'dark' | 'system' {
+  if (typeof window === 'undefined') return 'system'
+  const stored = localStorage.getItem(THEME_KEY)
+  if (stored === 'light' || stored === 'dark' || stored === 'system') return stored
+  return 'system'
+}
+
 interface UIState {
   userId: string | null
   sidebarOpen: boolean
@@ -25,12 +34,15 @@ export const useUIStore = create<UIState>(set => ({
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear(),
   },
-  theme: 'system',
+  theme: getPersistedTheme(),
 
   setUserId: (id) => set({ userId: id }),
   setSidebarOpen: (v) => set({ sidebarOpen: v }),
   setAddTransactionOpen: (v) => set({ addTransactionOpen: v }),
   setAddTransferOpen: (v) => set({ addTransferOpen: v }),
   setActivePeriod: (month, year) => set({ activePeriod: { month, year } }),
-  setTheme: (t) => set({ theme: t }),
+  setTheme: (t) => {
+    if (typeof window !== 'undefined') localStorage.setItem(THEME_KEY, t)
+    set({ theme: t })
+  },
 }))
