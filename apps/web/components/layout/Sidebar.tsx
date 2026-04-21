@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, Target,
-  CreditCard, Landmark, BarChart2, Gift, Users, Car, Settings, X
+  CreditCard, Landmark, BarChart2, Gift, Users, Car, Settings, X, RefreshCw
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/store/ui.store'
@@ -15,17 +15,18 @@ export function Sidebar() {
   const t = useTranslations('nav')
 
   const NAV_ITEMS = [
-    { href: '/overview',      icon: LayoutDashboard, label: t('overview') },
-    { href: '/transactions',  icon: CreditCard,      label: t('transactions') },
-    { href: '/transfers',     icon: ArrowLeftRight,  label: t('transfers') },
-    { href: '/budgets',       icon: Wallet,          label: t('budgets') },
-    { href: '/goals',         icon: Target,          label: t('goals') },
-    { href: '/accounts',      icon: Landmark,        label: t('accounts') },
-    { href: '/analytics',     icon: BarChart2,       label: t('analytics') },
-    { href: '/cashback',      icon: Gift,            label: t('cashback') },
-    { href: '/family',        icon: Users,           label: t('family') },
-    { href: '/car',           icon: Car,             label: t('car') },
-    { href: '/settings',      icon: Settings,        label: t('settings') },
+    { href: '/overview',       icon: LayoutDashboard, label: t('overview') },
+    { href: '/transactions',   icon: CreditCard,      label: t('transactions') },
+    { href: '/transfers',      icon: ArrowLeftRight,  label: t('transfers') },
+    { href: '/budgets',        icon: Wallet,          label: t('budgets') },
+    { href: '/goals',          icon: Target,          label: t('goals') },
+    { href: '/accounts',       icon: Landmark,        label: t('accounts') },
+    { href: '/analytics',      icon: BarChart2,       label: t('analytics') },
+    { href: '/cashback',       icon: Gift,            label: t('cashback') },
+    { href: '/subscriptions',  icon: RefreshCw,       label: t('subscriptions') },
+    { href: '/family',         icon: Users,           label: t('family') },
+    { href: '/car',            icon: Car,             label: t('car') },
+    { href: '/settings',       icon: Settings,        label: t('settings') },
   ]
 
   return (

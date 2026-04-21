@@ -17,6 +17,7 @@ import {
   Moon,
   Monitor,
   ChevronRight,
+  RefreshCw,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
@@ -49,10 +50,11 @@ export function BottomNav() {
   ]
 
   const MORE_ITEMS = [
-    { href: '/goals', icon: Target, label: t('goals') },
-    { href: '/car', icon: Car, label: t('car') },
-    { href: '/transfers', icon: ArrowLeftRight, label: t('transfers') },
-    { href: '/settings', icon: Settings, label: t('settings') },
+    { href: '/goals',          icon: Target,      label: t('goals') },
+    { href: '/subscriptions',  icon: RefreshCw,   label: t('subscriptions') },
+    { href: '/car',            icon: Car,         label: t('car') },
+    { href: '/transfers',      icon: ArrowLeftRight, label: t('transfers') },
+    { href: '/settings',       icon: Settings,    label: t('settings') },
   ]
 
   const moreActive = MORE_ITEMS.some(i => pathname.startsWith(i.href))
