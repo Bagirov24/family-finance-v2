@@ -374,6 +374,8 @@
     "name_label": "Название",
     "name_placeholder": "Например, Netflix",
     "icon": "Иконка",
-    "category_placeholder": "Стриминг"
+    "category_placeholder": "Стриминг",
+    "deleteTitle": "Удалить подписку?",
+    "deleteDescription": "Это действие нельзя отменить."
   }
 }
