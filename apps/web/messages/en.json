@@ -94,7 +94,11 @@
     "allCategories": "All categories",
     "no_transactions": "No transactions yet",
     "filter": "Filter",
-    "search": "Search"
+    "search": "Search",
+    "deleteTitle": "Delete transaction?",
+    "deleteDescription": "This action cannot be undone.",
+    "edit": "Edit",
+    "delete": "Delete"
   },
   "transfers": {
     "title": "Transfers",
@@ -277,7 +281,19 @@
     "leave": "Leave Family",
     "myFamily": "My Family",
     "inviteCode": "Invite Code",
-    "you": "you"
+    "you": "you",
+    "copyCode": "Copy code",
+    "copied": "Copied!",
+    "setupTitle": "Set up your family",
+    "setupSubtitle": "Create a new family or join an existing one by code",
+    "createFamily": "Create Family",
+    "joinFamily": "Join Family",
+    "familyNamePlaceholder": "e.g. Smith Family",
+    "inviteCodePlaceholder": "Enter code (6 chars)",
+    "errorCreate": "Failed to create family",
+    "errorJoin": "Failed to join family",
+    "invalidCode": "Invalid invite code",
+    "alreadyMember": "You are already a member of this family"
   },
   "settings": {
     "title": "Settings",

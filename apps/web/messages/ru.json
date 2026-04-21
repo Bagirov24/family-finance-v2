@@ -273,7 +273,19 @@
     "members": "Участники",
     "owner": "Владелец",
     "member": "Участник",
-    "you": "вы"
+    "you": "вы",
+    "copyCode": "Скопировать код",
+    "copied": "Скопировано!",
+    "setupTitle": "Настройка семьи",
+    "setupSubtitle": "Создайте новую семью или вступите в существующую по коду",
+    "createFamily": "Создать семью",
+    "joinFamily": "Вступить в семью",
+    "familyNamePlaceholder": "Например, Семья Багировых",
+    "inviteCodePlaceholder": "Введите код (6 символов)",
+    "errorCreate": "Не удалось создать семью",
+    "errorJoin": "Не удалось вступить в семью",
+    "invalidCode": "Неверный код приглашения",
+    "alreadyMember": "Вы уже состоите в этой семье"
   },
   "settings": {
     "title": "Настройки",
@@ -322,7 +334,11 @@
     "allCategories": "Все категории",
     "no_transactions": "Транзакций пока нет",
     "filter": "Фильтр",
-    "search": "Поиск"
+    "search": "Поиск",
+    "deleteTitle": "Удалить транзакцию?",
+    "deleteDescription": "Это действие нельзя отменить.",
+    "edit": "Редактировать",
+    "delete": "Удалить"
   },
   "categories": {
     "groceries": "Продукты",
