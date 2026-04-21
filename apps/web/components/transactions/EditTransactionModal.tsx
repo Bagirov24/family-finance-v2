@@ -2,7 +2,7 @@
 import { useTranslations } from 'next-intl'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -64,19 +64,19 @@ export function EditTransactionModal({ transaction: tx, open, onClose }: Props) 
   }
 
   return (
-    <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{t('edit')}</DialogTitle>
-        </DialogHeader>
+    <Sheet open={open} onOpenChange={v => { if (!v) onClose() }}>
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>{t('edit')}</SheetTitle>
+        </SheetHeader>
 
-        <div className="flex rounded-xl overflow-hidden border border-border">
+        <div className="flex rounded-xl overflow-hidden border border-border mb-3">
           {(['expense', 'income'] as const).map(currentType => (
             <button
               key={currentType}
               type="button"
               onClick={() => { setType(currentType); setCategoryId('') }}
-              className={`flex-1 py-2 text-sm font-medium transition-colors ${
+              className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
                 type === currentType
                   ? currentType === 'expense' ? 'bg-red-500 text-white' : 'bg-green-500 text-white'
                   : 'hover:bg-accent text-muted-foreground'
@@ -92,20 +92,21 @@ export function EditTransactionModal({ transaction: tx, open, onClose }: Props) 
             <Label>{tc('amount')}</Label>
             <Input
               type="number"
+              inputMode="decimal"
               min="0.01"
               step="0.01"
               placeholder="0.00"
               value={amount}
               onChange={e => setAmount(e.target.value)}
               required
-              className="text-lg font-semibold tabular-nums"
+              className="text-lg font-semibold tabular-nums h-12"
             />
           </div>
 
           <div className="space-y-1.5">
             <Label>{tc('account')}</Label>
             <Select value={accountId} onValueChange={setAccountId}>
-              <SelectTrigger><SelectValue placeholder={t('selectAccount')} /></SelectTrigger>
+              <SelectTrigger className="h-11"><SelectValue placeholder={t('selectAccount')} /></SelectTrigger>
               <SelectContent>
                 {accounts.map(a => (
                   <SelectItem key={a.id} value={a.id}>{a.icon} {a.name}</SelectItem>
@@ -117,7 +118,7 @@ export function EditTransactionModal({ transaction: tx, open, onClose }: Props) 
           <div className="space-y-1.5">
             <Label>{tc('category')}</Label>
             <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger><SelectValue placeholder={t('selectCategory')} /></SelectTrigger>
+              <SelectTrigger className="h-11"><SelectValue placeholder={t('selectCategory')} /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="">{t('noCategory')}</SelectItem>
                 {categories.map(c => (
@@ -131,7 +132,7 @@ export function EditTransactionModal({ transaction: tx, open, onClose }: Props) 
 
           <div className="space-y-1.5">
             <Label>{tc('date')}</Label>
-            <Input type="date" value={date} onChange={e => setDate(e.target.value)} required />
+            <Input type="date" value={date} onChange={e => setDate(e.target.value)} required className="h-11" />
           </div>
 
           <div className="space-y-1.5">
@@ -140,19 +141,20 @@ export function EditTransactionModal({ transaction: tx, open, onClose }: Props) 
               placeholder={tc('note')}
               value={note}
               onChange={e => setNote(e.target.value)}
+              className="h-11"
             />
           </div>
 
-          <div className="flex gap-2 pt-1">
-            <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
+          <div className="flex gap-2 pt-2">
+            <Button type="button" variant="outline" className="flex-1 h-11" onClick={onClose}>
               {tc('cancel')}
             </Button>
-            <Button type="submit" className="flex-1" disabled={isPending}>
+            <Button type="submit" className="flex-1 h-11" disabled={isPending}>
               {isPending ? tc('loading') : tc('save')}
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   )
 }

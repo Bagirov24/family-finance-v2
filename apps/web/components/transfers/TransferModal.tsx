@@ -2,7 +2,7 @@
 import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -40,14 +40,8 @@ export function TransferModal() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!fromAccountId || !toAccountId || !amount) return
-    if (!family?.id) {
-      toast.error(t('no_family'))
-      return
-    }
-    if (!toUserId) {
-      toast.error(t('no_recipient'))
-      return
-    }
+    if (!family?.id) { toast.error(t('no_family')); return }
+    if (!toUserId) { toast.error(t('no_recipient')); return }
     try {
       await createTransfer.mutateAsync({
         family_id: family.id,
@@ -66,29 +60,28 @@ export function TransferModal() {
   }
 
   return (
-    <Dialog open={addTransferOpen} onOpenChange={setAddTransferOpen}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{t('title')}</DialogTitle>
-        </DialogHeader>
+    <Sheet open={addTransferOpen} onOpenChange={setAddTransferOpen}>
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>{t('title')}</SheetTitle>
+        </SheetHeader>
 
         {!hasFamily ? (
-          <p className="text-sm text-muted-foreground py-4 text-center">
-            {t('no_family')}
-          </p>
+          <p className="text-sm text-muted-foreground py-4 text-center">{t('no_family')}</p>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-3">
             <div className="space-y-1.5">
               <Label>{tc('amount')}</Label>
               <Input
                 type="number"
+                inputMode="decimal"
                 min="0.01"
                 step="0.01"
                 placeholder="0.00"
                 value={amount}
                 onChange={e => setAmount(e.target.value)}
                 required
-                className="text-lg font-semibold tabular-nums"
+                className="text-lg font-semibold tabular-nums h-12"
                 autoFocus
               />
             </div>
@@ -97,7 +90,7 @@ export function TransferModal() {
               <div className="space-y-1.5">
                 <Label>{t('from_account')}</Label>
                 <Select value={fromAccountId} onValueChange={setFromAccountId} required>
-                  <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                  <SelectTrigger className="h-11"><SelectValue placeholder="—" /></SelectTrigger>
                   <SelectContent>
                     {accounts.map(a => (
                       <SelectItem key={a.id} value={a.id} disabled={a.id === toAccountId}>
@@ -110,7 +103,7 @@ export function TransferModal() {
               <div className="space-y-1.5">
                 <Label>{t('to_account')}</Label>
                 <Select value={toAccountId} onValueChange={setToAccountId} required>
-                  <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                  <SelectTrigger className="h-11"><SelectValue placeholder="—" /></SelectTrigger>
                   <SelectContent>
                     {accounts.map(a => (
                       <SelectItem key={a.id} value={a.id} disabled={a.id === fromAccountId}>
@@ -125,7 +118,7 @@ export function TransferModal() {
             <div className="space-y-1.5">
               <Label>{t('recipient')}</Label>
               <Select value={toUserId} onValueChange={setToUserId} required>
-                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectTrigger className="h-11"><SelectValue placeholder="—" /></SelectTrigger>
                 <SelectContent>
                   {otherMembers.map(m => (
                     <SelectItem key={m.user_id} value={m.user_id}>
@@ -142,20 +135,26 @@ export function TransferModal() {
                 placeholder={tc('note')}
                 value={note}
                 onChange={e => setNote(e.target.value)}
+                className="h-11"
               />
             </div>
 
-            <div className="flex gap-2 pt-1">
-              <Button type="button" variant="outline" className="flex-1" onClick={() => { setAddTransferOpen(false); reset() }}>
+            <div className="flex gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1 h-11"
+                onClick={() => { setAddTransferOpen(false); reset() }}
+              >
                 {tc('cancel')}
               </Button>
-              <Button type="submit" className="flex-1" disabled={createTransfer.isPending}>
+              <Button type="submit" className="flex-1 h-11" disabled={createTransfer.isPending}>
                 {createTransfer.isPending ? tc('loading') : t('send')}
               </Button>
             </div>
           </form>
         )}
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   )
 }
