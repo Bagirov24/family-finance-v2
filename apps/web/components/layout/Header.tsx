@@ -6,6 +6,7 @@ import { useUIStore } from '@/store/ui.store'
 import { getMonthName } from '@/lib/utils'
 import { useTranslations } from 'next-intl'
 import { useNotifications } from '@/hooks/useNotifications'
+import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import { cn } from '@/lib/utils'
 
 export function Header() {
@@ -53,10 +54,11 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-border bg-card/80 backdrop-blur px-4">
-      {/* Burger */}
+      {/* Burger — mobile only */}
       <button
         className="md:hidden p-1.5 rounded-lg hover:bg-accent"
         onClick={() => setSidebarOpen(true)}
+        aria-label="Open menu"
       >
         <Menu className="h-5 w-5" />
       </button>
@@ -66,6 +68,7 @@ export function Header() {
         <button
           onClick={prevMonth}
           className="p-1.5 rounded-lg hover:bg-accent transition-colors"
+          aria-label="Previous month"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
@@ -76,12 +79,18 @@ export function Header() {
           onClick={nextMonth}
           disabled={isCurrentMonth}
           className="p-1.5 rounded-lg hover:bg-accent transition-colors disabled:opacity-40"
+          aria-label="Next month"
         >
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>
 
       <div className="ml-auto flex items-center gap-2">
+        {/* Theme toggle — desktop only */}
+        <div className="hidden md:flex">
+          <ThemeToggle />
+        </div>
+
         {/* Notifications bell */}
         <div className="relative" ref={notifRef}>
           <button
@@ -110,7 +119,6 @@ export function Header() {
                   </button>
                 )}
               </div>
-
               <div className="max-h-80 overflow-y-auto divide-y divide-border">
                 {notifications.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-8">{tc('empty')}</p>
@@ -149,22 +157,25 @@ export function Header() {
           )}
         </div>
 
+        {/* Transfer btn — desktop only */}
         <Button
           size="sm"
           variant="outline"
           onClick={() => setAddTransferOpen(true)}
-          className="hidden sm:flex gap-1.5"
+          className="hidden md:flex gap-1.5"
         >
           <ArrowLeftRight className="h-3.5 w-3.5" />
           {tt('send')}
         </Button>
+
+        {/* Add transaction — desktop only */}
         <Button
           size="sm"
           onClick={() => setAddTransactionOpen(true)}
-          className="gap-1.5"
+          className="hidden md:flex gap-1.5"
         >
           <Plus className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">{tx('add')}</span>
+          {tx('add')}
         </Button>
       </div>
     </header>

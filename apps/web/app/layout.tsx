@@ -3,6 +3,7 @@ import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getMessages } from 'next-intl/server'
 import { Toaster } from 'sonner'
 import { QueryProvider } from '@/components/providers/QueryProvider'
+import { ThemeProvider } from '@/components/providers/ThemeProvider'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -19,8 +20,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <NextIntlClientProvider messages={messages}>
           <QueryProvider>
-            {children}
-            <Toaster richColors closeButton position="top-right" />
+            <ThemeProvider>
+              {children}
+              <Toaster richColors closeButton position="top-right" />
+            </ThemeProvider>
           </QueryProvider>
         </NextIntlClientProvider>
       </body>
