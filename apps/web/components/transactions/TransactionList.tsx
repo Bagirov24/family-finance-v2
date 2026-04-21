@@ -40,7 +40,7 @@ export function TransactionList({ limit, showDate = true, categoryId, type }: Pr
     return (
       <div className="space-y-3">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-3">
+          <div key={i} className="flex items-center gap-3 rounded-xl border border-border/50 p-3">
             <Skeleton className="h-10 w-10 rounded-full" />
             <div className="flex-1 space-y-1">
               <Skeleton className="h-4 w-32" />
@@ -73,24 +73,27 @@ export function TransactionList({ limit, showDate = true, categoryId, type }: Pr
           return (
             <li
               key={tx.id}
-              className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted/50 transition-colors"
+              className="group flex items-center gap-3 p-3 rounded-xl border border-transparent hover:border-border hover:bg-muted/30 transition-colors"
             >
               <div className="h-10 w-10 rounded-full flex items-center justify-center text-lg bg-muted shrink-0">
                 {tx.category?.icon ?? (tx.type === 'income' ? '💰' : '💸')}
               </div>
+
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm truncate">
-                  {tx.note || categoryLabel}
-                </p>
-                {showDate && (
-                  <p className="text-xs text-muted-foreground">{formatDate(tx.date)}</p>
-                )}
+                <p className="font-medium text-sm truncate">{tx.note || categoryLabel}</p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground min-w-0">
+                  {showDate && <span className="shrink-0">{formatDate(tx.date)}</span>}
+                  <span className="truncate">{categoryLabel}</span>
+                </div>
               </div>
+
               <div className="flex items-center gap-1 shrink-0">
-                <div className={cn(
-                  'font-semibold text-sm tabular-nums mr-1',
-                  tx.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-foreground'
-                )}>
+                <div
+                  className={cn(
+                    'font-semibold text-sm tabular-nums mr-1 text-right max-w-[110px] sm:max-w-none truncate',
+                    tx.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-foreground'
+                  )}
+                >
                   {tx.type === 'income' ? '+' : '−'}{formatAmount(Number(tx.amount))}
                 </div>
                 <button
@@ -115,19 +118,13 @@ export function TransactionList({ limit, showDate = true, categoryId, type }: Pr
         })}
       </ul>
 
-      <EditTransactionModal
-        transaction={editTx}
-        open={!!editTx}
-        onClose={() => setEditTx(null)}
-      />
+      <EditTransactionModal transaction={editTx} open={!!editTx} onClose={() => setEditTx(null)} />
 
       <AlertDialog open={!!deleteTx} onOpenChange={open => { if (!open) setDeleteTx(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t('deleteTitle')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('deleteDescription')}
-            </AlertDialogDescription>
+            <AlertDialogDescription>{t('deleteDescription')}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{tc('cancel')}</AlertDialogCancel>
