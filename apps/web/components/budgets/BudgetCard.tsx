@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import type { BudgetView } from '@/hooks/useBudgets'
 import { useDeleteBudget } from '@/hooks/useBudgets'
 import { EditBudgetModal } from './EditBudgetModal'
+import { DeleteConfirmDialog } from '@/components/shared/DeleteConfirmDialog'
 
 export function BudgetCard({ budget: b }: { budget: BudgetView }) {
   const t = useTranslations('budgets')
@@ -15,6 +16,7 @@ export function BudgetCard({ budget: b }: { budget: BudgetView }) {
   const tc = useTranslations('common')
   const { mutate: deleteBudget, isPending: isDeleting } = useDeleteBudget()
   const [editOpen, setEditOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   const isOver = b.percent >= 100
   const isWarning = b.percent >= 80 && b.percent < 100
@@ -23,6 +25,7 @@ export function BudgetCard({ budget: b }: { budget: BudgetView }) {
 
   function handleDelete() {
     deleteBudget(b.id, {
+      onSuccess: () => setDeleteOpen(false),
       onError: () => toast.error(tc('error')),
     })
   }
@@ -32,7 +35,7 @@ export function BudgetCard({ budget: b }: { budget: BudgetView }) {
       <div className="rounded-2xl border bg-card p-4 space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="text-xl shrink-0">{b.category?.icon ?? '💸'}</span>
+            <span className="text-xl shrink-0">{b.category?.icon ?? '\uD83D\uDCB8'}</span>
             <span className="font-medium text-sm truncate">
               {b.category
                 ? tcat(b.category.name_key as Parameters<typeof tcat>[0], { defaultValue: b.category.name_key })
@@ -54,16 +57,16 @@ export function BudgetCard({ budget: b }: { budget: BudgetView }) {
               type="button"
               onClick={() => setEditOpen(true)}
               className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-              aria-label="Edit budget"
+              aria-label={tc('edit')}
             >
               <Pencil size={13} />
             </button>
             <button
               type="button"
-              onClick={handleDelete}
+              onClick={() => setDeleteOpen(true)}
               disabled={isDeleting}
               className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
-              aria-label="Delete budget"
+              aria-label={tc('delete')}
             >
               <Trash2 size={13} />
             </button>
@@ -90,6 +93,17 @@ export function BudgetCard({ budget: b }: { budget: BudgetView }) {
       </div>
 
       <EditBudgetModal budget={b} open={editOpen} onClose={() => setEditOpen(false)} />
+
+      <DeleteConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title={t('deleteTitle')}
+        description={t('deleteDescription')}
+        confirmLabel={tc('delete')}
+        cancelLabel={tc('cancel')}
+        onConfirm={handleDelete}
+        isLoading={isDeleting}
+      />
     </>
   )
 }
