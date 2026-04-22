@@ -374,6 +374,11 @@
     "icon": "Icon",
     "category_placeholder": "Streaming",
     "deleteTitle": "Delete subscription?",
-    "deleteDescription": "This action cannot be undone."
+    "deleteDescription": "This action cannot be undone.",
+    "upcoming": "Coming up",
+    "all": "All subscriptions",
+    "due_today": "Today",
+    "due_tomorrow": "Tomorrow",
+    "due_in_days": "{count, plural, one {In # day} other {In # days}}"
   }
 }

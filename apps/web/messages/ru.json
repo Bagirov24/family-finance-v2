@@ -382,6 +382,11 @@
     "icon": "Иконка",
     "category_placeholder": "Стриминг",
     "deleteTitle": "Удалить подписку?",
-    "deleteDescription": "Это действие нельзя отменить."
+    "deleteDescription": "Это действие нельзя отменить.",
+    "upcoming": "Скоро спишется",
+    "all": "Все подписки",
+    "due_today": "Сегодня",
+    "due_tomorrow": "Завтра",
+    "due_in_days": "{count, plural, one {Через # день} few {Через # дня} many {Через # дней} other {Через # дня}}"
   }
 }
