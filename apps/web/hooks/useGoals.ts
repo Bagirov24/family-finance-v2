@@ -45,7 +45,9 @@ async function fetchGoals(familyId: string) {
     let monthsLeft: number | null = null
     if (goal.deadline && !completed) {
       const deadline = new Date(goal.deadline)
-      const diffMonths = (deadline.getFullYear() - now.getFullYear()) * 12 + (deadline.getMonth() - now.getMonth())
+      const diffMonths =
+        (deadline.getFullYear() - now.getFullYear()) * 12 +
+        (deadline.getMonth() - now.getMonth())
       monthsLeft = Math.max(0, diffMonths)
     }
 
@@ -122,22 +124,12 @@ export function useContributeGoal() {
   return useMutation({
     mutationFn: async ({ id, amount }: { id: string; amount: number }) => {
       const supabase = createClient()
-      const { data: goal, error: gErr } = await supabase
-        .from('goals')
-        .select('current_amount, target_amount, is_completed')
-        .eq('id', id)
-        .single()
-      if (gErr) throw gErr
-
-      const newAmount = Number(goal.current_amount) + amount
-      const isCompleted = goal.is_completed || newAmount >= Number(goal.target_amount)
-
-      const { data, error } = await supabase
-        .from('goals')
-        .update({ current_amount: newAmount, is_completed: isCompleted })
-        .eq('id', id)
-        .select()
-        .single()
+      // Use atomic RPC to prevent race conditions when multiple
+      // family members contribute to the same goal simultaneously
+      const { data, error } = await supabase.rpc('contribute_to_goal', {
+        p_goal_id: id,
+        p_amount: amount,
+      })
       if (error) throw error
       return data
     },
