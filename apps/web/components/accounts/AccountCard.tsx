@@ -5,6 +5,8 @@ import { EyeOff, Archive, Pencil } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatAmount } from '@/lib/formatters'
 import { useUpdateAccount, useArchiveAccount } from '@/hooks/useAccounts'
+import { useSparkline } from '@/hooks/useSparkline'
+import { SparklineChart } from '@/components/ui/SparklineChart'
 import type { Account } from '@/hooks/useAccounts'
 
 interface AccountCardProps {
@@ -18,6 +20,10 @@ export function AccountCard({ account }: AccountCardProps) {
 
   const { mutate: updateAccount } = useUpdateAccount()
   const { mutate: archiveAccount } = useArchiveAccount()
+
+  const { data: sparklineData } = useSparkline(account.id)
+  const sparklineValues = sparklineData?.map(p => p.value) ?? []
+  const hasActivity = sparklineValues.some(v => v > 0)
 
   function toggleHidden() {
     updateAccount({ id: account.id, is_hidden_from_total: !account.is_hidden_from_total })
@@ -57,9 +63,20 @@ export function AccountCard({ account }: AccountCardProps) {
         </div>
       </div>
 
-      <p className="text-2xl font-bold tabular-nums">
-        {formatAmount(account.balance, account.currency)}
-      </p>
+      {/* Баланс + спарклайн */}
+      <div className="flex items-end justify-between gap-2">
+        <p className="text-2xl font-bold tabular-nums">
+          {formatAmount(account.balance, account.currency)}
+        </p>
+        {hasActivity && (
+          <SparklineChart
+            data={sparklineValues}
+            color={account.color ?? undefined}
+            width={80}
+            height={28}
+          />
+        )}
+      </div>
 
       {/* Меню действий */}
       <div className="flex items-center gap-2 pt-1 border-t border-border/50">
