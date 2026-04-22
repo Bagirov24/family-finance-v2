@@ -9,7 +9,9 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
         defaultOptions: {
           queries: {
             staleTime: 30_000,
+            gcTime: 10 * 60_000,      // держать кеш 10 минут (дефолт 5)
             refetchOnWindowFocus: false,
+            retry: 1,                  // один ретрай вместо трёх
           },
         },
       })

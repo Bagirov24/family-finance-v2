@@ -40,6 +40,8 @@ export function useSubscriptions() {
     queryKey: ['subscriptions', family?.id],
     queryFn: () => fetchSubscriptions(family!.id),
     enabled: !!family?.id,
+    staleTime: 5 * 60_000,   // подписки меняются редко
+    gcTime: 15 * 60_000,
   })
   return { ...query, subscriptions: query.data ?? [] }
 }

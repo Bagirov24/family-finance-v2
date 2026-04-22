@@ -62,6 +62,8 @@ export function useGoals() {
     queryKey: ['goals', family?.id],
     queryFn: () => fetchGoals(family!.id),
     enabled: !!family?.id,
+    staleTime: 5 * 60_000,   // цели меняются редко
+    gcTime: 15 * 60_000,
   })
 
   return { ...query, goals: query.data ?? [] }

@@ -21,11 +21,11 @@ export function AuthGuard({ userId, children }: AuthGuardProps) {
   const setUserId = useUIStore((s) => s.setUserId)
   const queryClient = useQueryClient()
 
-  // Синхронизируем userId из серверного пропа в стор во время рендера
-  const currentUserId = useUIStore((s) => s.userId)
-  if (currentUserId !== userId) {
+  // Синхронизируем userId из серверного пропа в стор через useEffect,
+  // чтобы не вызывать side-effect во время рендера (нарушение правил React).
+  useEffect(() => {
     setUserId(userId)
-  }
+  }, [userId, setUserId])
 
   useEffect(() => {
     const supabase = createClient()
@@ -34,12 +34,10 @@ export function AuthGuard({ userId, children }: AuthGuardProps) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT' || !session) {
-        // Правильный порядок: стор → кеш → редирект
         setUserId(null)
         queryClient.clear()
         router.replace('/login')
       } else if (session.user.id !== userId) {
-        // Смена пользователя между вкладками
         setUserId(session.user.id)
         queryClient.clear()
         router.refresh()

@@ -29,6 +29,8 @@ export function useCashbackCards() {
   const query = useQuery({
     queryKey: ['cashback-cards', family?.id],
     enabled: !!family?.id,
+    staleTime: 5 * 60_000,   // кешбэк-карты меняются редко
+    gcTime: 15 * 60_000,
     queryFn: async () => {
       const supabase = createClient()
       const { data, error } = await supabase

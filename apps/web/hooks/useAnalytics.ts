@@ -52,7 +52,8 @@ export function useWeekdaySpending(familyId: string) {
   return useQuery({
     queryKey: ['weekday-spending', familyId],
     enabled: !!familyId,
-    staleTime: 300_000,
+    staleTime: 10 * 60_000,   // 10 мин — исторические данные меняются редко
+    gcTime: 60 * 60_000,      // держать в памяти 1 час
     queryFn: async () => {
       const supabase = createClient()
       const { data, error } = await supabase.rpc('get_weekday_spending', {
@@ -65,13 +66,15 @@ export function useWeekdaySpending(familyId: string) {
 }
 
 /**
- * Вместо отдельного Supabase-запроса переиспользует транзакции из кеша
- * useTransactions (тот же queryKey ['transactions', ...]) — нулевой RTT.
+ * Переиспользует транзакции из кеша useTransactions — нулевой RTT.
+ * useMemo пересчитывает breakdown только при изменении списка транзакций.
  */
 export function useCategoryBreakdown(familyId: string, month: number, year: number) {
-  const { transactions } = useTransactions({ familyId })
+  const { transactions, isLoading } = useTransactions({ familyId })
 
   const breakdown = useMemo(() => {
+    if (!familyId) return []
+
     const map: Record<string, { name_key: string; icon: string; color: string; total: number }> = {}
 
     for (const t of transactions) {
@@ -83,7 +86,7 @@ export function useCategoryBreakdown(familyId: string, month: number, year: numb
     }
 
     return Object.values(map).sort((a, b) => b.total - a.total)
-  }, [transactions])
+  }, [transactions, familyId])
 
-  return { data: breakdown, isLoading: false }
+  return { data: breakdown, isLoading }
 }
