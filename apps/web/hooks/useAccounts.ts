@@ -14,6 +14,7 @@ export interface Account {
   color: string | null
   icon: string | null
   is_archived: boolean
+  is_hidden_from_total: boolean
   created_at: string
 }
 
@@ -24,6 +25,7 @@ export interface CreateAccountInput {
   currency?: string
   color?: string
   icon?: string
+  is_hidden_from_total?: boolean
 }
 
 async function fetchAccounts(userId: string, familyId?: string | null) {
@@ -59,11 +61,15 @@ export function useAccounts({ initialAccounts }: UseAccountsOptions = {}) {
     queryFn: () => fetchAccounts(userId!, family?.id),
     enabled: !!userId,
     initialData: initialAccounts,
-    staleTime: 30_000, // 30 сек
+    staleTime: 30_000,
   })
 
   const accounts = query.data ?? []
-  const totalBalance = accounts.reduce((sum, a) => sum + Number(a.balance), 0)
+
+  // Счета с is_hidden_from_total не учитываются в общем балансе
+  const totalBalance = accounts
+    .filter(a => !a.is_hidden_from_total)
+    .reduce((sum, a) => sum + Number(a.balance), 0)
 
   return { ...query, accounts, totalBalance }
 }
