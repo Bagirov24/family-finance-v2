@@ -27,7 +27,6 @@ export function HeroBalanceCard({ initialData }: HeroBalanceCardProps) {
   const { activePeriod } = useUIStore()
   const currency = family?.currency ?? 'RUB'
 
-  // Используем initialData только если период совпадает с текущим
   const isCurrentPeriod =
     initialData != null &&
     activePeriod.month === initialData.month &&
@@ -66,7 +65,6 @@ export function HeroBalanceCard({ initialData }: HeroBalanceCardProps) {
       : null
 
   return (
-    // min-h зафиксирован под реальный контент — предотвращает CLS при появлении данных
     <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/90 to-primary p-5 sm:p-6 text-white shadow-lg min-h-[140px]">
       <div className="flex items-start justify-between gap-3 mb-4">
         <div className="min-w-0">
@@ -114,10 +112,11 @@ export function HeroBalanceCard({ initialData }: HeroBalanceCardProps) {
                 <p className="text-xs opacity-70">{t('expenses')}</p>
                 {expenseDelta !== null && (
                   <span className={cn(
-                    'text-[10px] font-semibold px-1 py-0.5 rounded-full leading-none',
+                    'text-[10px] font-semibold px-1.5 py-0.5 rounded-full leading-none',
+                    // WCAG AA: непрозрачный фон + тёмный текст вместо white на 30%-прозрачном
                     expenseDelta <= 0
-                      ? 'bg-green-400/30 text-white'
-                      : 'bg-red-400/30 text-white'
+                      ? 'bg-emerald-300 text-emerald-950'  // зелёный: расходы снизились
+                      : 'bg-red-300 text-red-950'          // красный: расходы выросли
                   )}>
                     {expenseDelta > 0 ? '+' : ''}{expenseDelta.toFixed(0)}%
                   </span>
