@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useUIStore } from '@/store/ui.store'
+import type { FamilyMember } from '@/hooks/useFamily'
 
 const supabase = createClient()
 
@@ -24,7 +25,11 @@ export type FamilyMember = {
   } | null
 }
 
-export function useFamily() {
+interface UseFamilyOptions {
+  initialMembers?: FamilyMember[]
+}
+
+export function useFamily({ initialMembers }: UseFamilyOptions = {}) {
   const currentUserId = useUIStore(s => s.userId)
   const queryClient = useQueryClient()
 
@@ -40,6 +45,8 @@ export function useFamily() {
       return data as FamilyMember[]
     },
     enabled: !!currentUserId,
+    initialData: initialMembers,
+    staleTime: 60_000, // 1 минута — повторные заходы мгновенны
   })
 
   const family = membersQuery.data?.[0]?.family ?? null

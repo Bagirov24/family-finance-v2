@@ -9,22 +9,35 @@ import { TrendingUp, TrendingDown, Eye, EyeOff } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
+import type { OverviewInitialData } from '@/types/overview'
 
 const HIDDEN_KEY = 'balance_hidden'
 
-export function HeroBalanceCard() {
+interface HeroBalanceCardProps {
+  initialData?: OverviewInitialData
+}
+
+export function HeroBalanceCard({ initialData }: HeroBalanceCardProps) {
   const t = useTranslations('overview')
   const tc = useTranslations('common')
   const [hidden, setHidden] = useState(false)
-  const { totalBalance, isLoading: accountsLoading } = useAccounts()
-  const { family } = useFamily()
+
+  const { family } = useFamily({ initialMembers: initialData?.members })
+  const { totalBalance, isLoading: accountsLoading } = useAccounts({ initialAccounts: initialData?.accounts })
   const { activePeriod } = useUIStore()
   const currency = family?.currency ?? 'RUB'
+
+  // Используем initialData только если период совпадает с текущим
+  const isCurrentPeriod =
+    initialData != null &&
+    activePeriod.month === initialData.month &&
+    activePeriod.year === initialData.year
 
   const { data: summary, isLoading: summaryLoading } = useMonthlySummary(
     family?.id ?? '',
     activePeriod.month,
-    activePeriod.year
+    activePeriod.year,
+    { initialData: isCurrentPeriod ? initialData?.summary : undefined }
   )
 
   const prevMonth = activePeriod.month === 1 ? 12 : activePeriod.month - 1
@@ -45,7 +58,6 @@ export function HeroBalanceCard() {
 
   const isLoading = accountsLoading || summaryLoading
 
-  // Fix: delta compares expenses month-over-month (not net)
   const expense = summary?.total_expense ?? null
   const prevExpense = prevSummary?.total_expense ?? null
   const expenseDelta =
@@ -99,7 +111,6 @@ export function HeroBalanceCard() {
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
                 <p className="text-xs opacity-70">{t('expenses')}</p>
-                {/* Fix: expense delta vs previous month */}
                 {expenseDelta !== null && (
                   <span className={cn(
                     'text-[10px] font-semibold px-1 py-0.5 rounded-full leading-none',

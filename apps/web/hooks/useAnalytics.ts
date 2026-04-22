@@ -5,6 +5,7 @@ export function useMonthlyTrend(familyId: string, months = 6) {
   return useQuery({
     queryKey: ['monthly-trend', familyId, months],
     enabled: !!familyId,
+    staleTime: 60_000,
     queryFn: async () => {
       const supabase = createClient()
       const { data, error } = await supabase.rpc('get_income_expense_trend', {
@@ -17,10 +18,21 @@ export function useMonthlyTrend(familyId: string, months = 6) {
   })
 }
 
-export function useMonthlySummary(familyId: string, month: number, year: number) {
+interface UseMonthlySummaryOptions {
+  initialData?: { total_income: number; total_expense: number; net: number; top_category: string } | null
+}
+
+export function useMonthlySummary(
+  familyId: string,
+  month: number,
+  year: number,
+  { initialData }: UseMonthlySummaryOptions = {}
+) {
   return useQuery({
     queryKey: ['monthly-summary', familyId, month, year],
     enabled: !!familyId,
+    staleTime: 60_000,
+    initialData: initialData ?? undefined,
     queryFn: async () => {
       const supabase = createClient()
       const { data, error } = await supabase.rpc('get_monthly_summary', {
@@ -38,6 +50,7 @@ export function useWeekdaySpending(familyId: string) {
   return useQuery({
     queryKey: ['weekday-spending', familyId],
     enabled: !!familyId,
+    staleTime: 300_000, // 5 минут
     queryFn: async () => {
       const supabase = createClient()
       const { data, error } = await supabase.rpc('get_weekday_spending', {
@@ -53,6 +66,7 @@ export function useCategoryBreakdown(familyId: string, month: number, year: numb
   return useQuery({
     queryKey: ['category-breakdown', familyId, month, year],
     enabled: !!familyId,
+    staleTime: 60_000,
     queryFn: async () => {
       const supabase = createClient()
       const startDate = `${year}-${String(month).padStart(2, '0')}-01`

@@ -1,4 +1,6 @@
 import { getTranslations } from 'next-intl/server'
+import { createClient } from '@/lib/supabase/server'
+import { prefetchOverviewData } from '@/lib/supabase/prefetch'
 import { HeroBalanceCard } from '@/components/overview/HeroBalanceCard'
 import { DailyBudgetPulse } from '@/components/overview/DailyBudgetPulse'
 import { TopCategories } from '@/components/overview/TopCategories'
@@ -6,6 +8,7 @@ import { PeriodSwitcher } from '@/components/overview/PeriodSwitcher'
 import { UpcomingSubscriptions } from '@/components/overview/UpcomingSubscriptions'
 import { PendingTransferBanner } from '@/components/transfers/PendingTransferBanner'
 import { TransactionList } from '@/components/transactions/TransactionList'
+import type { OverviewInitialData } from '@/types/overview'
 
 export async function generateMetadata() {
   const t = await getTranslations('overview')
@@ -15,13 +18,27 @@ export async function generateMetadata() {
 export default async function OverviewPage() {
   const t = await getTranslations('overview')
 
+  // Серверный prefetch: данные готовы до первого клиентского рендера
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  let initialData: OverviewInitialData | undefined
+  if (user) {
+    try {
+      const prefetched = await prefetchOverviewData(user.id)
+      initialData = prefetched
+    } catch {
+      // Не падаем — клиент подтянет данные самостоятельно
+    }
+  }
+
   return (
     <div className="space-y-4 max-w-2xl mx-auto">
       {/* Period selector */}
       <PeriodSwitcher />
 
       {/* Hero: total balance + income/expense for period */}
-      <HeroBalanceCard />
+      <HeroBalanceCard initialData={initialData} />
 
       {/* Daily spending limit based on remaining budgets */}
       <DailyBudgetPulse />

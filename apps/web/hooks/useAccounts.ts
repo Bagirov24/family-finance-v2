@@ -46,7 +46,11 @@ async function fetchAccounts(userId: string, familyId?: string | null) {
   return data as Account[]
 }
 
-export function useAccounts() {
+interface UseAccountsOptions {
+  initialAccounts?: Account[]
+}
+
+export function useAccounts({ initialAccounts }: UseAccountsOptions = {}) {
   const userId = useUIStore(s => s.userId)
   const { family } = useFamily()
 
@@ -54,6 +58,8 @@ export function useAccounts() {
     queryKey: ['accounts', userId, family?.id],
     queryFn: () => fetchAccounts(userId!, family?.id),
     enabled: !!userId,
+    initialData: initialAccounts,
+    staleTime: 30_000, // 30 сек
   })
 
   const accounts = query.data ?? []
