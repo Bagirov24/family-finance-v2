@@ -19,11 +19,16 @@ export async function prefetchAppData(userId: string) {
   const month = now.getMonth() + 1
   const year = now.getFullYear()
 
+  const periodStart = `${year}-${String(month).padStart(2, '0')}-01`
+  const nextMonth = month === 12 ? 1 : month + 1
+  const nextYear = month === 12 ? year + 1 : year
+  const periodEnd = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`
+
   const accountsFilter = family?.id
     ? `family_id.eq.${family.id},owner_user_id.eq.${userId}`
     : `owner_user_id.eq.${userId}`
 
-  const [accountsResult, summaryResult, categoriesResult] = await Promise.all([
+  const [accountsResult, summaryResult, categoriesResult, transactionsResult] = await Promise.all([
     supabase
       .from('accounts')
       .select('*')
@@ -40,6 +45,17 @@ export async function prefetchAppData(userId: string) {
       : Promise.resolve({ data: null, error: null }),
 
     supabase.from('categories').select('*').order('name'),
+
+    family?.id
+      ? supabase
+          .from('transactions')
+          .select('*, account:accounts(name, currency), category:categories(name, icon)')
+          .eq('family_id', family.id)
+          .gte('date', periodStart)
+          .lt('date', periodEnd)
+          .order('date', { ascending: false })
+          .limit(30)
+      : Promise.resolve({ data: [], error: null }),
   ])
 
   if (accountsResult.error)
@@ -48,6 +64,8 @@ export async function prefetchAppData(userId: string) {
     console.error('[prefetch] summary error:', summaryResult.error)
   if (categoriesResult.error)
     console.error('[prefetch] categories error:', categoriesResult.error)
+  if (transactionsResult.error)
+    console.error('[prefetch] transactions error:', transactionsResult.error)
 
   return {
     members: membersData ?? [],
@@ -55,6 +73,9 @@ export async function prefetchAppData(userId: string) {
     accounts: accountsResult.data ?? [],
     summary: summaryResult.data ?? null,
     categories: categoriesResult.data ?? [],
+    transactions: transactionsResult.data ?? [],
+    month,
+    year,
   }
 }
 
