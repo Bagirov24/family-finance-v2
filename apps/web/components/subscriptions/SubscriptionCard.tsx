@@ -34,11 +34,12 @@ export function SubscriptionCard({ subscription: s, onEdit, onDelete }: Props) {
       )}>
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
-            <span className="text-2xl">{s.icon ?? '\uD83D\uDCE6'}</span>
+            {/* icon is an emoji string stored in DB */}
+            <span className="text-2xl leading-none">{s.icon || '📦'}</span>
             <div className="min-w-0">
               <p className="font-semibold text-sm truncate">{s.name}</p>
-              {s.category && (
-                <p className="text-xs text-muted-foreground">{s.category}</p>
+              {s.description && (
+                <p className="text-xs text-muted-foreground truncate">{s.description}</p>
               )}
             </div>
           </div>
@@ -75,11 +76,9 @@ export function SubscriptionCard({ subscription: s, onEdit, onDelete }: Props) {
           </span>
         </div>
 
-        {s.next_billing_date && (
-          <p className="text-xs text-muted-foreground">
-            {t('next_billing')}: {formatFullDate(s.next_billing_date)}
-          </p>
-        )}
+        <p className="text-xs text-muted-foreground">
+          {t('next_billing')}: {formatFullDate(s.next_billing_date)}
+        </p>
       </div>
 
       {onDelete && (

@@ -5,16 +5,22 @@ import { useFamily } from '@/hooks/useFamily'
 export interface Subscription {
   id: string
   family_id: string
+  created_by_user_id: string | null
   name: string
+  description: string | null
   amount: number
   currency: string
   billing_cycle: 'monthly' | 'yearly' | 'weekly'
-  next_billing_date: string | null
-  category: string | null
-  color: string | null
-  icon: string | null
+  next_billing_date: string        // NOT NULL in DB
+  category_id: string | null       // uuid FK, not free text
+  account_id: string | null
+  color: string
+  icon: string
   is_active: boolean
+  reminder_days: number
+  auto_create_tx: boolean
   created_at: string
+  updated_at: string
 }
 
 async function fetchSubscriptions(familyId: string): Promise<Subscription[]> {
@@ -38,11 +44,23 @@ export function useSubscriptions() {
   return { ...query, subscriptions: query.data ?? [] }
 }
 
+type CreateInput = Pick<
+  Subscription,
+  'name' | 'amount' | 'currency' | 'billing_cycle' | 'next_billing_date' |
+  'color' | 'icon' | 'is_active'
+> & {
+  description?: string | null
+  category_id?: string | null
+  account_id?: string | null
+  reminder_days?: number
+  auto_create_tx?: boolean
+}
+
 export function useCreateSubscription() {
   const qc = useQueryClient()
   const { family } = useFamily()
   return useMutation({
-    mutationFn: async (input: Omit<Subscription, 'id' | 'family_id' | 'created_at'>) => {
+    mutationFn: async (input: CreateInput) => {
       const supabase = createClient()
       const { data, error } = await supabase
         .from('subscriptions')
@@ -59,7 +77,7 @@ export function useCreateSubscription() {
 export function useUpdateSubscription() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, ...input }: Partial<Subscription> & { id: string }) => {
+    mutationFn: async ({ id, ...input }: Partial<CreateInput> & { id: string }) => {
       const supabase = createClient()
       const { data, error } = await supabase
         .from('subscriptions')
