@@ -402,6 +402,7 @@
     "tomorrow": "Tomorrow",
     "days_left": "In {days} days",
     "per_month": "Per month",
-    "per_year": "Per year"
+    "per_year": "Per year",
+    "color": "Color"
   }
 }

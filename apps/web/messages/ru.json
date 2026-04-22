@@ -410,6 +410,7 @@
     "tomorrow": "Завтра",
     "days_left": "Через {days} дн.",
     "per_month": "В месяц",
-    "per_year": "В год"
+    "per_year": "В год",
+    "color": "Цвет"
   }
 }
