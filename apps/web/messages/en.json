@@ -172,7 +172,11 @@
     "empty": "No budgets for this period yet",
     "saved": "Budget saved",
     "overspent": "Over by {amount}",
-    "over_budget": "Over by {amount}"
+    "over_budget": "Over by {amount}",
+    "deleteTitle": "Delete budget?",
+    "deleteDescription": "This action cannot be undone.",
+    "alert_over_title": "{count, plural, one {# category exceeded its limit} other {# categories exceeded their limit}}",
+    "alert_warning_title": "{count, plural, one {# category is close to its limit} other {# categories are close to their limit}}"
   },
   "goals": {
     "title": "Goals",
