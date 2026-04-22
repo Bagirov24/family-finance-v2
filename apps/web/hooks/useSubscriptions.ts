@@ -11,8 +11,8 @@ export interface Subscription {
   amount: number
   currency: string
   billing_cycle: 'monthly' | 'yearly' | 'weekly'
-  next_billing_date: string        // NOT NULL in DB
-  category_id: string | null       // uuid FK, not free text
+  next_billing_date: string
+  category_id: string | null
   account_id: string | null
   color: string
   icon: string
@@ -29,7 +29,7 @@ async function fetchSubscriptions(familyId: string): Promise<Subscription[]> {
     .from('subscriptions')
     .select('*')
     .eq('family_id', familyId)
-    .order('created_at', { ascending: false })
+    .order('next_billing_date', { ascending: true })
   if (error) throw error
   return data ?? []
 }
