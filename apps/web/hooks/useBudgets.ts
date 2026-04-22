@@ -98,10 +98,17 @@ export function useBudgets() {
   const { family } = useFamily()
   const { month, year } = activePeriod
 
+  // Исторические периоды (не текущий месяц) кешируем дольше — данные не меняются
+  const now = new Date()
+  const isCurrentPeriod =
+    month === now.getMonth() + 1 && year === now.getFullYear()
+
   const query = useQuery({
     queryKey: ['budgets', family?.id, month, year],
     queryFn: () => fetchBudgets(family?.id ?? '', month, year),
     enabled: !!family?.id,
+    staleTime: isCurrentPeriod ? 30_000 : 5 * 60_000,
+    gcTime: isCurrentPeriod ? 10 * 60_000 : 30 * 60_000,
   })
 
   return { ...query, budgets: query.data ?? [] }

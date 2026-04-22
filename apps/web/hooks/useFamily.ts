@@ -1,9 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useUIStore } from '@/store/ui.store'
-import type { FamilyMember } from '@/hooks/useFamily'
-
-const supabase = createClient()
 
 export type FamilyMemberRole = 'owner' | 'member'
 
@@ -36,6 +33,8 @@ export function useFamily({ initialMembers }: UseFamilyOptions = {}) {
   const membersQuery = useQuery({
     queryKey: ['family-members'],
     queryFn: async () => {
+      // createClient() внутри queryFn — гарантирует свежую сессию при каждом запросе
+      const supabase = createClient()
       const { data, error } = await supabase
         .from('family_members')
         .select('*, family:families(id, name, invite_code, currency)')
