@@ -23,6 +23,7 @@ import {
 } from '@/hooks/useVehicles'
 import { VehicleHealthScore } from '@/components/car/VehicleHealthScore'
 import { FuelChart } from '@/components/car/FuelChart'
+import { FuelTimeline } from '@/components/car/FuelTimeline'
 import { formatAmount, formatDate, formatKm, formatLper100 } from '@/lib/formatters'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
@@ -64,7 +65,7 @@ function periodStart(period: ExpensePeriod): Date | null {
   return d
 }
 
-// ── Edit Vehicle Form ───────────────────────────────────────────────────────
+// ── Edit Vehicle Form ─────────────────────────────────────────────────────────
 function EditVehicleForm({
   vehicle,
   onClose,
@@ -153,7 +154,7 @@ function EditVehicleForm({
   )
 }
 
-// ── Danger dialog ────────────────────────────────────────────────────────────
+// ── Danger dialog ─────────────────────────────────────────────────────────────
 type DangerAction = 'archive' | 'delete'
 
 function DangerDialog({
@@ -219,7 +220,7 @@ function DangerDialog({
   )
 }
 
-// ── Period toggle ────────────────────────────────────────────────────────────
+// ── Period toggle ─────────────────────────────────────────────────────────────
 const PERIOD_LABELS: Record<ExpensePeriod, string> = {
   month: 'Месяц',
   year: 'Год',
@@ -248,7 +249,10 @@ function PeriodToggle({ value, onChange }: { value: ExpensePeriod; onChange: (v:
   )
 }
 
-// ── Main page ────────────────────────────────────────────────────────────────
+// ── Fuel view toggle ──────────────────────────────────────────────────────────
+type FuelView = 'list' | 'timeline'
+
+// ── Main page ─────────────────────────────────────────────────────────────────
 export default function VehicleDetailPage() {
   const { vehicleId } = useParams<{ vehicleId: string }>()
   const router = useRouter()
@@ -261,6 +265,7 @@ export default function VehicleDetailPage() {
   const [isEditing, setIsEditing] = useState(false)
   const [dangerAction, setDangerAction] = useState<DangerAction | null>(null)
   const [expensePeriod, setExpensePeriod] = useState<ExpensePeriod>('month')
+  const [fuelView, setFuelView] = useState<FuelView>('list')
 
   const [fuelAccountId, setFuelAccountId] = useState('')
   const [fuelLiters, setFuelLiters] = useState('')
@@ -304,7 +309,7 @@ export default function VehicleDetailPage() {
     createFine, updateFine, deleteFine,
   } = useVehicleFines(vehicleId)
 
-  // ── Period-filtered expenses ──────────────────────────────────────────────
+  // ── Period-filtered expenses ───────────────────────────────────────────────
   const filteredExpenses = useMemo(() => {
     const start = periodStart(expensePeriod)
     if (!start) return expenses
@@ -336,7 +341,7 @@ export default function VehicleDetailPage() {
     return filteredTotal / months
   }, [filteredTotal, expensePeriod, expenses])
 
-  // ── Misc ──────────────────────────────────────────────────────────────────
+  // ── Misc ───────────────────────────────────────────────────────────────────
   const unpaidFinesTotal = useMemo(
     () => fines.filter(f => f.status === 'unpaid').reduce((s, f) => s + Number(f.discount_amount_rub ?? f.amount_rub), 0),
     [fines]
@@ -538,11 +543,12 @@ export default function VehicleDetailPage() {
 
         {/* ── FUEL ── */}
         <TabsContent value="fuel" className="space-y-4 mt-4">
-          {/* Chart — appears above the form when there's data */}
+          {/* Chart */}
           {!fuelLoading && entries.length >= 2 && (
             <FuelChart entries={entries} />
           )}
 
+          {/* Add form */}
           <form onSubmit={handleAddFuel} className="rounded-2xl border bg-card p-4 space-y-3">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{t('addFuelEntry')}</h2>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -579,32 +585,60 @@ export default function VehicleDetailPage() {
             </button>
           </form>
 
+          {/* View toggle + list/timeline */}
           {fuelLoading
             ? <Skeleton className="h-32 w-full" />
             : entries.length === 0
               ? <p className="text-sm text-muted-foreground text-center py-8">{t('noFuelEntries')}</p>
-              : <ul className="space-y-2">
-                  {entries.map(e => (
-                    <li key={e.id} className="rounded-xl border bg-card p-3 flex justify-between items-center gap-4">
-                      <div>
-                        <p className="text-sm font-medium">
-                          {e.liters} L · {Number(e.price_per_liter).toFixed(1)} ₽/L
-                          {e.fuel_consumption_calculated != null && (
-                            <span className="ml-2 text-xs text-muted-foreground">
-                              · {Number(e.fuel_consumption_calculated).toFixed(1)} л/100км
-                            </span>
-                          )}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatKm(Number(e.mileage))}
-                          {e.expense?.date ? ` • ${formatDate(e.expense.date)}` : ''}
-                          {e.full_tank ? ' • ⛽ полный' : ''}
-                        </p>
-                      </div>
-                      <p className="font-semibold tabular-nums text-sm">{formatAmount(Number(e.liters) * Number(e.price_per_liter))}</p>
-                    </li>
-                  ))}
-                </ul>}
+              : (
+                <div className="space-y-3">
+                  {/* Toggle */}
+                  <div className="flex rounded-xl border overflow-hidden text-sm">
+                    {(['list', 'timeline'] as const).map(v => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setFuelView(v)}
+                        className={cn(
+                          'flex-1 px-3 py-1.5 transition-colors',
+                          fuelView === v
+                            ? 'bg-primary text-primary-foreground font-medium'
+                            : 'text-muted-foreground hover:bg-muted'
+                        )}
+                      >
+                        {v === 'list' ? 'Список' : 'Timeline'}
+                      </button>
+                    ))}
+                  </div>
+
+                  {fuelView === 'list' ? (
+                    <ul className="space-y-2">
+                      {entries.map(e => (
+                        <li key={e.id} className="rounded-xl border bg-card p-3 flex justify-between items-center gap-4">
+                          <div>
+                            <p className="text-sm font-medium">
+                              {e.liters} л · {Number(e.price_per_liter).toFixed(1)} ₽/л
+                              {e.fuel_consumption_calculated != null && (
+                                <span className="ml-2 text-xs text-muted-foreground">
+                                  · {Number(e.fuel_consumption_calculated).toFixed(1)} л/100км
+                                </span>
+                              )}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatKm(Number(e.mileage))}
+                              {e.expense?.date ? ` • ${formatDate(e.expense.date)}` : ''}
+                              {e.full_tank ? ' • ⛽ полный' : ''}
+                            </p>
+                          </div>
+                          <p className="font-semibold tabular-nums text-sm">{formatAmount(Number(e.liters) * Number(e.price_per_liter))}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <FuelTimeline entries={entries} />
+                  )}
+                </div>
+              )}
         </TabsContent>
 
         {/* ── SERVICE ── */}
