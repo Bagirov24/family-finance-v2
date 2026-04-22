@@ -5,6 +5,8 @@ import { Pencil, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatAmount, formatFullDate } from '@/lib/formatters'
 import { DeleteConfirmDialog } from '@/components/shared/DeleteConfirmDialog'
+import { useUpdateSubscription } from '@/hooks/useSubscriptions'
+import { useAccounts } from '@/hooks/useAccounts'
 import type { Subscription } from '@/hooks/useSubscriptions'
 
 interface Props {
@@ -19,22 +21,58 @@ const CYCLE_KEYS = {
   weekly: 'weekly',
 } as const
 
+/** Дней до следующего списания (может быть отрицательным если просрочено) */
+function daysUntil(dateStr: string): number {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const target = new Date(dateStr)
+  target.setHours(0, 0, 0, 0)
+  return Math.round((target.getTime() - today.getTime()) / 86_400_000)
+}
+
 export function SubscriptionCard({ subscription: s, onEdit, onDelete }: Props) {
   const t = useTranslations('subscriptions')
   const tc = useTranslations('common')
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const update = useUpdateSubscription()
+  const { accounts } = useAccounts()
 
   const cycleKey = CYCLE_KEYS[s.billing_cycle] ?? 'monthly'
+  const days = daysUntil(s.next_billing_date)
+  const account = s.account_id ? accounts.find(a => a.id === s.account_id) : null
+
+  function toggleActive() {
+    update.mutate({ id: s.id, is_active: !s.is_active })
+  }
+
+  // Цвет бейджа «через N дней»
+  const badgeClass =
+    days < 0
+      ? 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300'
+      : days <= 3
+      ? 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300'
+      : days <= 7
+      ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300'
+      : 'bg-muted text-muted-foreground'
+
+  const badgeLabel =
+    days < 0
+      ? t('overdue')
+      : days === 0
+      ? t('today')
+      : days === 1
+      ? t('tomorrow')
+      : t('days_left', { days })
 
   return (
     <>
       <div className={cn(
-        'rounded-2xl border bg-card p-4 space-y-3 relative',
+        'rounded-2xl border bg-card p-4 space-y-3 relative transition-opacity',
         !s.is_active && 'opacity-50'
       )}>
+        {/* Header */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
-            {/* icon is an emoji string stored in DB */}
             <span className="text-2xl leading-none">{s.icon || '📦'}</span>
             <div className="min-w-0">
               <p className="font-semibold text-sm truncate">{s.name}</p>
@@ -43,7 +81,23 @@ export function SubscriptionCard({ subscription: s, onEdit, onDelete }: Props) {
               )}
             </div>
           </div>
-          <div className="flex gap-1 shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
+            {/* Тогл активности */}
+            <button
+              type="button"
+              onClick={toggleActive}
+              disabled={update.isPending}
+              title={s.is_active ? t('deactivate') : t('activate')}
+              className={cn(
+                'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none',
+                s.is_active ? 'bg-primary' : 'bg-input'
+              )}
+            >
+              <span className={cn(
+                'pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-lg transform transition-transform',
+                s.is_active ? 'translate-x-4' : 'translate-x-0'
+              )} />
+            </button>
             {onEdit && (
               <button
                 type="button"
@@ -67,18 +121,37 @@ export function SubscriptionCard({ subscription: s, onEdit, onDelete }: Props) {
           </div>
         </div>
 
+        {/* Сумма + цикл */}
         <div className="flex items-end justify-between">
           <span className="text-xl font-bold tabular-nums">
             {formatAmount(s.amount, s.currency)}
           </span>
-          <span className="text-xs text-muted-foreground">
-            {t(cycleKey)}
-          </span>
+          <span className="text-xs text-muted-foreground">{t(cycleKey)}</span>
         </div>
 
-        <p className="text-xs text-muted-foreground">
-          {t('next_billing')}: {formatFullDate(s.next_billing_date)}
-        </p>
+        {/* Нижняя строка: дата + бейдж + счёт */}
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-muted-foreground">
+              {formatFullDate(s.next_billing_date)}
+            </span>
+            {/* Бейдж «через N дней» */}
+            <span className={cn('text-[11px] px-1.5 py-0.5 rounded-full font-medium', badgeClass)}>
+              {badgeLabel}
+            </span>
+          </div>
+          {/* Счёт списания */}
+          {account && (
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              {account.icon ?? '💳'} {account.name}
+            </span>
+          )}
+        </div>
+
+        {/* Авто-транзакция индикатор */}
+        {s.auto_create_tx && (
+          <p className="text-[11px] text-muted-foreground">⚡ {t('auto_create_tx')}</p>
+        )}
       </div>
 
       {onDelete && (

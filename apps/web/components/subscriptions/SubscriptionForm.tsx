@@ -6,7 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useCreateSubscription, useUpdateSubscription } from '@/hooks/useSubscriptions'
+import { useAccounts } from '@/hooks/useAccounts'
 import type { Subscription } from '@/hooks/useSubscriptions'
 
 interface Props {
@@ -21,11 +23,14 @@ const EMPTY = {
   name: '',
   amount: '',
   billing_cycle: 'monthly' as Subscription['billing_cycle'],
-  next_billing_date: today(),   // NOT NULL — default to today
+  next_billing_date: today(),
   icon: '📦',
   color: '#6366F1',
   is_active: true,
   currency: 'RUB',
+  account_id: '',
+  reminder_days: '3',
+  auto_create_tx: false,
 }
 
 export function SubscriptionForm({ open, onOpenChange, initial }: Props) {
@@ -33,6 +38,7 @@ export function SubscriptionForm({ open, onOpenChange, initial }: Props) {
   const tc = useTranslations('common')
   const create = useCreateSubscription()
   const update = useUpdateSubscription()
+  const { accounts } = useAccounts()
 
   const [form, setForm] = useState(EMPTY)
   const isEdit = !!initial
@@ -48,13 +54,16 @@ export function SubscriptionForm({ open, onOpenChange, initial }: Props) {
         color: initial.color ?? '#6366F1',
         is_active: initial.is_active,
         currency: initial.currency,
+        account_id: initial.account_id ?? '',
+        reminder_days: String(initial.reminder_days ?? 3),
+        auto_create_tx: initial.auto_create_tx ?? false,
       })
     } else {
       setForm({ ...EMPTY, next_billing_date: today() })
     }
   }, [initial, open])
 
-  function set(field: keyof typeof EMPTY, value: string | boolean) {
+  function set<K extends keyof typeof EMPTY>(field: K, value: typeof EMPTY[K]) {
     setForm(prev => ({ ...prev, [field]: value }))
   }
 
@@ -65,11 +74,14 @@ export function SubscriptionForm({ open, onOpenChange, initial }: Props) {
       name: form.name.trim(),
       amount: parseFloat(form.amount),
       billing_cycle: form.billing_cycle,
-      next_billing_date: form.next_billing_date,  // always a valid date string
+      next_billing_date: form.next_billing_date,
       icon: form.icon || '📦',
       color: form.color || '#6366F1',
       is_active: form.is_active,
       currency: form.currency || 'RUB',
+      account_id: form.account_id || null,
+      reminder_days: parseInt(form.reminder_days) || 3,
+      auto_create_tx: form.auto_create_tx,
     }
     try {
       if (isEdit) {
@@ -88,11 +100,13 @@ export function SubscriptionForm({ open, onOpenChange, initial }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEdit ? t('edit') : t('add')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3">
+
+          {/* Название */}
           <div className="space-y-1.5">
             <Label>{t('name_label')}</Label>
             <Input
@@ -104,6 +118,7 @@ export function SubscriptionForm({ open, onOpenChange, initial }: Props) {
             />
           </div>
 
+          {/* Сумма + цикл */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>{tc('amount')}</Label>
@@ -121,7 +136,7 @@ export function SubscriptionForm({ open, onOpenChange, initial }: Props) {
               <Label>{t('billing_cycle')}</Label>
               <select
                 value={form.billing_cycle}
-                onChange={e => set('billing_cycle', e.target.value)}
+                onChange={e => set('billing_cycle', e.target.value as Subscription['billing_cycle'])}
                 className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 <option value="monthly">{t('monthly')}</option>
@@ -131,6 +146,7 @@ export function SubscriptionForm({ open, onOpenChange, initial }: Props) {
             </div>
           </div>
 
+          {/* Дата следующего списания */}
           <div className="space-y-1.5">
             <Label>{t('next_billing')} *</Label>
             <Input
@@ -141,6 +157,52 @@ export function SubscriptionForm({ open, onOpenChange, initial }: Props) {
             />
           </div>
 
+          {/* Счёт списания */}
+          <div className="space-y-1.5">
+            <Label>{tc('account')}</Label>
+            <Select value={form.account_id} onValueChange={v => set('account_id', v)}>
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder={t('no_account')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">{t('no_account')}</SelectItem>
+                {accounts.map(a => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.icon ?? '💳'} {a.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Напоминание за N дней */}
+          <div className="space-y-1.5">
+            <Label>{t('reminder_days')}</Label>
+            <select
+              value={form.reminder_days}
+              onChange={e => set('reminder_days', e.target.value)}
+              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="0">{t('no_reminder')}</option>
+              <option value="1">1 {t('days_before')}</option>
+              <option value="3">3 {t('days_before')}</option>
+              <option value="7">7 {t('days_before')}</option>
+              <option value="14">14 {t('days_before')}</option>
+            </select>
+          </div>
+
+          {/* Авто-транзакция */}
+          <label className="flex items-center gap-3 py-1 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.auto_create_tx}
+              onChange={e => set('auto_create_tx', e.target.checked)}
+              className="h-4 w-4 rounded border-input accent-primary"
+            />
+            <span className="text-sm">{t('auto_create_tx')}</span>
+          </label>
+
+          {/* Иконка + валюта */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>{t('icon')}</Label>
