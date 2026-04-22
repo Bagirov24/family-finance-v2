@@ -6,12 +6,12 @@ import { toast } from 'sonner'
 import { useSubscriptions, useDeleteSubscription } from '@/hooks/useSubscriptions'
 import { SubscriptionCard } from '@/components/subscriptions/SubscriptionCard'
 import { SubscriptionForm } from '@/components/subscriptions/SubscriptionForm'
+import { SubscriptionCalendar } from '@/components/subscriptions/SubscriptionCalendar'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatAmount } from '@/lib/formatters'
 import type { Subscription } from '@/hooks/useSubscriptions'
 
-// Приводим любую подписку к месячной стоимости
 function toMonthly(s: Subscription): number {
   if (!s.is_active) return 0
   if (s.billing_cycle === 'yearly') return s.amount / 12
@@ -50,7 +50,6 @@ export default function SubscriptionsPage() {
     }
   }
 
-  // Суммарные цифры (только активные)
   const { monthlyTotal, yearlyTotal, currency } = useMemo(() => {
     const active = subscriptions.filter(s => s.is_active)
     const monthly = active.reduce((sum, s) => sum + toMonthly(s), 0)
@@ -58,13 +57,11 @@ export default function SubscriptionsPage() {
     return { monthlyTotal: monthly, yearlyTotal: monthly * 12, currency: cur }
   }, [subscriptions])
 
-  // Секция «Скоро» — активные, ближайшие 7 дней
   const upcoming = useMemo(
     () => subscriptions.filter(s => s.is_active && daysUntil(s.next_billing_date) <= 7),
     [subscriptions]
   )
 
-  // Остальные
   const rest = useMemo(
     () => subscriptions.filter(s => !s.is_active || daysUntil(s.next_billing_date) > 7),
     [subscriptions]
@@ -101,6 +98,12 @@ export default function SubscriptionsPage() {
         </div>
       )}
 
+      {/* Мини-календарь */}
+      {!isLoading && hasSubscriptions && (
+        <SubscriptionCalendar subscriptions={subscriptions} />
+      )}
+
+      {/* Скелетон / пустой стейт / карточки */}
       {isLoading ? (
         <div className="grid gap-3 sm:grid-cols-2">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -134,7 +137,7 @@ export default function SubscriptionsPage() {
             </div>
           )}
 
-          {/* Остальные подписки */}
+          {/* Остальные */}
           {rest.length > 0 && (
             <div className="space-y-3">
               {upcoming.length > 0 && (
