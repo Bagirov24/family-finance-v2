@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useUpdateTransaction, Transaction } from '@/hooks/useTransactions'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useCategories } from '@/hooks/useCategories'
+import { CategoryPicker } from './CategoryPicker'
 
 interface Props {
   transaction: Transaction | null
@@ -20,7 +21,6 @@ interface Props {
 export function EditTransactionModal({ transaction: tx, open, onClose }: Props) {
   const t = useTranslations('transaction')
   const tc = useTranslations('common')
-  const tcat = useTranslations('categories')
 
   const [type, setType] = useState<'income' | 'expense'>('expense')
   const [amount, setAmount] = useState('')
@@ -29,7 +29,7 @@ export function EditTransactionModal({ transaction: tx, open, onClose }: Props) 
   const [date, setDate] = useState('')
   const [note, setNote] = useState('')
 
-  const { data: accounts = [] } = useAccounts()
+  const { accounts } = useAccounts()
   const { data: categories = [] } = useCategories(type)
   const { mutateAsync, isPending } = useUpdateTransaction()
 
@@ -65,11 +65,12 @@ export function EditTransactionModal({ transaction: tx, open, onClose }: Props) 
 
   return (
     <Sheet open={open} onOpenChange={v => { if (!v) onClose() }}>
-      <SheetContent>
+      <SheetContent className="overflow-y-auto">
         <SheetHeader>
           <SheetTitle>{t('edit')}</SheetTitle>
         </SheetHeader>
 
+        {/* Income / Expense toggle */}
         <div className="flex rounded-xl overflow-hidden border border-border mb-3">
           {(['expense', 'income'] as const).map(currentType => (
             <button
@@ -87,7 +88,8 @@ export function EditTransactionModal({ transaction: tx, open, onClose }: Props) 
           ))}
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Сумма */}
           <div className="space-y-1.5">
             <Label>{tc('amount')}</Label>
             <Input
@@ -103,6 +105,7 @@ export function EditTransactionModal({ transaction: tx, open, onClose }: Props) 
             />
           </div>
 
+          {/* Счёт */}
           <div className="space-y-1.5">
             <Label>{tc('account')}</Label>
             <Select value={accountId} onValueChange={setAccountId}>
@@ -115,26 +118,24 @@ export function EditTransactionModal({ transaction: tx, open, onClose }: Props) 
             </Select>
           </div>
 
+          {/* Категория — сетка */}
           <div className="space-y-1.5">
             <Label>{tc('category')}</Label>
-            <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger className="h-11"><SelectValue placeholder={t('selectCategory')} /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">{t('noCategory')}</SelectItem>
-                {categories.map(c => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.icon} {tcat(c.name_key as Parameters<typeof tcat>[0], { defaultValue: c.name_key })}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <CategoryPicker
+              categories={categories}
+              value={categoryId}
+              onChange={setCategoryId}
+              noLabel={t('noCategory')}
+            />
           </div>
 
+          {/* Дата */}
           <div className="space-y-1.5">
             <Label>{tc('date')}</Label>
             <Input type="date" value={date} onChange={e => setDate(e.target.value)} required className="h-11" />
           </div>
 
+          {/* Заметка */}
           <div className="space-y-1.5">
             <Label>{tc('note')}</Label>
             <Input
@@ -145,7 +146,7 @@ export function EditTransactionModal({ transaction: tx, open, onClose }: Props) 
             />
           </div>
 
-          <div className="flex gap-2 pt-2">
+          <div className="flex gap-2 pt-1">
             <Button type="button" variant="outline" className="flex-1 h-11" onClick={onClose}>
               {tc('cancel')}
             </Button>

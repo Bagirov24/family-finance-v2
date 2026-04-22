@@ -12,11 +12,11 @@ import { useCreateTransaction } from '@/hooks/useTransactions'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useCategories } from '@/hooks/useCategories'
 import { useFamily } from '@/hooks/useFamily'
+import { CategoryPicker } from './CategoryPicker'
 
 export function AddTransactionModal() {
   const t = useTranslations('transaction')
   const tc = useTranslations('common')
-  const tcat = useTranslations('categories')
   const { addTransactionOpen, setAddTransactionOpen } = useUIStore()
   const { family } = useFamily()
   const [type, setType] = useState<'income' | 'expense'>('expense')
@@ -26,7 +26,7 @@ export function AddTransactionModal() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [note, setNote] = useState('')
 
-  const { data: accounts = [] } = useAccounts()
+  const { accounts } = useAccounts()
   const { data: categories = [] } = useCategories(type)
   const { mutateAsync, isPending } = useCreateTransaction()
 
@@ -66,11 +66,12 @@ export function AddTransactionModal() {
         else setAddTransactionOpen(true)
       }}
     >
-      <SheetContent>
+      <SheetContent className="overflow-y-auto">
         <SheetHeader>
           <SheetTitle>{t('add')}</SheetTitle>
         </SheetHeader>
 
+        {/* Income / Expense toggle */}
         <div className="flex rounded-xl overflow-hidden border border-border mb-3">
           {(['expense', 'income'] as const).map(currentType => (
             <button
@@ -88,7 +89,8 @@ export function AddTransactionModal() {
           ))}
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Сумма */}
           <div className="space-y-1.5">
             <Label>{tc('amount')}</Label>
             <Input
@@ -105,6 +107,7 @@ export function AddTransactionModal() {
             />
           </div>
 
+          {/* Счёт */}
           <div className="space-y-1.5">
             <Label>{tc('account')}</Label>
             <Select value={accountId} onValueChange={setAccountId} required>
@@ -117,25 +120,24 @@ export function AddTransactionModal() {
             </Select>
           </div>
 
+          {/* Категория — сетка */}
           <div className="space-y-1.5">
             <Label>{tc('category')}</Label>
-            <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger className="h-11"><SelectValue placeholder={t('selectCategory')} /></SelectTrigger>
-              <SelectContent>
-                {categories.map(c => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.icon} {tcat(c.name_key as Parameters<typeof tcat>[0], { defaultValue: c.name_key })}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <CategoryPicker
+              categories={categories}
+              value={categoryId}
+              onChange={setCategoryId}
+              noLabel={t('noCategory')}
+            />
           </div>
 
+          {/* Дата */}
           <div className="space-y-1.5">
             <Label>{tc('date')}</Label>
             <Input type="date" value={date} onChange={e => setDate(e.target.value)} required className="h-11" />
           </div>
 
+          {/* Заметка */}
           <div className="space-y-1.5">
             <Label>{tc('note')}</Label>
             <Input
@@ -146,7 +148,7 @@ export function AddTransactionModal() {
             />
           </div>
 
-          <div className="flex gap-2 pt-2">
+          <div className="flex gap-2 pt-1">
             <Button
               type="button"
               variant="outline"
