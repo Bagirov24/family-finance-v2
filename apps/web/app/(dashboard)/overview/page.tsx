@@ -2,6 +2,7 @@ import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { prefetchOverviewData } from '@/lib/supabase/prefetch'
 import { HeroBalanceCard } from '@/components/overview/HeroBalanceCard'
+import { NetSavingsBar } from '@/components/overview/NetSavingsBar'
 import { DailyBudgetPulse } from '@/components/overview/DailyBudgetPulse'
 import { TopCategories } from '@/components/overview/TopCategories'
 import { PeriodSwitcher } from '@/components/overview/PeriodSwitcher'
@@ -41,6 +42,9 @@ export default async function OverviewPage() {
 
       {/* Hero: total balance + income/expense for period */}
       <HeroBalanceCard initialData={initialData} />
+
+      {/* Income vs Expense progress bar + net savings */}
+      <NetSavingsBar />
 
       {/* Quick inline add — сумма + категория + note одной строкой */}
       <QuickAdd />
