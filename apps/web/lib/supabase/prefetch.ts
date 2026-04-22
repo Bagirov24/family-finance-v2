@@ -14,30 +14,22 @@ export async function prefetchOverviewData(userId: string) {
   const month = now.getMonth() + 1
   const year = now.getFullYear()
 
-  // Все три запроса параллельно
-  const [membersResult, accountsResult] = await Promise.all([
-    supabase
-      .from('family_members')
-      .select('*, family:families(id, name, invite_code, currency)')
-      .eq('user_id', userId)
-      .order('joined_at'),
-    supabase
-      .from('accounts')
-      .select('*')
-      .eq('is_archived', false)
-      .eq('owner_user_id', userId)
-      .order('created_at'),
-  ])
+  // Шаг 1: получаем members (нужен family.id для остальных запросов)
+  const { data: membersData } = await supabase
+    .from('family_members')
+    .select('*, family:families(id, name, invite_code, currency)')
+    .eq('user_id', userId)
+    .order('joined_at')
 
-  const members = (membersResult.data ?? []) as FamilyMember[]
+  const members = (membersData ?? []) as FamilyMember[]
   const family = members[0]?.family ?? null
 
-  // Если семья есть — добираем семейные счета и summary параллельно
-  let accounts = (accountsResult.data ?? []) as Account[]
+  let accounts: Account[] = []
   let summary: { total_income: number; total_expense: number; net: number; top_category: string } | null = null
 
   if (family?.id) {
-    const [familyAccountsResult, summaryResult] = await Promise.all([
+    // Шаг 2: один батчевый Promise.all — accounts сразу с семейным фильтром + summary
+    const [accountsResult, summaryResult] = await Promise.all([
       supabase
         .from('accounts')
         .select('*')
@@ -51,8 +43,17 @@ export async function prefetchOverviewData(userId: string) {
       }),
     ])
 
-    if (!familyAccountsResult.error) accounts = familyAccountsResult.data as Account[]
+    if (!accountsResult.error) accounts = accountsResult.data as Account[]
     if (!summaryResult.error) summary = summaryResult.data?.[0] ?? null
+  } else {
+    // Нет семьи — берём только личные счета
+    const { data } = await supabase
+      .from('accounts')
+      .select('*')
+      .eq('is_archived', false)
+      .eq('owner_user_id', userId)
+      .order('created_at')
+    accounts = (data ?? []) as Account[]
   }
 
   return { members, family, accounts, summary, month, year }

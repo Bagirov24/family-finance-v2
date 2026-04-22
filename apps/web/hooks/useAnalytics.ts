@@ -1,5 +1,7 @@
+import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { useTransactions } from '@/hooks/useTransactions'
 
 export function useMonthlyTrend(familyId: string, months = 6) {
   return useQuery({
@@ -50,7 +52,7 @@ export function useWeekdaySpending(familyId: string) {
   return useQuery({
     queryKey: ['weekday-spending', familyId],
     enabled: !!familyId,
-    staleTime: 300_000, // 5 минут
+    staleTime: 300_000,
     queryFn: async () => {
       const supabase = createClient()
       const { data, error } = await supabase.rpc('get_weekday_spending', {
@@ -62,36 +64,26 @@ export function useWeekdaySpending(familyId: string) {
   })
 }
 
+/**
+ * Вместо отдельного Supabase-запроса переиспользует транзакции из кеша
+ * useTransactions (тот же queryKey ['transactions', ...]) — нулевой RTT.
+ */
 export function useCategoryBreakdown(familyId: string, month: number, year: number) {
-  return useQuery({
-    queryKey: ['category-breakdown', familyId, month, year],
-    enabled: !!familyId,
-    staleTime: 60_000,
-    queryFn: async () => {
-      const supabase = createClient()
-      const startDate = `${year}-${String(month).padStart(2, '0')}-01`
-      const endDate = new Date(year, month, 0).toISOString().split('T')[0]
+  const { transactions } = useTransactions({ familyId })
 
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('amount, category:categories(name_key, icon, color)')
-        .eq('family_id', familyId)
-        .eq('type', 'expense')
-        .gte('date', startDate)
-        .lte('date', endDate)
+  const breakdown = useMemo(() => {
+    const map: Record<string, { name_key: string; icon: string; color: string; total: number }> = {}
 
-      if (error) throw error
+    for (const t of transactions) {
+      if (t.type !== 'expense') continue
+      const cat = t.category
+      if (!cat) continue
+      if (!map[cat.name_key]) map[cat.name_key] = { ...cat, total: 0 }
+      map[cat.name_key].total += Number(t.amount)
+    }
 
-      const map: Record<string, { name_key: string; icon: string; color: string; total: number }> = {}
-      for (const t of data ?? []) {
-        const categoryRaw = t.category as { name_key: string; icon: string; color: string }[] | { name_key: string; icon: string; color: string } | null
-        const cat = Array.isArray(categoryRaw) ? categoryRaw[0] ?? null : categoryRaw
-        if (!cat) continue
-        if (!map[cat.name_key]) map[cat.name_key] = { ...cat, total: 0 }
-        map[cat.name_key].total += Number(t.amount)
-      }
+    return Object.values(map).sort((a, b) => b.total - a.total)
+  }, [transactions])
 
-      return Object.values(map).sort((a, b) => b.total - a.total)
-    },
-  })
+  return { data: breakdown, isLoading: false }
 }
