@@ -21,16 +21,16 @@ function buildPeriods(count = 6) {
 export function PeriodSwitcher() {
   const { activePeriod, setActivePeriod } = useUIStore()
   const periods = buildPeriods(6)
+  const currentYear = new Date().getFullYear()
 
   function shift(dir: -1 | 1) {
     const d = new Date(activePeriod.year, activePeriod.month - 1 + dir, 1)
     setActivePeriod(d.getMonth() + 1, d.getFullYear())
   }
 
-  const label = `${MONTHS_RU[activePeriod.month - 1]} ${activePeriod.year}`
   const isCurrentMonth =
     activePeriod.month === new Date().getMonth() + 1 &&
-    activePeriod.year === new Date().getFullYear()
+    activePeriod.year === currentYear
 
   return (
     <div className="flex items-center gap-2">
@@ -45,6 +45,9 @@ export function PeriodSwitcher() {
       <div className="flex gap-1.5 overflow-x-auto scrollbar-none flex-1 justify-center">
         {periods.map(p => {
           const active = p.month === activePeriod.month && p.year === activePeriod.year
+          // Всегда показываем год если он отличается от текущего —
+          // без этого при навигации назад кнопки «Янв» «Фев» выглядят одинаково
+          const showYear = p.year !== currentYear
           return (
             <button
               key={`${p.year}-${p.month}`}
@@ -56,12 +59,13 @@ export function PeriodSwitcher() {
                   : 'bg-muted text-muted-foreground hover:bg-muted/80'
               )}
             >
-              {MONTHS_RU[p.month - 1]}{p.year !== new Date().getFullYear() ? ` ${p.year}` : ''}
+              {MONTHS_RU[p.month - 1]}{showYear ? ` ${p.year}` : ''}
             </button>
           )
         })}
       </div>
 
+      {/* Активная кнопка «вперёд» — показывает период вне видимого списка */}
       <button
         onClick={() => shift(1)}
         disabled={isCurrentMonth}

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import type { FamilyMember } from '@/hooks/useFamily'
 import type { Account } from '@/hooks/useAccounts'
+import type { Transaction } from '@/hooks/useTransactions'
 
 /**
  * Серверный prefetch данных для /overview.
@@ -26,10 +27,14 @@ export async function prefetchOverviewData(userId: string) {
 
   let accounts: Account[] = []
   let summary: { total_income: number; total_expense: number; net: number; top_category: string } | null = null
+  let transactions: Transaction[] = []
 
   if (family?.id) {
-    // Шаг 2: один батчевый Promise.all — accounts сразу с семейным фильтром + summary
-    const [accountsResult, summaryResult] = await Promise.all([
+    const from = `${year}-${String(month).padStart(2, '0')}-01`
+    const to = new Date(year, month, 0).toISOString().split('T')[0]
+
+    // Шаг 2: один батчевый Promise.all — accounts + summary + транзакции текущего периода
+    const [accountsResult, summaryResult, transactionsResult] = await Promise.all([
       supabase
         .from('accounts')
         .select('*')
@@ -41,10 +46,22 @@ export async function prefetchOverviewData(userId: string) {
         p_month: month,
         p_year: year,
       }),
+      // Префетч транзакций: устраняет клиентский waterfall для TransactionList и
+      // useCategoryBreakdown — оба компонента получают данные без RTT через initialData
+      supabase
+        .from('transactions')
+        .select('*, category:categories(name_key,icon,color), account:accounts(name,currency)')
+        .eq('family_id', family.id)
+        .gte('date', from)
+        .lte('date', to)
+        .order('date', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(30),
     ])
 
     if (!accountsResult.error) accounts = accountsResult.data as Account[]
     if (!summaryResult.error) summary = summaryResult.data?.[0] ?? null
+    if (!transactionsResult.error) transactions = transactionsResult.data as Transaction[]
   } else {
     // Нет семьи — берём только личные счета
     const { data } = await supabase
@@ -56,5 +73,5 @@ export async function prefetchOverviewData(userId: string) {
     accounts = (data ?? []) as Account[]
   }
 
-  return { members, family, accounts, summary, month, year }
+  return { members, family, accounts, summary, transactions, month, year }
 }

@@ -6,6 +6,7 @@ import { DailyBudgetPulse } from '@/components/overview/DailyBudgetPulse'
 import { TopCategories } from '@/components/overview/TopCategories'
 import { PeriodSwitcher } from '@/components/overview/PeriodSwitcher'
 import { UpcomingSubscriptions } from '@/components/overview/UpcomingSubscriptions'
+import { WhoSpentWhat } from '@/components/overview/WhoSpentWhat'
 import { PendingTransferBanner } from '@/components/transfers/PendingTransferBanner'
 import { TransactionList } from '@/components/transactions/TransactionList'
 import type { OverviewInitialData } from '@/types/overview'
@@ -48,6 +49,9 @@ export default async function OverviewPage() {
 
       {/* Subscriptions due in next 7 days */}
       <UpcomingSubscriptions />
+
+      {/* Per-member expense breakdown (only shown in family with 2+ members) */}
+      <WhoSpentWhat />
 
       {/* Top spend categories for active period */}
       <section>
