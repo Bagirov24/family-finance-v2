@@ -40,7 +40,8 @@
     "currency": "Валюта",
     "all": "Все",
     "show": "Показать",
-    "hide": "Скрыть"
+    "hide": "Скрыть",
+    "archive": "Архивировать"
   },
   "quickAdd": {
     "placeholder": "Быстро добавить расход...",
@@ -117,7 +118,11 @@
     "recent_transactions": "Последние операции",
     "expenses": "Расходы",
     "days_left": "{count, plural, one {# день остался} few {# дня осталось} many {# дней осталось} other {# дня осталось}}",
-    "view_all": "Смотреть все"
+    "view_all": "Смотреть все",
+    "net_savings": "Чистые сбережения",
+    "spent": "потрачено",
+    "of": "из",
+    "expense_ratio": "Доля расходов от доходов"
   },
   "analytics": {
     "title": "Аналитика",
@@ -153,6 +158,9 @@
     "namePlaceholder": "Например, Основная карта",
     "type": "Тип",
     "initialBalance": "Начальный баланс",
+    "hiddenFromTotal": "Скрыт из итога",
+    "hideFromTotal": "Скрыть из итога",
+    "showInTotal": "Показать в итоге",
     "types": {
       "cash": "Наличные",
       "card": "Карта",

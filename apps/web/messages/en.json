@@ -39,7 +39,8 @@
     "all": "All",
     "show": "Show",
     "hide": "Hide",
-    "currency": "Currency"
+    "currency": "Currency",
+    "archive": "Archive"
   },
   "quickAdd": {
     "placeholder": "Quick add expense...",
@@ -74,7 +75,11 @@
     "rule_5030": "50/30/20 Rule",
     "needs": "Needs",
     "wants": "Wants",
-    "savings": "Savings"
+    "savings": "Savings",
+    "net_savings": "Net Savings",
+    "spent": "spent",
+    "of": "of",
+    "expense_ratio": "Expense-to-income ratio"
   },
   "transaction": {
     "add": "Add Transaction",
@@ -187,6 +192,9 @@
     "namePlaceholder": "For example, Main card",
     "type": "Type",
     "initialBalance": "Initial balance",
+    "hiddenFromTotal": "Hidden from total",
+    "hideFromTotal": "Hide from total",
+    "showInTotal": "Show in total",
     "types": {
       "cash": "Cash",
       "card": "Card",
