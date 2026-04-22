@@ -175,7 +175,7 @@ export function SubscriptionForm({ open, onOpenChange, initial }: Props) {
             </Select>
           </div>
 
-          {/* Напоминание за N дней */}
+          {/* Напоминание */}
           <div className="space-y-1.5">
             <Label>{t('reminder_days')}</Label>
             <select
@@ -202,8 +202,8 @@ export function SubscriptionForm({ open, onOpenChange, initial }: Props) {
             <span className="text-sm">{t('auto_create_tx')}</span>
           </label>
 
-          {/* Иконка + валюта */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Иконка + цвет + валюта */}
+          <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <Label>{t('icon')}</Label>
               <Input
@@ -212,6 +212,17 @@ export function SubscriptionForm({ open, onOpenChange, initial }: Props) {
                 placeholder="📦"
                 maxLength={4}
               />
+            </div>
+            <div className="space-y-1.5">
+              <Label>{t('color') ?? 'Цвет'}</Label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={form.color}
+                  onChange={e => set('color', e.target.value)}
+                  className="h-9 w-full rounded-md border border-input cursor-pointer p-0.5 bg-background"
+                />
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label>{tc('currency')}</Label>

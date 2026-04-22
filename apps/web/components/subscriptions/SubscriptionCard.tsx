@@ -21,7 +21,6 @@ const CYCLE_KEYS = {
   weekly: 'weekly',
 } as const
 
-/** Дней до следующего списания (может быть отрицательным если просрочено) */
 function daysUntil(dateStr: string): number {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -39,13 +38,14 @@ export function SubscriptionCard({ subscription: s, onEdit, onDelete }: Props) {
 
   const cycleKey = CYCLE_KEYS[s.billing_cycle] ?? 'monthly'
   const days = daysUntil(s.next_billing_date)
-  const account = s.account_id ? accounts.find(a => a.id === s.account_id) : null
+  // Безопасная проверка: icon может быть null
+  const account = s.account_id ? accounts.find(a => a.id === s.account_id) ?? null : null
+  const accountIcon: string = account?.icon ?? '💳'
 
   function toggleActive() {
     update.mutate({ id: s.id, is_active: !s.is_active })
   }
 
-  // Цвет бейджа «через N дней»
   const badgeClass =
     days < 0
       ? 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300'
@@ -82,7 +82,6 @@ export function SubscriptionCard({ subscription: s, onEdit, onDelete }: Props) {
             </div>
           </div>
           <div className="flex items-center gap-1 shrink-0">
-            {/* Тогл активности */}
             <button
               type="button"
               onClick={toggleActive}
@@ -129,26 +128,23 @@ export function SubscriptionCard({ subscription: s, onEdit, onDelete }: Props) {
           <span className="text-xs text-muted-foreground">{t(cycleKey)}</span>
         </div>
 
-        {/* Нижняя строка: дата + бейдж + счёт */}
+        {/* Нижняя строка */}
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs text-muted-foreground">
               {formatFullDate(s.next_billing_date)}
             </span>
-            {/* Бейдж «через N дней» */}
             <span className={cn('text-[11px] px-1.5 py-0.5 rounded-full font-medium', badgeClass)}>
               {badgeLabel}
             </span>
           </div>
-          {/* Счёт списания */}
           {account && (
             <span className="text-xs text-muted-foreground flex items-center gap-1">
-              {account.icon ?? '💳'} {account.name}
+              {accountIcon} {account.name}
             </span>
           )}
         </div>
 
-        {/* Авто-транзакция индикатор */}
         {s.auto_create_tx && (
           <p className="text-[11px] text-muted-foreground">⚡ {t('auto_create_tx')}</p>
         )}
