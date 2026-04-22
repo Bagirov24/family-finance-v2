@@ -41,6 +41,10 @@
     "hide": "Hide",
     "currency": "Currency"
   },
+  "quickAdd": {
+    "placeholder": "Quick add expense...",
+    "notePlaceholder": "Note (optional)"
+  },
   "notifications": {
     "title": "Notifications",
     "mark_all_read": "Mark all as read",

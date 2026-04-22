@@ -7,6 +7,7 @@ import { TopCategories } from '@/components/overview/TopCategories'
 import { PeriodSwitcher } from '@/components/overview/PeriodSwitcher'
 import { UpcomingSubscriptions } from '@/components/overview/UpcomingSubscriptions'
 import { WhoSpentWhat } from '@/components/overview/WhoSpentWhat'
+import { QuickAdd } from '@/components/overview/QuickAdd'
 import { PendingTransferBanner } from '@/components/transfers/PendingTransferBanner'
 import { TransactionList } from '@/components/transactions/TransactionList'
 import type { OverviewInitialData } from '@/types/overview'
@@ -40,6 +41,9 @@ export default async function OverviewPage() {
 
       {/* Hero: total balance + income/expense for period */}
       <HeroBalanceCard initialData={initialData} />
+
+      {/* Quick inline add — сумма + категория + note одной строкой */}
+      <QuickAdd />
 
       {/* Daily spending limit based on remaining budgets */}
       <DailyBudgetPulse />

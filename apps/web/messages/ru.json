@@ -42,6 +42,10 @@
     "show": "Показать",
     "hide": "Скрыть"
   },
+  "quickAdd": {
+    "placeholder": "Быстро добавить расход...",
+    "notePlaceholder": "Заметка (необязательно)"
+  },
   "notifications": {
     "title": "Уведомления",
     "mark_all_read": "Прочитать все",
