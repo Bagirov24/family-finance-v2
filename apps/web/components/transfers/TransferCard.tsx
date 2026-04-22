@@ -2,7 +2,7 @@
 import { useTranslations } from 'next-intl'
 import { formatAmount, formatDate } from '@/lib/formatters'
 import { cn } from '@/lib/utils'
-import { ArrowUpRight, ArrowDownLeft, Clock, Ban } from 'lucide-react'
+import { ArrowUpRight, ArrowDownLeft, Clock, Ban, HandCoins } from 'lucide-react'
 import type { MemberTransfer } from '@/hooks/useTransfers'
 
 interface Props {
@@ -16,12 +16,37 @@ export function TransferCard({ transfer: tx, myUserId }: Props) {
   const isPending = tx.status === 'pending'
   const isDeclined = tx.status === 'declined'
   const isCancelled = tx.status === 'cancelled'
+  const isRequest = tx.transfer_type === 'request'
 
   const fromName = tx.from_member?.display_name ?? tx.from_user_id
   const toName = tx.to_member?.display_name ?? tx.to_user_id
 
-  // created_at может прийти null до того, как Supabase присвоит default
   const dateStr = tx.created_at ? tx.created_at.split('T')[0] : tx.date
+
+  // Иконка и цвет аватара
+  const avatarColor = (() => {
+    if (isCancelled) return 'bg-muted'
+    if (isRequest && isOutgoing) return 'bg-blue-100 dark:bg-blue-950'
+    if (isRequest && !isOutgoing) return 'bg-purple-100 dark:bg-purple-950'
+    if (isOutgoing) return 'bg-red-100 dark:bg-red-950'
+    return 'bg-green-100 dark:bg-green-950'
+  })()
+
+  const Icon = (() => {
+    if (isCancelled) return <Ban size={18} className="text-muted-foreground" />
+    if (isPending && !isRequest) return <Clock size={18} className="text-yellow-600" />
+    if (isRequest) return <HandCoins size={18} className={isOutgoing ? 'text-blue-600 dark:text-blue-400' : 'text-purple-600 dark:text-purple-400'} />
+    if (isOutgoing) return <ArrowUpRight size={18} className="text-red-600" />
+    return <ArrowDownLeft size={18} className="text-green-600" />
+  })()
+
+  // Подпись
+  const label = (() => {
+    if (isRequest && isOutgoing) return t('request_sent_to', { name: toName })
+    if (isRequest && !isOutgoing) return t('request_from_name', { name: fromName })
+    if (isOutgoing) return t('sentTo', { name: toName })
+    return t('receivedFrom', { name: fromName })
+  })()
 
   return (
     <div className={cn(
@@ -30,31 +55,18 @@ export function TransferCard({ transfer: tx, myUserId }: Props) {
     )}>
       <div className={cn(
         'h-10 w-10 rounded-full flex items-center justify-center shrink-0',
-        isCancelled
-          ? 'bg-gray-100 dark:bg-gray-800'
-          : isOutgoing ? 'bg-red-100 dark:bg-red-950' : 'bg-green-100 dark:bg-green-950'
+        avatarColor
       )}>
-        {isCancelled
-          ? <Ban size={18} className="text-gray-500" />
-          : isPending
-            ? <Clock size={18} className="text-yellow-600" />
-            : isOutgoing
-              ? <ArrowUpRight size={18} className="text-red-600" />
-              : <ArrowDownLeft size={18} className="text-green-600" />
-        }
+        {Icon}
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">
-          {isOutgoing
-            ? t('sentTo', { name: toName })
-            : t('receivedFrom', { name: fromName })}
-        </p>
-        <div className="flex items-center gap-2">
+        <p className="text-sm font-medium truncate">{label}</p>
+        <div className="flex items-center gap-1.5 flex-wrap">
           <p className="text-xs text-muted-foreground">{formatDate(dateStr)}</p>
           {isPending && (
             <span className="text-xs px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300">
-              {t('pending')}
+              {isRequest ? t('request_pending') : t('pending')}
             </span>
           )}
           {isDeclined && (
@@ -63,20 +75,30 @@ export function TransferCard({ transfer: tx, myUserId }: Props) {
             </span>
           )}
           {isCancelled && (
-            <span className="text-xs px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+            <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
               {t('cancelled')}
             </span>
           )}
         </div>
+        {tx.note && (
+          <p className="text-xs text-muted-foreground truncate mt-0.5">💬 {tx.note}</p>
+        )}
       </div>
 
       <p className={cn(
         'text-sm font-semibold tabular-nums shrink-0',
         (isDeclined || isCancelled)
           ? 'text-muted-foreground line-through'
-          : isOutgoing ? 'text-foreground' : 'text-green-600 dark:text-green-400'
+          : isRequest
+            ? isOutgoing
+              ? 'text-blue-600 dark:text-blue-400'
+              : 'text-purple-600 dark:text-purple-400'
+            : isOutgoing
+              ? 'text-foreground'
+              : 'text-green-600 dark:text-green-400'
       )}>
-        {isOutgoing ? '−' : '+'}{formatAmount(Number(tx.amount))}
+        {isRequest ? '🤝' : isOutgoing ? '−' : '+'}{!isRequest && formatAmount(Number(tx.amount))}
+        {isRequest && ` ${formatAmount(Number(tx.amount))}`}
       </p>
     </div>
   )

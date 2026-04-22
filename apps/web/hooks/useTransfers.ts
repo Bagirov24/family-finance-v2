@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useUIStore } from '@/store/ui.store'
 
 export type TransferStatus = 'pending' | 'confirmed' | 'declined' | 'cancelled'
+export type TransferType = 'send' | 'request'
 
 export interface MemberTransfer {
   id: string
@@ -15,9 +16,10 @@ export interface MemberTransfer {
   amount: number
   note: string | null
   status: TransferStatus
+  transfer_type: TransferType
   date: string
   confirmed_at: string | null
-  created_at: string | null  // nullable: Supabase default назначается серверно
+  created_at: string | null
   from_account?: { name: string; color: string | null; icon: string | null } | null
   to_account?: { name: string; color: string | null; icon: string | null } | null
   from_member?: { display_name: string | null } | null
@@ -29,7 +31,15 @@ export interface CreateTransferInput {
   from_account_id: string
   to_account_id: string
   amount: number
-  note?: string
+  note: string          // required for all transfers
+  family_id: string
+  transfer_type?: TransferType
+}
+
+export interface CreateRequestInput {
+  to_user_id: string    // кому адресован запрос
+  amount: number
+  note: string          // обязательно — причина запроса
   family_id: string
 }
 
@@ -40,6 +50,7 @@ export function useTransfers() {
   const query = useQuery({
     queryKey: ['transfers', userId],
     enabled: !!userId,
+    staleTime: 30_000,
     queryFn: async () => {
       const supabase = createClient()
       const { data, error } = await supabase
@@ -59,30 +70,57 @@ export function useTransfers() {
     }
   })
 
+  // Realtime: слушаем оба направления
   useEffect(() => {
     if (!userId) return
     const supabase = createClient()
+    const invalidate = () => {
+      qc.invalidateQueries({ queryKey: ['transfers'] })
+      qc.invalidateQueries({ queryKey: ['accounts'] })
+    }
     const channel = supabase
       .channel('transfers-realtime')
       .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'member_transfers',
+        event: '*', schema: 'public', table: 'member_transfers',
         filter: `to_user_id=eq.${userId}`
-      }, () => {
-        qc.invalidateQueries({ queryKey: ['transfers'] })
-        qc.invalidateQueries({ queryKey: ['accounts'] })
-      })
+      }, invalidate)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'member_transfers',
+        filter: `from_user_id=eq.${userId}`
+      }, invalidate)
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [userId, qc])
 
+  // Обычный перевод (send) — note обязателен
   const createTransfer = useMutation({
     mutationFn: async (payload: CreateTransferInput) => {
       const supabase = createClient()
       const { error } = await supabase.from('member_transfers').insert({
         ...payload,
         from_user_id: userId,
+        transfer_type: payload.transfer_type ?? 'send',
+        status: 'pending',
+        date: new Date().toISOString().split('T')[0],
+      })
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['transfers'] })
+  })
+
+  // Запрос денег (request) — без счетов, note обязателен
+  const createRequest = useMutation({
+    mutationFn: async (payload: CreateRequestInput) => {
+      const supabase = createClient()
+      const { error } = await supabase.from('member_transfers').insert({
+        family_id: payload.family_id,
+        from_user_id: userId,     // инициатор запроса
+        to_user_id: payload.to_user_id,
+        from_account_id: null,
+        to_account_id: null,
+        amount: payload.amount,
+        note: payload.note,
+        transfer_type: 'request',
         status: 'pending',
         date: new Date().toISOString().split('T')[0],
       })
@@ -92,14 +130,13 @@ export function useTransfers() {
   })
 
   const respondTransfer = useMutation({
-    mutationFn: async ({ transfer_id, action }: {
+    mutationFn: async ({ transfer_id, action, from_account_id, to_account_id }: {
       transfer_id: string
       action: 'confirmed' | 'declined'
+      from_account_id?: string  // нужен при принятии request
+      to_account_id?: string
     }) => {
       const supabase = createClient()
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
-      if (userError || !user) throw new Error('Not authenticated')
-
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('No active session')
 
@@ -111,7 +148,7 @@ export function useTransfers() {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${session.access_token}`
           },
-          body: JSON.stringify({ transfer_id, action })
+          body: JSON.stringify({ transfer_id, action, from_account_id, to_account_id })
         }
       )
       if (!res.ok) throw new Error(await res.text())
@@ -138,17 +175,30 @@ export function useTransfers() {
   })
 
   const all = query.data ?? []
-  const pending = all.filter(t => t.status === 'pending' && t.to_user_id === userId)
-  const outgoingPending = all.filter(t => t.status === 'pending' && t.from_user_id === userId)
-  const history = all.filter(t => t.status !== 'pending' || t.from_user_id === userId)
+
+  // Входящие ожидающие переводы (to_user_id === me, type = send)
+  const pending = all.filter(
+    t => t.status === 'pending' && t.to_user_id === userId && t.transfer_type === 'send'
+  )
+  // Входящие запросы денег (from_user_id просит меня, to_user_id === me, type = request)
+  const pendingRequests = all.filter(
+    t => t.status === 'pending' && t.to_user_id === userId && t.transfer_type === 'request'
+  )
+  // Мои исходящие ожидающие (я отправил/запросил)
+  const outgoingPending = all.filter(
+    t => t.status === 'pending' && t.from_user_id === userId
+  )
+  const history = all.filter(t => t.status !== 'pending')
 
   return {
     pending,
+    pendingRequests,
     outgoingPending,
     history,
     allTransfers: all,
     isLoading: query.isLoading,
     createTransfer,
+    createRequest,
     respondTransfer,
     cancelTransfer,
   }
