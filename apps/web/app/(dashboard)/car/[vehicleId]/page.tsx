@@ -26,6 +26,8 @@ import { formatAmount, formatDate, formatKm, formatLper100 } from '@/lib/formatt
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
+type ExpensePeriod = 'month' | 'year' | 'all'
+
 const serviceItemIcons: Record<ServiceItemNameKey, string> = {
   motor_oil: '🛢️',
   air_filter: '🌬️',
@@ -37,39 +39,31 @@ const serviceItemIcons: Record<ServiceItemNameKey, string> = {
 }
 
 const serviceItemKeys: readonly ServiceItemNameKey[] = [
-  'motor_oil',
-  'air_filter',
-  'brake_pads',
-  'timing_belt',
-  'coolant',
-  'osago',
-  'tech_inspection',
+  'motor_oil', 'air_filter', 'brake_pads', 'timing_belt',
+  'coolant', 'osago', 'tech_inspection',
 ] as const
 
 const fuelTypes: readonly FuelType[] = ['gasoline', 'diesel', 'gas', 'electric', 'hybrid'] as const
 const fineStatuses: readonly FineStatus[] = ['unpaid', 'paid', 'disputed'] as const
-
 const expenseCategories: readonly VehicleExpenseCategory[] = [
-  'service',
-  'insurance',
-  'documents',
-  'parking',
-  'wash',
-  'tires',
-  'fine',
-  'equipment',
-  'other',
+  'service', 'insurance', 'documents', 'parking',
+  'wash', 'tires', 'fine', 'equipment', 'other',
 ] as const
 
-function isFuelType(value: string): value is FuelType {
-  return fuelTypes.includes(value as FuelType)
+function isFuelType(v: string): v is FuelType { return fuelTypes.includes(v as FuelType) }
+function isExpenseCategory(v: string): v is VehicleExpenseCategory {
+  return expenseCategories.includes(v as VehicleExpenseCategory)
 }
 
-function isExpenseCategory(value: string): value is VehicleExpenseCategory {
-  return expenseCategories.includes(value as VehicleExpenseCategory)
+function periodStart(period: ExpensePeriod): Date | null {
+  if (period === 'all') return null
+  const d = new Date()
+  if (period === 'month') { d.setDate(1); d.setHours(0, 0, 0, 0) }
+  if (period === 'year') { d.setMonth(0, 1); d.setHours(0, 0, 0, 0) }
+  return d
 }
 
-// ── Edit Vehicle Form ────────────────────────────────────────────────────────
+// ── Edit Vehicle Form ─────────────────────────────────────────────────────────
 function EditVehicleForm({
   vehicle,
   onClose,
@@ -94,9 +88,7 @@ function EditVehicleForm({
     e.preventDefault()
     await updateVehicle.mutateAsync({
       id: vehicle.id,
-      name,
-      make,
-      model,
+      name, make, model,
       year: Number(year),
       fuel_type: fuelType || null,
       license_plate: licensePlate || null,
@@ -109,106 +101,49 @@ function EditVehicleForm({
   return (
     <form onSubmit={handleSubmit} className="rounded-2xl border bg-card p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          {common('edit')}
-        </h2>
-        <button type="button" onClick={onClose} className="text-muted-foreground hover:text-foreground">
-          <X size={16} />
-        </button>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{common('edit')}</h2>
+        <button type="button" onClick={onClose} className="text-muted-foreground hover:text-foreground"><X size={16} /></button>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="space-y-1 sm:col-span-2">
           <span className="text-sm text-muted-foreground">{t('vehicle')}</span>
-          <input
-            className="w-full rounded-xl border bg-background px-3 py-2 text-sm"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            required
-          />
+          <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={name} onChange={e => setName(e.target.value)} required />
         </label>
         <label className="space-y-1">
           <span className="text-sm text-muted-foreground">Make</span>
-          <input
-            className="w-full rounded-xl border bg-background px-3 py-2 text-sm"
-            value={make}
-            onChange={e => setMake(e.target.value)}
-            required
-          />
+          <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={make} onChange={e => setMake(e.target.value)} required />
         </label>
         <label className="space-y-1">
           <span className="text-sm text-muted-foreground">Model</span>
-          <input
-            className="w-full rounded-xl border bg-background px-3 py-2 text-sm"
-            value={model}
-            onChange={e => setModel(e.target.value)}
-            required
-          />
+          <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={model} onChange={e => setModel(e.target.value)} required />
         </label>
         <label className="space-y-1">
           <span className="text-sm text-muted-foreground">Year</span>
-          <input
-            className="w-full rounded-xl border bg-background px-3 py-2 text-sm"
-            type="number"
-            min={1900}
-            max={new Date().getFullYear() + 1}
-            value={year}
-            onChange={e => setYear(e.target.value)}
-            required
-          />
+          <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min={1900} max={new Date().getFullYear() + 1} value={year} onChange={e => setYear(e.target.value)} required />
         </label>
         <label className="space-y-1">
           <span className="text-sm text-muted-foreground">{t('mileage')}</span>
-          <input
-            className="w-full rounded-xl border bg-background px-3 py-2 text-sm"
-            type="number"
-            min={0}
-            value={currentMileage}
-            onChange={e => setCurrentMileage(e.target.value)}
-          />
+          <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min={0} value={currentMileage} onChange={e => setCurrentMileage(e.target.value)} />
         </label>
         <label className="space-y-1">
           <span className="text-sm text-muted-foreground">{t('licensePlate')}</span>
-          <input
-            className="w-full rounded-xl border bg-background px-3 py-2 text-sm"
-            value={licensePlate}
-            onChange={e => setLicensePlate(e.target.value)}
-          />
+          <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={licensePlate} onChange={e => setLicensePlate(e.target.value)} />
         </label>
         <label className="space-y-1">
           <span className="text-sm text-muted-foreground">VIN</span>
-          <input
-            className="w-full rounded-xl border bg-background px-3 py-2 text-sm"
-            value={vin}
-            onChange={e => setVin(e.target.value)}
-          />
+          <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={vin} onChange={e => setVin(e.target.value)} />
         </label>
         <label className="space-y-1">
           <span className="text-sm text-muted-foreground">{t('fuel')}</span>
-          <select
-            className="w-full rounded-xl border bg-background px-3 py-2 text-sm"
-            value={fuelType}
-            onChange={e => setFuelType(e.target.value as FuelType | '')}
-          >
+          <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={fuelType} onChange={e => setFuelType(e.target.value as FuelType | '')}>
             <option value="">—</option>
-            {fuelTypes.map(ft => (
-              <option key={ft} value={ft}>{t(`fuelTypes.${ft}` as const)}</option>
-            ))}
+            {fuelTypes.map(ft => <option key={ft} value={ft}>{t(`fuelTypes.${ft}` as const)}</option>)}
           </select>
         </label>
       </div>
       <div className="flex gap-2 justify-end">
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-xl border px-4 py-2 text-sm"
-        >
-          {common('cancel')}
-        </button>
-        <button
-          type="submit"
-          disabled={updateVehicle.isPending}
-          className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50 flex items-center gap-1"
-        >
+        <button type="button" onClick={onClose} className="rounded-xl border px-4 py-2 text-sm">{common('cancel')}</button>
+        <button type="submit" disabled={updateVehicle.isPending} className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50 flex items-center gap-1">
           <Check size={14} />
           {updateVehicle.isPending ? common('loading') : common('save')}
         </button>
@@ -217,15 +152,11 @@ function EditVehicleForm({
   )
 }
 
-// ── Archive / Delete confirmation dialog ─────────────────────────────────────
+// ── Danger dialog ────────────────────────────────────────────────────────────────
 type DangerAction = 'archive' | 'delete'
 
 function DangerDialog({
-  action,
-  vehicleName,
-  isPending,
-  onConfirm,
-  onClose,
+  action, vehicleName, isPending, onConfirm, onClose,
 }: {
   action: DangerAction
   vehicleName: string
@@ -249,17 +180,13 @@ function DangerDialog({
               {isDelete ? 'Удалить автомобиль?' : 'Архивировать автомобиль?'}
             </h2>
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-            <X size={16} />
-          </button>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X size={16} /></button>
         </div>
-
         <p className="text-sm text-muted-foreground">
           {isDelete
             ? 'Все данные (топливо, ТО, расходы, штрафы) будут удалены безвозвратно.'
             : 'Автомобиль скроется из списка. Все данные сохранятся — вы сможете восстановить его позже.'}
         </p>
-
         {isDelete && (
           <label className="space-y-1 block">
             <span className="text-sm text-muted-foreground">
@@ -273,14 +200,8 @@ function DangerDialog({
             />
           </label>
         )}
-
         <div className="flex gap-2 justify-end">
-          <button
-            onClick={onClose}
-            className="rounded-xl border px-4 py-2 text-sm"
-          >
-            Отмена
-          </button>
+          <button onClick={onClose} className="rounded-xl border px-4 py-2 text-sm">Отмена</button>
           <button
             onClick={onConfirm}
             disabled={!canConfirm || isPending}
@@ -289,12 +210,39 @@ function DangerDialog({
               isDelete ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-500 hover:bg-amber-600'
             )}
           >
-            {isPending
-              ? 'Подождите...'
-              : isDelete ? 'Удалить навсегда' : 'Архивировать'}
+            {isPending ? 'Подождите...' : isDelete ? 'Удалить навсегда' : 'Архивировать'}
           </button>
         </div>
       </div>
+    </div>
+  )
+}
+
+// ── Period toggle ─────────────────────────────────────────────────────────────────
+const PERIOD_LABELS: Record<ExpensePeriod, string> = {
+  month: 'Месяц',
+  year: 'Год',
+  all: 'Всё время',
+}
+
+function PeriodToggle({ value, onChange }: { value: ExpensePeriod; onChange: (v: ExpensePeriod) => void }) {
+  return (
+    <div className="flex rounded-xl border overflow-hidden text-sm">
+      {(['month', 'year', 'all'] as const).map(p => (
+        <button
+          key={p}
+          type="button"
+          onClick={() => onChange(p)}
+          className={cn(
+            'flex-1 px-3 py-1.5 transition-colors',
+            value === p
+              ? 'bg-primary text-primary-foreground font-medium'
+              : 'text-muted-foreground hover:bg-muted'
+          )}
+        >
+          {PERIOD_LABELS[p]}
+        </button>
+      ))}
     </div>
   )
 }
@@ -311,6 +259,7 @@ export default function VehicleDetailPage() {
 
   const [isEditing, setIsEditing] = useState(false)
   const [dangerAction, setDangerAction] = useState<DangerAction | null>(null)
+  const [expensePeriod, setExpensePeriod] = useState<ExpensePeriod>('month')
 
   const [fuelAccountId, setFuelAccountId] = useState('')
   const [fuelLiters, setFuelLiters] = useState('')
@@ -345,73 +294,81 @@ export default function VehicleDetailPage() {
 
   const { entries, fuelConsumption, isLoading: fuelLoading, addFuelEntry } = useFuelLog(vehicleId)
   const {
-    items: serviceItems,
-    isLoading: svcLoading,
-    createServiceItem,
-    updateServiceItem,
-    deleteServiceItem,
+    items: serviceItems, isLoading: svcLoading,
+    createServiceItem, updateServiceItem, deleteServiceItem,
   } = useServiceItems(vehicleId)
   const { expenses, totalByCategory, total, isLoading: expLoading, addExpense } = useVehicleExpenses(vehicleId)
   const {
-    fines,
-    isLoading: finesLoading,
-    createFine,
-    updateFine,
-    deleteFine,
+    fines, isLoading: finesLoading,
+    createFine, updateFine, deleteFine,
   } = useVehicleFines(vehicleId)
 
-  const unpaidFinesTotal = useMemo(
-    () => fines.filter((f) => f.status === 'unpaid').reduce((sum, f) => sum + Number(f.discount_amount_rub ?? f.amount_rub), 0),
-    [fines]
+  // ── Period-filtered expenses ──────────────────────────────────────────────────
+  const filteredExpenses = useMemo(() => {
+    const start = periodStart(expensePeriod)
+    if (!start) return expenses
+    return expenses.filter(e => new Date(e.date) >= start)
+  }, [expenses, expensePeriod])
+
+  const filteredTotal = useMemo(
+    () => filteredExpenses.reduce((s, e) => s + Number(e.amount_rub), 0),
+    [filteredExpenses]
   )
 
-  const totalKm = vehicle
-    ? Number(vehicle.current_mileage ?? 0) - Number(vehicle.initial_mileage ?? 0)
-    : 0
-  const costPerKm = total > 0 && totalKm > 0 ? (total / totalKm).toFixed(1) : null
+  const filteredByCategory = useMemo(
+    () => filteredExpenses.reduce<Record<VehicleExpenseCategory, number>>(
+      (acc, e) => { acc[e.category] = (acc[e.category] ?? 0) + Number(e.amount_rub); return acc },
+      {} as Record<VehicleExpenseCategory, number>
+    ),
+    [filteredExpenses]
+  )
 
+  // Cost per month: total filtered / number of months in period
+  const costPerMonth = useMemo(() => {
+    if (filteredTotal === 0) return null
+    if (expensePeriod === 'month') return filteredTotal
+    if (expensePeriod === 'year') return filteredTotal / 12
+    // all time: divide by months since first expense
+    const first = expenses.at(-1) // sorted desc, last = oldest
+    if (!first) return null
+    const months = Math.max(1,
+      Math.ceil((Date.now() - new Date(first.date).getTime()) / (30.44 * 86_400_000))
+    )
+    return filteredTotal / months
+  }, [filteredTotal, expensePeriod, expenses])
+
+  // ── Misc ────────────────────────────────────────────────────────────────────
+  const unpaidFinesTotal = useMemo(
+    () => fines.filter(f => f.status === 'unpaid').reduce((s, f) => s + Number(f.discount_amount_rub ?? f.amount_rub), 0),
+    [fines]
+  )
+  const totalKm = vehicle ? Number(vehicle.current_mileage ?? 0) - Number(vehicle.initial_mileage ?? 0) : 0
+  const costPerKm = total > 0 && totalKm > 0 ? (total / totalKm).toFixed(1) : null
   const isVehicleReady = !!vehicle
   const defaultMileage = String(vehicle?.current_mileage ?? '')
 
   function resetServiceForm() {
-    setServiceNameKey('motor_oil')
-    setServiceLastDate('')
-    setServiceLastMileage('')
-    setServiceEveryKm('')
-    setServiceEveryMonths('')
-    setServiceNotes('')
-    setEditingServiceId(null)
+    setServiceNameKey('motor_oil'); setServiceLastDate(''); setServiceLastMileage('')
+    setServiceEveryKm(''); setServiceEveryMonths(''); setServiceNotes(''); setEditingServiceId(null)
   }
-
   function fillServiceForm(item: ServiceItem) {
-    setEditingServiceId(item.id)
-    setServiceNameKey(item.name_key)
+    setEditingServiceId(item.id); setServiceNameKey(item.name_key)
     setServiceLastDate(item.last_replaced_date ?? '')
     setServiceLastMileage(item.last_replaced_mileage != null ? String(item.last_replaced_mileage) : '')
     setServiceEveryKm(item.replace_every_km != null ? String(item.replace_every_km) : '')
     setServiceEveryMonths(item.replace_every_months != null ? String(item.replace_every_months) : '')
     setServiceNotes(item.notes ?? '')
   }
-
   function resetFineForm() {
-    setFineAmount('')
-    setFineDiscountAmount('')
-    setFineDiscountUntil('')
+    setFineAmount(''); setFineDiscountAmount(''); setFineDiscountUntil('')
     setFineIssuedDate(new Date().toISOString().split('T')[0])
-    setFineDescription('')
-    setFineExternalId('')
-    setFineStatus('unpaid')
-    setEditingFineId(null)
+    setFineDescription(''); setFineExternalId(''); setFineStatus('unpaid'); setEditingFineId(null)
   }
-
   function fillFineForm(fine: VehicleFine) {
-    setEditingFineId(fine.id)
-    setFineAmount(String(fine.amount_rub ?? ''))
+    setEditingFineId(fine.id); setFineAmount(String(fine.amount_rub ?? ''))
     setFineDiscountAmount(fine.discount_amount_rub != null ? String(fine.discount_amount_rub) : '')
-    setFineDiscountUntil(fine.discount_until ?? '')
-    setFineIssuedDate(fine.issued_date ?? '')
-    setFineDescription(fine.description ?? '')
-    setFineExternalId(fine.external_id ?? '')
+    setFineDiscountUntil(fine.discount_until ?? ''); setFineIssuedDate(fine.issued_date ?? '')
+    setFineDescription(fine.description ?? ''); setFineExternalId(fine.external_id ?? '')
     setFineStatus(fine.status)
   }
 
@@ -419,61 +376,41 @@ export default function VehicleDetailPage() {
     e.preventDefault()
     if (!vehicle?.user_id || !vehicle?.family_id || !fuelAccountId) return
     await addFuelEntry.mutateAsync({
-      vehicle_id: vehicle.id,
-      user_id: vehicle.user_id,
-      family_id: vehicle.family_id,
-      account_id: fuelAccountId,
-      liters: Number(fuelLiters),
-      price_per_liter: Number(fuelPrice),
-      mileage: Number(fuelMileage),
-      full_tank: fuelFullTank,
-      note: fuelNote || undefined,
+      vehicle_id: vehicle.id, user_id: vehicle.user_id, family_id: vehicle.family_id,
+      account_id: fuelAccountId, liters: Number(fuelLiters), price_per_liter: Number(fuelPrice),
+      mileage: Number(fuelMileage), full_tank: fuelFullTank, note: fuelNote || undefined,
     })
-    setFuelLiters('')
-    setFuelPrice('')
-    setFuelMileage(String(vehicle.current_mileage ?? ''))
-    setFuelNote('')
-    setFuelFullTank(true)
+    setFuelLiters(''); setFuelPrice(''); setFuelMileage(String(vehicle.current_mileage ?? ''))
+    setFuelNote(''); setFuelFullTank(true)
   }
 
   async function handleAddExpense(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!vehicle?.user_id || !vehicle?.family_id || !expenseAccountId) return
     await addExpense.mutateAsync({
-      vehicle_id: vehicle.id,
-      user_id: vehicle.user_id,
-      family_id: vehicle.family_id,
-      account_id: expenseAccountId,
-      category: expenseCategory,
-      amount_rub: Number(expenseAmount),
-      date: expenseDate,
+      vehicle_id: vehicle.id, user_id: vehicle.user_id, family_id: vehicle.family_id,
+      account_id: expenseAccountId, category: expenseCategory,
+      amount_rub: Number(expenseAmount), date: expenseDate,
       note: expenseNote || undefined,
       mileage_at_moment: expenseMileage ? Number(expenseMileage) : undefined,
     })
-    setExpenseAmount('')
-    setExpenseDate(new Date().toISOString().split('T')[0])
-    setExpenseMileage(String(vehicle.current_mileage ?? ''))
-    setExpenseNote('')
-    setExpenseCategory('service')
+    setExpenseAmount(''); setExpenseDate(new Date().toISOString().split('T')[0])
+    setExpenseMileage(String(vehicle.current_mileage ?? '')); setExpenseNote(''); setExpenseCategory('service')
   }
 
   async function handleSaveServiceItem(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!vehicle) return
     const payload = {
-      vehicle_id: vehicle.id,
-      name_key: serviceNameKey,
+      vehicle_id: vehicle.id, name_key: serviceNameKey,
       last_replaced_date: serviceLastDate || null,
       last_replaced_mileage: serviceLastMileage ? Number(serviceLastMileage) : null,
       replace_every_km: serviceEveryKm ? Number(serviceEveryKm) : null,
       replace_every_months: serviceEveryMonths ? Number(serviceEveryMonths) : null,
       notes: serviceNotes || null,
     }
-    if (editingServiceId) {
-      await updateServiceItem.mutateAsync({ id: editingServiceId, ...payload })
-    } else {
-      await createServiceItem.mutateAsync(payload)
-    }
+    if (editingServiceId) { await updateServiceItem.mutateAsync({ id: editingServiceId, ...payload }) }
+    else { await createServiceItem.mutateAsync(payload) }
     resetServiceForm()
   }
 
@@ -486,22 +423,14 @@ export default function VehicleDetailPage() {
     e.preventDefault()
     if (!vehicle?.user_id) return
     const payload = {
-      vehicle_id: vehicle.id,
-      user_id: vehicle.user_id,
-      family_id: vehicle.family_id,
+      vehicle_id: vehicle.id, user_id: vehicle.user_id, family_id: vehicle.family_id,
       amount_rub: Number(fineAmount),
       discount_amount_rub: fineDiscountAmount ? Number(fineDiscountAmount) : null,
-      discount_until: fineDiscountUntil || null,
-      issued_date: fineIssuedDate || null,
-      description: fineDescription || null,
-      external_id: fineExternalId || null,
-      status: fineStatus,
+      discount_until: fineDiscountUntil || null, issued_date: fineIssuedDate || null,
+      description: fineDescription || null, external_id: fineExternalId || null, status: fineStatus,
     }
-    if (editingFineId) {
-      await updateFine.mutateAsync({ id: editingFineId, ...payload })
-    } else {
-      await createFine.mutateAsync(payload)
-    }
+    if (editingFineId) { await updateFine.mutateAsync({ id: editingFineId, ...payload }) }
+    else { await createFine.mutateAsync(payload) }
     resetFineForm()
   }
 
@@ -512,11 +441,8 @@ export default function VehicleDetailPage() {
 
   async function handleDangerConfirm() {
     if (!vehicle || !dangerAction) return
-    if (dangerAction === 'archive') {
-      await archiveVehicle.mutateAsync(vehicle.id)
-    } else {
-      await deleteVehicle.mutateAsync(vehicle.id)
-    }
+    if (dangerAction === 'archive') { await archiveVehicle.mutateAsync(vehicle.id) }
+    else { await deleteVehicle.mutateAsync(vehicle.id) }
     router.push('/car')
   }
 
@@ -524,14 +450,9 @@ export default function VehicleDetailPage() {
     return (
       <div className="max-w-3xl mx-auto space-y-4">
         <Skeleton className="h-6 w-24" />
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-56" />
-          <Skeleton className="h-5 w-80" />
-        </div>
+        <div className="space-y-2"><Skeleton className="h-8 w-56" /><Skeleton className="h-5 w-80" /></div>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 rounded-2xl" />
-          ))}
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-2xl" />)}
         </div>
         <Skeleton className="h-80 w-full rounded-2xl" />
       </div>
@@ -541,12 +462,8 @@ export default function VehicleDetailPage() {
   if (!vehicle) {
     return (
       <div className="max-w-3xl mx-auto space-y-4">
-        <Link href="/car" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-          ← {t('backToCars')}
-        </Link>
-        <div className="rounded-2xl border bg-card p-6 text-center text-muted-foreground">
-          {t('vehicleNotFound')}
-        </div>
+        <Link href="/car" className="text-sm text-muted-foreground hover:text-foreground transition-colors">← {t('backToCars')}</Link>
+        <div className="rounded-2xl border bg-card p-6 text-center text-muted-foreground">{t('vehicleNotFound')}</div>
       </div>
     )
   }
@@ -555,19 +472,15 @@ export default function VehicleDetailPage() {
     <div className="max-w-3xl mx-auto space-y-4">
       {dangerAction && (
         <DangerDialog
-          action={dangerAction}
-          vehicleName={vehicle.name}
+          action={dangerAction} vehicleName={vehicle.name}
           isPending={archiveVehicle.isPending || deleteVehicle.isPending}
-          onConfirm={handleDangerConfirm}
-          onClose={() => setDangerAction(null)}
+          onConfirm={handleDangerConfirm} onClose={() => setDangerAction(null)}
         />
       )}
 
-      <Link href="/car" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-        ← {t('backToCars')}
-      </Link>
+      <Link href="/car" className="text-sm text-muted-foreground hover:text-foreground transition-colors">← {t('backToCars')}</Link>
 
-      {/* Vehicle header */}
+      {/* Header */}
       {isEditing ? (
         <EditVehicleForm vehicle={vehicle} onClose={() => setIsEditing(false)} />
       ) : (
@@ -575,9 +488,7 @@ export default function VehicleDetailPage() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold">{vehicle.name}</h1>
-              <p className="text-sm text-muted-foreground">
-                {vehicle.make} {vehicle.model} · {vehicle.year}
-              </p>
+              <p className="text-sm text-muted-foreground">{vehicle.make} {vehicle.model} · {vehicle.year}</p>
               <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
                 <span>{t('mileage')}: {formatKm(Number(vehicle.current_mileage ?? 0))}</span>
                 {vehicle.license_plate ? <span>• {t('licensePlate')}: {vehicle.license_plate}</span> : null}
@@ -585,33 +496,15 @@ export default function VehicleDetailPage() {
               </div>
             </div>
             <div className="flex items-center gap-1 shrink-0">
-              <button
-                onClick={() => setIsEditing(true)}
-                title={common('edit')}
-                className="rounded-xl border p-2 text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
-              >
-                <Pencil size={15} />
-              </button>
-              <button
-                onClick={() => setDangerAction('archive')}
-                title="Архивировать"
-                className="rounded-xl border p-2 text-muted-foreground hover:text-amber-500 hover:border-amber-400 transition-colors"
-              >
-                <ArchiveX size={15} />
-              </button>
-              <button
-                onClick={() => setDangerAction('delete')}
-                title={common('delete')}
-                className="rounded-xl border p-2 text-muted-foreground hover:text-red-500 hover:border-red-400 transition-colors"
-              >
-                <Trash2 size={15} />
-              </button>
+              <button onClick={() => setIsEditing(true)} title={common('edit')} className="rounded-xl border p-2 text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"><Pencil size={15} /></button>
+              <button onClick={() => setDangerAction('archive')} title="Архивировать" className="rounded-xl border p-2 text-muted-foreground hover:text-amber-500 hover:border-amber-400 transition-colors"><ArchiveX size={15} /></button>
+              <button onClick={() => setDangerAction('delete')} title={common('delete')} className="rounded-xl border p-2 text-muted-foreground hover:text-red-500 hover:border-red-400 transition-colors"><Trash2 size={15} /></button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Health Score ───────────────────────────────────────────── */}
+      {/* Health Score */}
       {!svcLoading && serviceItems.length > 0 && (
         <VehicleHealthScore vehicle={vehicle} serviceItems={serviceItems} />
       )}
@@ -624,19 +517,15 @@ export default function VehicleDetailPage() {
         </div>
         <div className="rounded-2xl border bg-card p-3 text-center">
           <p className="text-xs text-muted-foreground mb-1">{t('costPerKm')}</p>
-          <p className="font-bold tabular-nums">
-            {costPerKm != null ? `${costPerKm} ₽` : '—'}
-          </p>
+          <p className="font-bold tabular-nums">{costPerKm != null ? `${costPerKm} ₽` : '—'}</p>
         </div>
         <div className="rounded-2xl border bg-card p-3 text-center">
-          <p className="text-xs text-muted-foreground mb-1">{t('totalExpenses')}</p>
-          <p className="font-bold tabular-nums">{formatAmount(total)}</p>
+          <p className="text-xs text-muted-foreground mb-1">₽/мес</p>
+          <p className="font-bold tabular-nums">{costPerMonth != null ? formatAmount(Math.round(costPerMonth)) : '—'}</p>
         </div>
         <div className="rounded-2xl border bg-card p-3 text-center">
           <p className="text-xs text-muted-foreground mb-1">{t('unpaidFines')}</p>
-          <p className={cn('font-bold tabular-nums', unpaidFinesTotal > 0 && 'text-red-500')}>
-            {formatAmount(unpaidFinesTotal)}
-          </p>
+          <p className={cn('font-bold tabular-nums', unpaidFinesTotal > 0 && 'text-red-500')}>{formatAmount(unpaidFinesTotal)}</p>
         </div>
       </div>
 
@@ -655,32 +544,30 @@ export default function VehicleDetailPage() {
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="space-y-1">
                 <span className="text-sm text-muted-foreground">{common('account')}</span>
-                <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={fuelAccountId} onChange={(e) => setFuelAccountId(e.target.value)} required>
+                <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={fuelAccountId} onChange={e => setFuelAccountId(e.target.value)} required>
                   <option value="">{t('selectAccount')}</option>
-                  {accounts.map((account) => (
-                    <option key={account.id} value={account.id}>{account.name}</option>
-                  ))}
+                  {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </select>
               </label>
               <label className="space-y-1">
                 <span className="text-sm text-muted-foreground">{t('mileage')}</span>
-                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min={0} value={fuelMileage} onChange={(e) => setFuelMileage(e.target.value)} placeholder={defaultMileage} required />
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min={0} value={fuelMileage} onChange={e => setFuelMileage(e.target.value)} placeholder={defaultMileage} required />
               </label>
               <label className="space-y-1">
                 <span className="text-sm text-muted-foreground">{t('liters')}</span>
-                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min="0" step="0.1" value={fuelLiters} onChange={(e) => setFuelLiters(e.target.value)} required />
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min="0" step="0.1" value={fuelLiters} onChange={e => setFuelLiters(e.target.value)} required />
               </label>
               <label className="space-y-1">
                 <span className="text-sm text-muted-foreground">{t('pricePerLiter')}</span>
-                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min="0" step="0.01" value={fuelPrice} onChange={(e) => setFuelPrice(e.target.value)} required />
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min="0" step="0.01" value={fuelPrice} onChange={e => setFuelPrice(e.target.value)} required />
               </label>
             </div>
             <label className="space-y-1 block">
               <span className="text-sm text-muted-foreground">{common('note')}</span>
-              <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={fuelNote} onChange={(e) => setFuelNote(e.target.value)} />
+              <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={fuelNote} onChange={e => setFuelNote(e.target.value)} />
             </label>
             <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={fuelFullTank} onChange={(e) => setFuelFullTank(e.target.checked)} />
+              <input type="checkbox" checked={fuelFullTank} onChange={e => setFuelFullTank(e.target.checked)} />
               <span>{t('fullTank')}</span>
             </label>
             <button type="submit" disabled={addFuelEntry.isPending || !isVehicleReady} className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
@@ -688,24 +575,19 @@ export default function VehicleDetailPage() {
             </button>
           </form>
 
-          {fuelLoading ? <Skeleton className="h-32 w-full" /> : entries.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">{t('noFuelEntries')}</p>
-          ) : (
-            <ul className="space-y-2">
-              {entries.map((e) => (
-                <li key={e.id} className="rounded-xl border bg-card p-3 flex justify-between items-center gap-4">
-                  <div>
-                    <p className="text-sm font-medium">{e.liters} L · {Number(e.price_per_liter).toFixed(1)} ₽/L</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatKm(Number(e.mileage))}
-                      {e.expense?.date ? ` • ${formatDate(e.expense.date)}` : ''}
-                    </p>
-                  </div>
-                  <p className="font-semibold tabular-nums text-sm">{formatAmount(Number(e.liters) * Number(e.price_per_liter))}</p>
-                </li>
-              ))}
-            </ul>
-          )}
+          {fuelLoading ? <Skeleton className="h-32 w-full" /> : entries.length === 0
+            ? <p className="text-sm text-muted-foreground text-center py-8">{t('noFuelEntries')}</p>
+            : <ul className="space-y-2">
+                {entries.map(e => (
+                  <li key={e.id} className="rounded-xl border bg-card p-3 flex justify-between items-center gap-4">
+                    <div>
+                      <p className="text-sm font-medium">{e.liters} L · {Number(e.price_per_liter).toFixed(1)} ₽/L</p>
+                      <p className="text-xs text-muted-foreground">{formatKm(Number(e.mileage))}{e.expense?.date ? ` • ${formatDate(e.expense.date)}` : ''}</p>
+                    </div>
+                    <p className="font-semibold tabular-nums text-sm">{formatAmount(Number(e.liters) * Number(e.price_per_liter))}</p>
+                  </li>
+                ))}
+              </ul>}
         </TabsContent>
 
         {/* ── SERVICE ── */}
@@ -715,111 +597,94 @@ export default function VehicleDetailPage() {
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 {editingServiceId ? t('editServiceItem') : t('addServiceItem')}
               </h2>
-              {editingServiceId ? (
-                <button type="button" onClick={resetServiceForm} className="text-sm text-muted-foreground hover:text-foreground">
-                  {common('cancel')}
-                </button>
-              ) : null}
+              {editingServiceId && <button type="button" onClick={resetServiceForm} className="text-sm text-muted-foreground hover:text-foreground">{common('cancel')}</button>}
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="space-y-1">
                 <span className="text-sm text-muted-foreground">{common('category')}</span>
-                <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={serviceNameKey} onChange={(e) => setServiceNameKey(e.target.value as ServiceItemNameKey)}>
-                  {serviceItemKeys.map((key) => (
-                    <option key={key} value={key}>{t(`serviceItems.${key}` as const)}</option>
-                  ))}
+                <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={serviceNameKey} onChange={e => setServiceNameKey(e.target.value as ServiceItemNameKey)}>
+                  {serviceItemKeys.map(key => <option key={key} value={key}>{t(`serviceItems.${key}` as const)}</option>)}
                 </select>
               </label>
               <label className="space-y-1">
                 <span className="text-sm text-muted-foreground">{t('lastReplaced')}</span>
-                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="date" value={serviceLastDate} onChange={(e) => setServiceLastDate(e.target.value)} />
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="date" value={serviceLastDate} onChange={e => setServiceLastDate(e.target.value)} />
               </label>
               <label className="space-y-1">
                 <span className="text-sm text-muted-foreground">{t('mileage')}</span>
-                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min={0} value={serviceLastMileage} onChange={(e) => setServiceLastMileage(e.target.value)} />
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min={0} value={serviceLastMileage} onChange={e => setServiceLastMileage(e.target.value)} />
               </label>
               <label className="space-y-1">
                 <span className="text-sm text-muted-foreground">{t('replaceEveryKm')}</span>
-                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min={0} value={serviceEveryKm} onChange={(e) => setServiceEveryKm(e.target.value)} />
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min={0} value={serviceEveryKm} onChange={e => setServiceEveryKm(e.target.value)} />
               </label>
               <label className="space-y-1">
                 <span className="text-sm text-muted-foreground">{t('replaceEveryMonths')}</span>
-                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min={0} value={serviceEveryMonths} onChange={(e) => setServiceEveryMonths(e.target.value)} />
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min={0} value={serviceEveryMonths} onChange={e => setServiceEveryMonths(e.target.value)} />
               </label>
             </div>
             <label className="space-y-1 block">
               <span className="text-sm text-muted-foreground">{common('note')}</span>
-              <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={serviceNotes} onChange={(e) => setServiceNotes(e.target.value)} />
+              <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={serviceNotes} onChange={e => setServiceNotes(e.target.value)} />
             </label>
             <button type="submit" disabled={createServiceItem.isPending || updateServiceItem.isPending} className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
               {editingServiceId ? common('save') : t('addServiceItem')}
             </button>
           </form>
 
-          {svcLoading ? <Skeleton className="h-32 w-full" /> : serviceItems.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">{t('noServiceItems')}</p>
-          ) : (
-            <ul className="space-y-2">
-              {serviceItems.map((item) => {
-                const isDueByDate = item.next_due_date ? new Date(item.next_due_date) <= new Date() : false
-                const isDueByMileage = item.replace_every_km && item.last_replaced_mileage != null
-                  ? Number(vehicle.current_mileage ?? 0) >= item.last_replaced_mileage + item.replace_every_km
-                  : false
-                const isDue = Boolean(isDueByDate || isDueByMileage)
-                const nextMileage = item.replace_every_km && item.last_replaced_mileage != null
-                  ? item.last_replaced_mileage + item.replace_every_km
-                  : null
-
-                const kmProgress = (() => {
-                  if (!item.replace_every_km || item.last_replaced_mileage == null) return null
-                  const driven = Number(vehicle.current_mileage ?? 0) - item.last_replaced_mileage
-                  const pct = Math.min(100, Math.round((driven / item.replace_every_km) * 100))
-                  return { pct, driven, total: item.replace_every_km }
-                })()
-
-                return (
-                  <li key={item.id} className={cn('rounded-xl border bg-card p-3', isDue && 'border-red-300 dark:border-red-700')}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium">{serviceItemIcons[item.name_key]} {t(`serviceItems.${item.name_key}` as const)}</p>
-                        <div className="mt-1 space-y-1 text-xs text-muted-foreground">
-                          <p>{item.last_replaced_date ? `${t('lastReplaced')}: ${formatDate(item.last_replaced_date)}` : t('neverReplaced')}</p>
-                          {item.next_due_date ? <p>{t('nextDue')}: {formatDate(item.next_due_date)}</p> : null}
-                          {nextMileage ? <p>{t('nextDueMileage')}: {formatKm(nextMileage)}</p> : null}
-                          {item.notes ? <p>{item.notes}</p> : null}
-                        </div>
-                        {kmProgress ? (
-                          <div className="mt-2">
-                            <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                              <span>{formatKm(kmProgress.driven)} / {formatKm(kmProgress.total)}</span>
-                              <span>{kmProgress.pct}%</span>
-                            </div>
-                            <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                              <div
-                                className={cn(
-                                  'h-full rounded-full transition-all',
-                                  kmProgress.pct >= 100 ? 'bg-red-500' :
-                                  kmProgress.pct >= 80 ? 'bg-amber-400' : 'bg-green-500'
-                                )}
-                                style={{ width: `${kmProgress.pct}%` }}
-                              />
-                            </div>
+          {svcLoading ? <Skeleton className="h-32 w-full" /> : serviceItems.length === 0
+            ? <p className="text-sm text-muted-foreground text-center py-8">{t('noServiceItems')}</p>
+            : <ul className="space-y-2">
+                {serviceItems.map(item => {
+                  const isDueByDate = item.next_due_date ? new Date(item.next_due_date) <= new Date() : false
+                  const isDueByMileage = item.replace_every_km && item.last_replaced_mileage != null
+                    ? Number(vehicle.current_mileage ?? 0) >= item.last_replaced_mileage + item.replace_every_km : false
+                  const isDue = Boolean(isDueByDate || isDueByMileage)
+                  const nextMileage = item.replace_every_km && item.last_replaced_mileage != null
+                    ? item.last_replaced_mileage + item.replace_every_km : null
+                  const kmProgress = (() => {
+                    if (!item.replace_every_km || item.last_replaced_mileage == null) return null
+                    const driven = Number(vehicle.current_mileage ?? 0) - item.last_replaced_mileage
+                    const pct = Math.min(100, Math.round((driven / item.replace_every_km) * 100))
+                    return { pct, driven, total: item.replace_every_km }
+                  })()
+                  return (
+                    <li key={item.id} className={cn('rounded-xl border bg-card p-3', isDue && 'border-red-300 dark:border-red-700')}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">{serviceItemIcons[item.name_key]} {t(`serviceItems.${item.name_key}` as const)}</p>
+                          <div className="mt-1 space-y-1 text-xs text-muted-foreground">
+                            <p>{item.last_replaced_date ? `${t('lastReplaced')}: ${formatDate(item.last_replaced_date)}` : t('neverReplaced')}</p>
+                            {item.next_due_date && <p>{t('nextDue')}: {formatDate(item.next_due_date)}</p>}
+                            {nextMileage && <p>{t('nextDueMileage')}: {formatKm(nextMileage)}</p>}
+                            {item.notes && <p>{item.notes}</p>}
                           </div>
-                        ) : null}
-                      </div>
-                      <div className="flex flex-col items-end gap-2 shrink-0">
-                        {isDue ? <span className="text-xs bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400 px-2 py-0.5 rounded-full font-semibold">{t('due')}</span> : null}
-                        <div className="flex gap-2">
-                          <button type="button" onClick={() => fillServiceForm(item)} className="rounded-lg border px-3 py-1 text-xs">{common('edit')}</button>
-                          <button type="button" onClick={() => handleDeleteServiceItem(item.id)} className="rounded-lg border px-3 py-1 text-xs text-red-600">{common('delete')}</button>
+                          {kmProgress && (
+                            <div className="mt-2">
+                              <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                                <span>{formatKm(kmProgress.driven)} / {formatKm(kmProgress.total)}</span>
+                                <span>{kmProgress.pct}%</span>
+                              </div>
+                              <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                                <div className={cn('h-full rounded-full transition-all',
+                                  kmProgress.pct >= 100 ? 'bg-red-500' : kmProgress.pct >= 80 ? 'bg-amber-400' : 'bg-green-500'
+                                )} style={{ width: `${kmProgress.pct}%` }} />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                          {isDue && <span className="text-xs bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400 px-2 py-0.5 rounded-full font-semibold">{t('due')}</span>}
+                          <div className="flex gap-2">
+                            <button type="button" onClick={() => fillServiceForm(item)} className="rounded-lg border px-3 py-1 text-xs">{common('edit')}</button>
+                            <button type="button" onClick={() => handleDeleteServiceItem(item.id)} className="rounded-lg border px-3 py-1 text-xs text-red-600">{common('delete')}</button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
+                    </li>
+                  )
+                })}
+              </ul>}
         </TabsContent>
 
         {/* ── EXPENSES ── */}
@@ -829,37 +694,33 @@ export default function VehicleDetailPage() {
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="space-y-1">
                 <span className="text-sm text-muted-foreground">{common('account')}</span>
-                <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={expenseAccountId} onChange={(e) => setExpenseAccountId(e.target.value)} required>
+                <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={expenseAccountId} onChange={e => setExpenseAccountId(e.target.value)} required>
                   <option value="">{t('selectAccount')}</option>
-                  {accounts.map((account) => (
-                    <option key={account.id} value={account.id}>{account.name}</option>
-                  ))}
+                  {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </select>
               </label>
               <label className="space-y-1">
                 <span className="text-sm text-muted-foreground">{common('category')}</span>
-                <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={expenseCategory} onChange={(e) => setExpenseCategory(e.target.value as VehicleExpenseCategory)} required>
-                  {expenseCategories.map((category) => (
-                    <option key={category} value={category}>{t(`expenseCategories.${category}` as const)}</option>
-                  ))}
+                <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={expenseCategory} onChange={e => setExpenseCategory(e.target.value as VehicleExpenseCategory)} required>
+                  {expenseCategories.map(cat => <option key={cat} value={cat}>{t(`expenseCategories.${cat}` as const)}</option>)}
                 </select>
               </label>
               <label className="space-y-1">
                 <span className="text-sm text-muted-foreground">{common('amount')}</span>
-                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min="0" step="0.01" value={expenseAmount} onChange={(e) => setExpenseAmount(e.target.value)} required />
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min="0" step="0.01" value={expenseAmount} onChange={e => setExpenseAmount(e.target.value)} required />
               </label>
               <label className="space-y-1">
                 <span className="text-sm text-muted-foreground">{common('date')}</span>
-                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="date" value={expenseDate} onChange={(e) => setExpenseDate(e.target.value)} required />
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="date" value={expenseDate} onChange={e => setExpenseDate(e.target.value)} required />
               </label>
               <label className="space-y-1">
                 <span className="text-sm text-muted-foreground">{t('mileageOptional')}</span>
-                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min={0} value={expenseMileage} onChange={(e) => setExpenseMileage(e.target.value)} placeholder={defaultMileage} />
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min={0} value={expenseMileage} onChange={e => setExpenseMileage(e.target.value)} placeholder={defaultMileage} />
               </label>
             </div>
             <label className="space-y-1 block">
               <span className="text-sm text-muted-foreground">{common('note')}</span>
-              <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={expenseNote} onChange={(e) => setExpenseNote(e.target.value)} />
+              <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={expenseNote} onChange={e => setExpenseNote(e.target.value)} />
             </label>
             <button type="submit" disabled={addExpense.isPending || !isVehicleReady} className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
               {addExpense.isPending ? common('loading') : t('addExpense')}
@@ -867,36 +728,49 @@ export default function VehicleDetailPage() {
           </form>
 
           {expLoading ? <Skeleton className="h-32 w-full" /> : (
-            <>
-              <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-                {Object.entries(totalByCategory).map(([cat, sum]) => {
-                  if (!isExpenseCategory(cat)) return null
-                  return (
-                    <div key={cat} className="rounded-xl border bg-card p-3">
-                      <p className="text-xs text-muted-foreground capitalize">{t(`expenseCategories.${cat}` as const)}</p>
-                      <p className="font-bold tabular-nums">{formatAmount(sum)}</p>
-                    </div>
-                  )
-                })}
+            <div className="space-y-3">
+              {/* Period toggle + total */}
+              <div className="flex items-center justify-between gap-3">
+                <PeriodToggle value={expensePeriod} onChange={setExpensePeriod} />
+                <p className="text-sm font-bold tabular-nums shrink-0">{formatAmount(filteredTotal)}</p>
               </div>
-              {expenses.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">{t('noExpenses')}</p> : (
-                <ul className="space-y-2">
-                  {expenses.slice(0, 20).map((e) => (
-                    <li key={e.id} className="rounded-xl border bg-card p-3 flex justify-between gap-4">
-                      <div>
-                        <p className="text-sm font-medium capitalize">{t(`expenseCategories.${e.category}` as const)}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatDate(e.date)}
-                          {e.mileage_at_moment ? ` • ${formatKm(Number(e.mileage_at_moment))}` : ''}
-                          {e.note ? ` • ${e.note}` : ''}
-                        </p>
+
+              {/* Category breakdown for selected period */}
+              {Object.keys(filteredByCategory).length > 0 && (
+                <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+                  {Object.entries(filteredByCategory).map(([cat, sum]) => {
+                    if (!isExpenseCategory(cat)) return null
+                    return (
+                      <div key={cat} className="rounded-xl border bg-card p-3">
+                        <p className="text-xs text-muted-foreground capitalize">{t(`expenseCategories.${cat}` as const)}</p>
+                        <p className="font-bold tabular-nums">{formatAmount(sum)}</p>
                       </div>
-                      <p className="font-semibold tabular-nums text-sm">{formatAmount(Number(e.amount_rub))}</p>
-                    </li>
-                  ))}
-                </ul>
+                    )
+                  })}
+                </div>
               )}
-            </>
+
+              {filteredExpenses.length === 0
+                ? <p className="text-sm text-muted-foreground text-center py-6">
+                    {expensePeriod === 'month' ? 'За этот месяц расходов нет' :
+                     expensePeriod === 'year' ? 'За этот год расходов нет' : t('noExpenses')}
+                  </p>
+                : <ul className="space-y-2">
+                    {filteredExpenses.slice(0, 30).map(e => (
+                      <li key={e.id} className="rounded-xl border bg-card p-3 flex justify-between gap-4">
+                        <div>
+                          <p className="text-sm font-medium capitalize">{t(`expenseCategories.${e.category}` as const)}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatDate(e.date)}
+                            {e.mileage_at_moment ? ` • ${formatKm(Number(e.mileage_at_moment))}` : ''}
+                            {e.note ? ` • ${e.note}` : ''}
+                          </p>
+                        </div>
+                        <p className="font-semibold tabular-nums text-sm">{formatAmount(Number(e.amount_rub))}</p>
+                      </li>
+                    ))}
+                  </ul>}
+            </div>
           )}
         </TabsContent>
 
@@ -907,101 +781,89 @@ export default function VehicleDetailPage() {
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 {editingFineId ? t('editFine') : t('addFine')}
               </h2>
-              {editingFineId ? (
-                <button type="button" onClick={resetFineForm} className="text-sm text-muted-foreground hover:text-foreground">
-                  {common('cancel')}
-                </button>
-              ) : null}
+              {editingFineId && <button type="button" onClick={resetFineForm} className="text-sm text-muted-foreground hover:text-foreground">{common('cancel')}</button>}
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="space-y-1">
                 <span className="text-sm text-muted-foreground">{common('amount')}</span>
-                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min="0" step="0.01" value={fineAmount} onChange={(e) => setFineAmount(e.target.value)} required />
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min="0" step="0.01" value={fineAmount} onChange={e => setFineAmount(e.target.value)} required />
               </label>
               <label className="space-y-1">
                 <span className="text-sm text-muted-foreground">{t('discountedAmount')}</span>
-                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min="0" step="0.01" value={fineDiscountAmount} onChange={(e) => setFineDiscountAmount(e.target.value)} />
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min="0" step="0.01" value={fineDiscountAmount} onChange={e => setFineDiscountAmount(e.target.value)} />
               </label>
               <label className="space-y-1">
                 <span className="text-sm text-muted-foreground">{t('issuedDate')}</span>
-                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="date" value={fineIssuedDate} onChange={(e) => setFineIssuedDate(e.target.value)} />
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="date" value={fineIssuedDate} onChange={e => setFineIssuedDate(e.target.value)} />
               </label>
               <label className="space-y-1">
                 <span className="text-sm text-muted-foreground">{t('discountUntil')}</span>
-                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="date" value={fineDiscountUntil} onChange={(e) => setFineDiscountUntil(e.target.value)} />
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="date" value={fineDiscountUntil} onChange={e => setFineDiscountUntil(e.target.value)} />
               </label>
               <label className="space-y-1">
                 <span className="text-sm text-muted-foreground">ID</span>
-                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={fineExternalId} onChange={(e) => setFineExternalId(e.target.value)} />
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={fineExternalId} onChange={e => setFineExternalId(e.target.value)} />
               </label>
               <label className="space-y-1">
                 <span className="text-sm text-muted-foreground">{t('status')}</span>
-                <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={fineStatus} onChange={(e) => setFineStatus(e.target.value as FineStatus)}>
-                  {fineStatuses.map((status) => (
-                    <option key={status} value={status}>{t(`fineStatuses.${status}` as const)}</option>
-                  ))}
+                <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={fineStatus} onChange={e => setFineStatus(e.target.value as FineStatus)}>
+                  {fineStatuses.map(s => <option key={s} value={s}>{t(`fineStatuses.${s}` as const)}</option>)}
                 </select>
               </label>
             </div>
             <label className="space-y-1 block">
               <span className="text-sm text-muted-foreground">{common('note')}</span>
-              <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={fineDescription} onChange={(e) => setFineDescription(e.target.value)} />
+              <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={fineDescription} onChange={e => setFineDescription(e.target.value)} />
             </label>
             <button type="submit" disabled={createFine.isPending || updateFine.isPending} className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
               {editingFineId ? common('save') : t('addFine')}
             </button>
           </form>
 
-          {finesLoading ? <Skeleton className="h-32 w-full" /> : fines.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">{t('noFines')}</p>
-          ) : (
-            <ul className="space-y-2">
-              {fines.map((fine) => {
-                const discountedAmount = Number(fine.discount_amount_rub ?? fine.amount_rub)
-                const hasDiscount = fine.discount_amount_rub != null && Number(fine.discount_amount_rub) < Number(fine.amount_rub)
-                const discountDaysLeft = fine.discount_until && fine.status === 'unpaid'
-                  ? Math.ceil((new Date(fine.discount_until).getTime() - Date.now()) / 86_400_000)
-                  : null
-
-                return (
-                  <li key={fine.id} className="rounded-xl border bg-card p-3">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium">{fine.description || t('fine')}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {fine.issued_date ? `${t('issuedDate')}: ${formatDate(fine.issued_date)}` : t('issuedDateUnknown')}
-                          {fine.external_id ? ` • ID: ${fine.external_id}` : ''}
-                        </p>
-                        {discountDaysLeft != null && discountDaysLeft >= 0 ? (
-                          <p className={cn('text-xs mt-1 font-medium', discountDaysLeft <= 3 ? 'text-red-500' : 'text-amber-500')}>
-                            ⏰ Скидка истекает через {discountDaysLeft === 0 ? 'сегодня' : `${discountDaysLeft} дн.`}
+          {finesLoading ? <Skeleton className="h-32 w-full" /> : fines.length === 0
+            ? <p className="text-sm text-muted-foreground text-center py-8">{t('noFines')}</p>
+            : <ul className="space-y-2">
+                {fines.map(fine => {
+                  const discountedAmount = Number(fine.discount_amount_rub ?? fine.amount_rub)
+                  const hasDiscount = fine.discount_amount_rub != null && Number(fine.discount_amount_rub) < Number(fine.amount_rub)
+                  const discountDaysLeft = fine.discount_until && fine.status === 'unpaid'
+                    ? Math.ceil((new Date(fine.discount_until).getTime() - Date.now()) / 86_400_000) : null
+                  return (
+                    <li key={fine.id} className="rounded-xl border bg-card p-3">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">{fine.description || t('fine')}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {fine.issued_date ? `${t('issuedDate')}: ${formatDate(fine.issued_date)}` : t('issuedDateUnknown')}
+                            {fine.external_id ? ` • ID: ${fine.external_id}` : ''}
                           </p>
-                        ) : discountDaysLeft != null && discountDaysLeft < 0 ? (
-                          <p className="text-xs mt-1 text-muted-foreground">Скидка истекла</p>
-                        ) : null}
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className="font-semibold tabular-nums">{formatAmount(discountedAmount)}</p>
-                        {hasDiscount ? <p className="text-xs text-muted-foreground line-through">{formatAmount(Number(fine.amount_rub))}</p> : null}
-                        <span className={cn(
-                          'inline-flex rounded-full px-2 py-0.5 text-xs font-semibold mt-1',
-                          fine.status === 'paid' && 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400',
-                          fine.status === 'disputed' && 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-400',
-                          fine.status === 'unpaid' && 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400'
-                        )}>
-                          {t(`fineStatuses.${fine.status}` as const)}
-                        </span>
-                        <div className="mt-2 flex justify-end gap-2">
-                          <button type="button" onClick={() => fillFineForm(fine)} className="rounded-lg border px-3 py-1 text-xs">{common('edit')}</button>
-                          <button type="button" onClick={() => handleDeleteFine(fine.id)} className="rounded-lg border px-3 py-1 text-xs text-red-600">{common('delete')}</button>
+                          {discountDaysLeft != null && discountDaysLeft >= 0
+                            ? <p className={cn('text-xs mt-1 font-medium', discountDaysLeft <= 3 ? 'text-red-500' : 'text-amber-500')}>
+                                ⏰ Скидка истекает через {discountDaysLeft === 0 ? 'сегодня' : `${discountDaysLeft} дн.`}
+                              </p>
+                            : discountDaysLeft != null && discountDaysLeft < 0
+                              ? <p className="text-xs mt-1 text-muted-foreground">Скидка истекла</p>
+                              : null}
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="font-semibold tabular-nums">{formatAmount(discountedAmount)}</p>
+                          {hasDiscount && <p className="text-xs text-muted-foreground line-through">{formatAmount(Number(fine.amount_rub))}</p>}
+                          <span className={cn(
+                            'inline-flex rounded-full px-2 py-0.5 text-xs font-semibold mt-1',
+                            fine.status === 'paid' && 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400',
+                            fine.status === 'disputed' && 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-400',
+                            fine.status === 'unpaid' && 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400'
+                          )}>{t(`fineStatuses.${fine.status}` as const)}</span>
+                          <div className="mt-2 flex justify-end gap-2">
+                            <button type="button" onClick={() => fillFineForm(fine)} className="rounded-lg border px-3 py-1 text-xs">{common('edit')}</button>
+                            <button type="button" onClick={() => handleDeleteFine(fine.id)} className="rounded-lg border px-3 py-1 text-xs text-red-600">{common('delete')}</button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
+                    </li>
+                  )
+                })}
+              </ul>}
         </TabsContent>
       </Tabs>
     </div>
