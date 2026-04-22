@@ -21,32 +21,37 @@ export function HeroBalanceCard() {
   const { activePeriod } = useUIStore()
   const currency = family?.currency ?? 'RUB'
 
-  const { data: summary, isLoading: summaryLoading } = useMonthlySummary(family?.id ?? '', activePeriod.month, activePeriod.year)
+  const { data: summary, isLoading: summaryLoading } = useMonthlySummary(
+    family?.id ?? '',
+    activePeriod.month,
+    activePeriod.year
+  )
 
   const prevMonth = activePeriod.month === 1 ? 12 : activePeriod.month - 1
   const prevYear = activePeriod.month === 1 ? activePeriod.year - 1 : activePeriod.year
   const { data: prevSummary } = useMonthlySummary(family?.id ?? '', prevMonth, prevYear)
 
   useEffect(() => {
-    try {
-      setHidden(localStorage.getItem(HIDDEN_KEY) === 'true')
-    } catch {}
+    try { setHidden(localStorage.getItem(HIDDEN_KEY) === 'true') } catch {}
   }, [])
 
   function toggleHidden() {
     setHidden(h => {
       const next = !h
-      try {
-        localStorage.setItem(HIDDEN_KEY, String(next))
-      } catch {}
+      try { localStorage.setItem(HIDDEN_KEY, String(next)) } catch {}
       return next
     })
   }
 
   const isLoading = accountsLoading || summaryLoading
-  const net = summary ? summary.total_income - summary.total_expense : null
-  const prevNet = prevSummary ? prevSummary.total_income - prevSummary.total_expense : null
-  const delta = net !== null && prevNet !== null && prevNet !== 0 ? ((net - prevNet) / Math.abs(prevNet)) * 100 : null
+
+  // Fix: delta compares expenses month-over-month (not net)
+  const expense = summary?.total_expense ?? null
+  const prevExpense = prevSummary?.total_expense ?? null
+  const expenseDelta =
+    expense !== null && prevExpense !== null && prevExpense !== 0
+      ? ((expense - prevExpense) / Math.abs(prevExpense)) * 100
+      : null
 
   return (
     <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/90 to-primary p-5 sm:p-6 text-white shadow-lg">
@@ -60,17 +65,6 @@ export function HeroBalanceCard() {
               <p className={cn('text-3xl sm:text-4xl font-bold tabular-nums transition-all break-all', hidden && 'blur-md select-none')}>
                 {hidden ? '••••••' : formatAmount(totalBalance, currency)}
               </p>
-              {delta !== null && (
-                <span
-                  className={cn(
-                    'text-xs font-semibold px-1.5 py-0.5 rounded-full shrink-0',
-                    delta >= 0 ? 'bg-white/20 text-white' : 'bg-destructive/40 text-white'
-                  )}
-                >
-                  {delta >= 0 ? '+' : ''}
-                  {delta.toFixed(1)}%
-                </span>
-              )}
             </div>
           )}
         </div>
@@ -85,12 +79,12 @@ export function HeroBalanceCard() {
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 pt-4 border-t border-white/20">
+        <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-white/20">
           <Skeleton className="h-10 w-full bg-white/20" />
           <Skeleton className="h-10 w-full bg-white/20" />
         </div>
       ) : summary && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 pt-4 border-t border-white/20">
+        <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-white/20">
           <div className="flex items-center gap-2">
             <TrendingUp size={16} className="opacity-80 shrink-0" />
             <div className="min-w-0">
@@ -103,7 +97,20 @@ export function HeroBalanceCard() {
           <div className="flex items-center gap-2">
             <TrendingDown size={16} className="opacity-80 shrink-0" />
             <div className="min-w-0">
-              <p className="text-xs opacity-70">{t('expenses')}</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs opacity-70">{t('expenses')}</p>
+                {/* Fix: expense delta vs previous month */}
+                {expenseDelta !== null && (
+                  <span className={cn(
+                    'text-[10px] font-semibold px-1 py-0.5 rounded-full leading-none',
+                    expenseDelta <= 0
+                      ? 'bg-green-400/30 text-white'
+                      : 'bg-red-400/30 text-white'
+                  )}>
+                    {expenseDelta > 0 ? '+' : ''}{expenseDelta.toFixed(0)}%
+                  </span>
+                )}
+              </div>
               <p className={cn('text-sm font-semibold tabular-nums break-all', hidden && 'blur-sm select-none')}>
                 {hidden ? '••••' : formatAmount(summary.total_expense, currency)}
               </p>

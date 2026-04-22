@@ -16,15 +16,24 @@ export function DailyBudgetPulse() {
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
   const daysLeft = daysInMonth - now.getDate() + 1
 
-  const totalBudget = budgets.reduce((s, b) => s + Number(b.amount ?? 0), 0)
-  const totalRemaining = budgets.reduce((s, b) => s + Math.max(0, b.remaining), 0)
+  // Fix: only count active budgets
+  const activeBudgets = budgets.filter(b => {
+    const today = now
+    const inCurrentMonth =
+      b.period_month === today.getMonth() + 1 &&
+      b.period_year === today.getFullYear()
+    return inCurrentMonth
+  })
+
+  const totalBudget = activeBudgets.reduce((s, b) => s + Number(b.amount ?? 0), 0)
+  const totalRemaining = activeBudgets.reduce((s, b) => s + Math.max(0, b.remaining), 0)
   const dailyBudget = daysLeft > 0 ? totalRemaining / daysLeft : 0
 
   const idealDaily = totalBudget > 0 ? totalBudget / daysInMonth : 0
   const ratio = idealDaily > 0 ? dailyBudget / idealDaily : 1
 
   if (isLoading) return <Skeleton className="h-24 w-full rounded-2xl" />
-  if (!budgets.length) return null
+  if (!activeBudgets.length) return null
 
   const status = totalRemaining <= 0 ? 'danger' : ratio < 0.5 ? 'warning' : 'ok'
 

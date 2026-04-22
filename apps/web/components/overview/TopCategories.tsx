@@ -14,6 +14,8 @@ export function TopCategories() {
   const tCommon = useTranslations('common')
   const { family } = useFamily()
   const { activePeriod } = useUIStore()
+  const currency = family?.currency ?? 'RUB'
+
   const { data, isLoading } = useCategoryBreakdown(
     family?.id ?? '',
     activePeriod.month,
@@ -53,7 +55,7 @@ export function TopCategories() {
                   {tc(cat.name_key, { defaultValue: cat.name_key })}
                 </span>
                 <span className="text-sm font-semibold tabular-nums shrink-0 ml-2">
-                  {formatAmount(cat.total)}
+                  {formatAmount(cat.total, currency)}
                 </span>
               </div>
               <div className="h-1.5 bg-muted rounded-full overflow-hidden">
