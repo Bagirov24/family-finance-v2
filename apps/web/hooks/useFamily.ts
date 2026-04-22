@@ -10,7 +10,7 @@ type FamilyMember = Database['public']['Tables']['family_members']['Row'] & {
 /**
  * Returns family + members for the current user.
  * Uses userId from ui.store — no argument needed.
- * Returns { family, members, currentUserId, ...queryResult }
+ * Returns { family, members, currentUserId, invalidateMembers, ...queryResult }
  */
 export function useFamily() {
   const userId = useUIStore((s) => s.userId)
@@ -42,5 +42,6 @@ export function useFamily() {
     family: query.data?.family ?? null,
     members: query.data?.members ?? [],
     currentUserId: userId,
+    invalidateMembers: query.refetch,
   }
 }
