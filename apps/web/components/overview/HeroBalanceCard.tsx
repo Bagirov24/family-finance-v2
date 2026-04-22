@@ -66,7 +66,8 @@ export function HeroBalanceCard({ initialData }: HeroBalanceCardProps) {
       : null
 
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/90 to-primary p-5 sm:p-6 text-white shadow-lg">
+    // min-h зафиксирован под реальный контент — предотвращает CLS при появлении данных
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/90 to-primary p-5 sm:p-6 text-white shadow-lg min-h-[140px]">
       <div className="flex items-start justify-between gap-3 mb-4">
         <div className="min-w-0">
           <p className="text-sm font-medium opacity-80">{t('total_balance')}</p>

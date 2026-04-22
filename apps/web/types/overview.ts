@@ -1,5 +1,6 @@
 import type { FamilyMember } from '@/hooks/useFamily'
 import type { Account } from '@/hooks/useAccounts'
+import type { Transaction } from '@/hooks/useTransactions'
 
 export interface OverviewInitialData {
   members: FamilyMember[]
@@ -16,6 +17,9 @@ export interface OverviewInitialData {
     net: number
     top_category: string
   } | null
+  /** Транзакции текущего периода (limit 30), префетчнутые на сервере.
+   *  Передаются как initialData в useTransactions и useCategoryBreakdown — нулевой RTT. */
+  transactions: Transaction[]
   month: number
   year: number
 }
