@@ -47,7 +47,7 @@ export function TransactionList({ limit, showDate = true, categoryId, type }: Pr
   if (!transactions.length) {
     return (
       <div className="py-12 text-center text-muted-foreground">
-        <p className="text-4xl mb-3">\uD83D\uDCB8</p>
+        <p className="text-4xl mb-3">💸</p>
         <p>{t('no_transactions')}</p>
       </div>
     )
@@ -67,7 +67,7 @@ export function TransactionList({ limit, showDate = true, categoryId, type }: Pr
               className="group flex items-center gap-3 p-3 rounded-xl border border-transparent hover:border-border hover:bg-muted/30 transition-colors"
             >
               <div className="h-10 w-10 rounded-full flex items-center justify-center text-lg bg-muted shrink-0">
-                {tx.category?.icon ?? (tx.type === 'income' ? '\uD83D\uDCB0' : '\uD83D\uDCB8')}
+                {tx.category?.icon ?? (tx.type === 'income' ? '💰' : '💸')}
               </div>
 
               <div className="flex-1 min-w-0">
@@ -82,10 +82,10 @@ export function TransactionList({ limit, showDate = true, categoryId, type }: Pr
                 <div
                   className={cn(
                     'font-semibold text-sm tabular-nums mr-1 text-right max-w-[110px] sm:max-w-none truncate',
-                    tx.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-foreground'
+                    tx.type === 'income' ? 'text-income' : 'text-foreground'
                   )}
                 >
-                  {tx.type === 'income' ? '+' : '\u2212'}{formatAmount(Number(tx.amount))}
+                  {tx.type === 'income' ? '+' : '−'}{formatAmount(Number(tx.amount))}
                 </div>
                 <button
                   type="button"

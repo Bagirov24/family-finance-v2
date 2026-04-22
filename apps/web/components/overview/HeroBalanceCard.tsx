@@ -64,7 +64,7 @@ export function HeroBalanceCard() {
                 <span
                   className={cn(
                     'text-xs font-semibold px-1.5 py-0.5 rounded-full shrink-0',
-                    delta >= 0 ? 'bg-white/20 text-white' : 'bg-red-400/40 text-white'
+                    delta >= 0 ? 'bg-white/20 text-white' : 'bg-destructive/40 text-white'
                   )}
                 >
                   {delta >= 0 ? '+' : ''}
