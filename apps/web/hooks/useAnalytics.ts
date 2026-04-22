@@ -52,8 +52,8 @@ export function useWeekdaySpending(familyId: string) {
   return useQuery({
     queryKey: ['weekday-spending', familyId],
     enabled: !!familyId,
-    staleTime: 10 * 60_000,   // 10 мин — исторические данные меняются редко
-    gcTime: 60 * 60_000,      // держать в памяти 1 час
+    staleTime: 10 * 60_000,
+    gcTime: 60 * 60_000,
     queryFn: async () => {
       const supabase = createClient()
       const { data, error } = await supabase.rpc('get_weekday_spending', {
@@ -67,7 +67,12 @@ export function useWeekdaySpending(familyId: string) {
 
 /**
  * Переиспользует транзакции из кеша useTransactions — нулевой RTT.
- * useMemo пересчитывает breakdown только при изменении списка транзакций.
+ *
+ * ВАЖНО: month/year из аргументов используются для фильтрации транзакций
+ * на клиенте, а не для запроса — useTransactions всегда грузит activePeriod
+ * из UIStore. Если переданный период совпадает с activePeriod (типичный случай),
+ * фильтр не отсекает ничего лишнего. Если передан другой период — фильтруем явно,
+ * чтобы исторические карточки не показывали данные текущего месяца.
  */
 export function useCategoryBreakdown(familyId: string, month: number, year: number) {
   const { transactions, isLoading } = useTransactions({ familyId })
@@ -75,10 +80,17 @@ export function useCategoryBreakdown(familyId: string, month: number, year: numb
   const breakdown = useMemo(() => {
     if (!familyId) return []
 
+    // Границы запрошенного периода для клиентской фильтрации
+    const fromStr = `${year}-${String(month).padStart(2, '0')}-01`
+    const toDate = new Date(year, month, 0) // последний день месяца
+    const toStr = toDate.toISOString().split('T')[0]
+
     const map: Record<string, { name_key: string; icon: string; color: string; total: number }> = {}
 
     for (const t of transactions) {
       if (t.type !== 'expense') continue
+      // Фильтруем по периоду — защита когда month/year != activePeriod
+      if (t.date < fromStr || t.date > toStr) continue
       const cat = t.category
       if (!cat) continue
       if (!map[cat.name_key]) map[cat.name_key] = { ...cat, total: 0 }
@@ -86,7 +98,7 @@ export function useCategoryBreakdown(familyId: string, month: number, year: numb
     }
 
     return Object.values(map).sort((a, b) => b.total - a.total)
-  }, [transactions, familyId])
+  }, [transactions, familyId, month, year])
 
   return { data: breakdown, isLoading }
 }
