@@ -40,28 +40,28 @@ export function BottomNav() {
   const { setAddTransactionOpen, setAddTransferOpen, theme, setTheme } = useUIStore()
 
   const MAIN_LEFT = [
-    { href: '/overview', icon: LayoutDashboard, label: t('overview') },
-    { href: '/transactions', icon: CreditCard, label: t('transactions') },
+    { href: '/overview',      icon: LayoutDashboard, label: t('overview') },
+    { href: '/transactions',  icon: CreditCard,       label: t('transactions') },
   ]
 
   const MAIN_RIGHT = [
     { href: '/budgets', icon: Wallet, label: t('budgets') },
-    { href: '/analytics', icon: BarChart2, label: t('analytics') },
   ]
 
   const MORE_ITEMS = [
-    { href: '/goals',          icon: Target,      label: t('goals') },
-    { href: '/subscriptions',  icon: RefreshCw,   label: t('subscriptions') },
-    { href: '/car',            icon: Car,         label: t('car') },
-    { href: '/transfers',      icon: ArrowLeftRight, label: t('transfers') },
-    { href: '/settings',       icon: Settings,    label: t('settings') },
+    { href: '/analytics',     icon: BarChart2,       label: t('analytics') },
+    { href: '/goals',         icon: Target,          label: t('goals') },
+    { href: '/subscriptions', icon: RefreshCw,       label: t('subscriptions') },
+    { href: '/car',           icon: Car,             label: t('car') },
+    { href: '/transfers',     icon: ArrowLeftRight,  label: t('transfers') },
+    { href: '/settings',      icon: Settings,        label: t('settings') },
   ]
 
   const moreActive = MORE_ITEMS.some(i => pathname.startsWith(i.href))
 
   const THEME_OPTIONS: { value: 'light' | 'dark' | 'system'; icon: typeof Sun; label: string }[] = [
-    { value: 'light', icon: Sun, label: 'Светлая' },
-    { value: 'dark', icon: Moon, label: 'Тёмная' },
+    { value: 'light',  icon: Sun,     label: 'Светлая' },
+    { value: 'dark',   icon: Moon,    label: 'Тёмная' },
     { value: 'system', icon: Monitor, label: 'Системная' },
   ]
 
@@ -162,7 +162,7 @@ export function BottomNav() {
         </SheetContent>
       </Sheet>
 
-      {/* Tab bar */}
+      {/* Tab bar — 4 cols: left × 2, FAB, right × 1, More */}
       <div className="grid grid-cols-5 items-end border-t border-border bg-card/95 backdrop-blur pb-safe">
         {MAIN_LEFT.map(({ href, icon: Icon, label }) => {
           const active = pathname.startsWith(href)
