@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Pencil, Trash2, ArchiveX, X, Check } from 'lucide-react'
+import { Pencil, Trash2, ArchiveX, X, Check, Plus, ChevronUp } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAccounts } from '@/hooks/useAccounts'
 import {
@@ -63,6 +63,35 @@ function periodStart(period: ExpensePeriod): Date | null {
   if (period === 'month') { d.setDate(1); d.setHours(0, 0, 0, 0) }
   if (period === 'year') { d.setMonth(0, 1); d.setHours(0, 0, 0, 0) }
   return d
+}
+
+// ── Collapsible add-form wrapper ──────────────────────────────────────────────
+function CollapseForm({
+  label,
+  open,
+  onToggle,
+  children,
+}: {
+  label: string
+  open: boolean
+  onToggle: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <div className="rounded-2xl border bg-card overflow-hidden">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center justify-between gap-2 px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <span className="flex items-center gap-1.5">
+          {open ? <ChevronUp size={15} /> : <Plus size={15} />}
+          {label}
+        </span>
+      </button>
+      {open && <div className="px-4 pb-4 pt-0 space-y-3 border-t">{children}</div>}
+    </div>
+  )
 }
 
 // ── Edit Vehicle Form ─────────────────────────────────────────────────────────
@@ -267,6 +296,12 @@ export default function VehicleDetailPage() {
   const [expensePeriod, setExpensePeriod] = useState<ExpensePeriod>('month')
   const [fuelView, setFuelView] = useState<FuelView>('list')
 
+  // ── Form collapse state ───────────────────────────────────────────────────
+  const [fuelFormOpen, setFuelFormOpen] = useState(false)
+  const [expenseFormOpen, setExpenseFormOpen] = useState(false)
+  const [serviceFormOpen, setServiceFormOpen] = useState(false)
+  const [fineFormOpen, setFineFormOpen] = useState(false)
+
   const [fuelAccountId, setFuelAccountId] = useState('')
   const [fuelLiters, setFuelLiters] = useState('')
   const [fuelPrice, setFuelPrice] = useState('')
@@ -347,7 +382,7 @@ export default function VehicleDetailPage() {
     [fines]
   )
   const totalKm = vehicle ? Number(vehicle.current_mileage ?? 0) - Number(vehicle.initial_mileage ?? 0) : 0
-  const costPerKm = total > 0 && totalKm > 0 ? (total / totalKm).toFixed(1) : null
+  const costPerKm = total > 0 && totalKm > 0 ? total / totalKm : null
   const isVehicleReady = !!vehicle
   const defaultMileage = String(vehicle?.current_mileage ?? '')
 
@@ -362,6 +397,7 @@ export default function VehicleDetailPage() {
     setServiceEveryKm(item.replace_every_km != null ? String(item.replace_every_km) : '')
     setServiceEveryMonths(item.replace_every_months != null ? String(item.replace_every_months) : '')
     setServiceNotes(item.notes ?? '')
+    setServiceFormOpen(true)
   }
   function resetFineForm() {
     setFineAmount(''); setFineDiscountAmount(''); setFineDiscountUntil('')
@@ -374,6 +410,7 @@ export default function VehicleDetailPage() {
     setFineDiscountUntil(fine.discount_until ?? ''); setFineIssuedDate(fine.issued_date ?? '')
     setFineDescription(fine.description ?? ''); setFineExternalId(fine.external_id ?? '')
     setFineStatus(fine.status)
+    setFineFormOpen(true)
   }
 
   async function handleAddFuel(e: React.FormEvent<HTMLFormElement>) {
@@ -386,6 +423,7 @@ export default function VehicleDetailPage() {
     })
     setFuelLiters(''); setFuelPrice(''); setFuelMileage(String(vehicle.current_mileage ?? ''))
     setFuelNote(''); setFuelFullTank(true)
+    setFuelFormOpen(false)
   }
 
   async function handleAddExpense(e: React.FormEvent<HTMLFormElement>) {
@@ -400,6 +438,7 @@ export default function VehicleDetailPage() {
     })
     setExpenseAmount(''); setExpenseDate(new Date().toISOString().split('T')[0])
     setExpenseMileage(String(vehicle.current_mileage ?? '')); setExpenseNote(''); setExpenseCategory('service')
+    setExpenseFormOpen(false)
   }
 
   async function handleSaveServiceItem(e: React.FormEvent<HTMLFormElement>) {
@@ -416,11 +455,12 @@ export default function VehicleDetailPage() {
     if (editingServiceId) { await updateServiceItem.mutateAsync({ id: editingServiceId, ...payload }) }
     else { await createServiceItem.mutateAsync(payload) }
     resetServiceForm()
+    setServiceFormOpen(false)
   }
 
   async function handleDeleteServiceItem(id: string) {
     await deleteServiceItem.mutateAsync(id)
-    if (editingServiceId === id) resetServiceForm()
+    if (editingServiceId === id) { resetServiceForm(); setServiceFormOpen(false) }
   }
 
   async function handleSaveFine(e: React.FormEvent<HTMLFormElement>) {
@@ -436,11 +476,12 @@ export default function VehicleDetailPage() {
     if (editingFineId) { await updateFine.mutateAsync({ id: editingFineId, ...payload }) }
     else { await createFine.mutateAsync(payload) }
     resetFineForm()
+    setFineFormOpen(false)
   }
 
   async function handleDeleteFine(id: string) {
     await deleteFine.mutateAsync(id)
-    if (editingFineId === id) resetFineForm()
+    if (editingFineId === id) { resetFineForm(); setFineFormOpen(false) }
   }
 
   async function handleDangerConfirm() {
@@ -521,7 +562,9 @@ export default function VehicleDetailPage() {
         </div>
         <div className="rounded-2xl border bg-card p-3 text-center">
           <p className="text-xs text-muted-foreground mb-1">{t('costPerKm')}</p>
-          <p className="font-bold tabular-nums">{costPerKm != null ? `${costPerKm} ₽` : '—'}</p>
+          <p className="font-bold tabular-nums">
+            {costPerKm != null ? formatAmount(costPerKm) : '—'}
+          </p>
         </div>
         <div className="rounded-2xl border bg-card p-3 text-center">
           <p className="text-xs text-muted-foreground mb-1">₽/мес</p>
@@ -548,42 +591,52 @@ export default function VehicleDetailPage() {
             <FuelChart entries={entries} />
           )}
 
-          {/* Add form */}
-          <form onSubmit={handleAddFuel} className="rounded-2xl border bg-card p-4 space-y-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{t('addFuelEntry')}</h2>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="space-y-1">
-                <span className="text-sm text-muted-foreground">{common('account')}</span>
-                <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={fuelAccountId} onChange={e => setFuelAccountId(e.target.value)} required>
-                  <option value="">{t('selectAccount')}</option>
-                  {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                </select>
+          {/* Collapsible add form */}
+          <CollapseForm
+            label={fuelFormOpen ? t('addFuelEntry') : t('addFuelEntry')}
+            open={fuelFormOpen}
+            onToggle={() => setFuelFormOpen(v => !v)}
+          >
+            <form onSubmit={handleAddFuel} className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="space-y-1">
+                  <span className="text-sm text-muted-foreground">{common('account')}</span>
+                  <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={fuelAccountId} onChange={e => setFuelAccountId(e.target.value)} required>
+                    <option value="">{t('selectAccount')}</option>
+                    {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
+                </label>
+                <label className="space-y-1">
+                  <span className="text-sm text-muted-foreground">{t('mileage')}</span>
+                  <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min={0} value={fuelMileage} onChange={e => setFuelMileage(e.target.value)} placeholder={defaultMileage} required />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-sm text-muted-foreground">{t('liters')}</span>
+                  <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min="0" step="0.1" value={fuelLiters} onChange={e => setFuelLiters(e.target.value)} required />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-sm text-muted-foreground">{t('pricePerLiter')}</span>
+                  <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min="0" step="0.01" value={fuelPrice} onChange={e => setFuelPrice(e.target.value)} required />
+                </label>
+              </div>
+              <label className="space-y-1 block">
+                <span className="text-sm text-muted-foreground">{common('note')}</span>
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={fuelNote} onChange={e => setFuelNote(e.target.value)} />
               </label>
-              <label className="space-y-1">
-                <span className="text-sm text-muted-foreground">{t('mileage')}</span>
-                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min={0} value={fuelMileage} onChange={e => setFuelMileage(e.target.value)} placeholder={defaultMileage} required />
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={fuelFullTank} onChange={e => setFuelFullTank(e.target.checked)} />
+                <span>{t('fullTank')}</span>
               </label>
-              <label className="space-y-1">
-                <span className="text-sm text-muted-foreground">{t('liters')}</span>
-                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min="0" step="0.1" value={fuelLiters} onChange={e => setFuelLiters(e.target.value)} required />
-              </label>
-              <label className="space-y-1">
-                <span className="text-sm text-muted-foreground">{t('pricePerLiter')}</span>
-                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min="0" step="0.01" value={fuelPrice} onChange={e => setFuelPrice(e.target.value)} required />
-              </label>
-            </div>
-            <label className="space-y-1 block">
-              <span className="text-sm text-muted-foreground">{common('note')}</span>
-              <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={fuelNote} onChange={e => setFuelNote(e.target.value)} />
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={fuelFullTank} onChange={e => setFuelFullTank(e.target.checked)} />
-              <span>{t('fullTank')}</span>
-            </label>
-            <button type="submit" disabled={addFuelEntry.isPending || !isVehicleReady} className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
-              {addFuelEntry.isPending ? common('loading') : t('addFuelEntry')}
-            </button>
-          </form>
+              <div className="flex gap-2">
+                <button type="submit" disabled={addFuelEntry.isPending || !isVehicleReady} className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
+                  {addFuelEntry.isPending ? common('loading') : t('addFuelEntry')}
+                </button>
+                <button type="button" onClick={() => setFuelFormOpen(false)} className="rounded-xl border px-4 py-2 text-sm text-muted-foreground hover:text-foreground">
+                  {common('cancel')}
+                </button>
+              </div>
+            </form>
+          </CollapseForm>
 
           {/* View toggle + list/timeline */}
           {fuelLoading
@@ -592,7 +645,6 @@ export default function VehicleDetailPage() {
               ? <p className="text-sm text-muted-foreground text-center py-8">{t('noFuelEntries')}</p>
               : (
                 <div className="space-y-3">
-                  {/* Toggle */}
                   <div className="flex rounded-xl border overflow-hidden text-sm">
                     {(['list', 'timeline'] as const).map(v => (
                       <button
@@ -643,45 +695,53 @@ export default function VehicleDetailPage() {
 
         {/* ── SERVICE ── */}
         <TabsContent value="service" className="space-y-4 mt-4">
-          <form onSubmit={handleSaveServiceItem} className="rounded-2xl border bg-card p-4 space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                {editingServiceId ? t('editServiceItem') : t('addServiceItem')}
-              </h2>
-              {editingServiceId && <button type="button" onClick={resetServiceForm} className="text-sm text-muted-foreground hover:text-foreground">{common('cancel')}</button>}
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="space-y-1">
-                <span className="text-sm text-muted-foreground">{common('category')}</span>
-                <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={serviceNameKey} onChange={e => setServiceNameKey(e.target.value as ServiceItemNameKey)}>
-                  {serviceItemKeys.map(key => <option key={key} value={key}>{t(`serviceItems.${key}` as const)}</option>)}
-                </select>
+          <CollapseForm
+            label={editingServiceId ? t('editServiceItem') : t('addServiceItem')}
+            open={serviceFormOpen}
+            onToggle={() => {
+              if (serviceFormOpen && editingServiceId) resetServiceForm()
+              setServiceFormOpen(v => !v)
+            }}
+          >
+            <form onSubmit={handleSaveServiceItem} className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="space-y-1">
+                  <span className="text-sm text-muted-foreground">{common('category')}</span>
+                  <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={serviceNameKey} onChange={e => setServiceNameKey(e.target.value as ServiceItemNameKey)}>
+                    {serviceItemKeys.map(key => <option key={key} value={key}>{t(`serviceItems.${key}` as const)}</option>)}
+                  </select>
+                </label>
+                <label className="space-y-1">
+                  <span className="text-sm text-muted-foreground">{t('lastReplaced')}</span>
+                  <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="date" value={serviceLastDate} onChange={e => setServiceLastDate(e.target.value)} />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-sm text-muted-foreground">{t('mileage')}</span>
+                  <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min={0} value={serviceLastMileage} onChange={e => setServiceLastMileage(e.target.value)} />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-sm text-muted-foreground">{t('replaceEveryKm')}</span>
+                  <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min={0} value={serviceEveryKm} onChange={e => setServiceEveryKm(e.target.value)} />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-sm text-muted-foreground">{t('replaceEveryMonths')}</span>
+                  <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min={0} value={serviceEveryMonths} onChange={e => setServiceEveryMonths(e.target.value)} />
+                </label>
+              </div>
+              <label className="space-y-1 block">
+                <span className="text-sm text-muted-foreground">{common('note')}</span>
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={serviceNotes} onChange={e => setServiceNotes(e.target.value)} />
               </label>
-              <label className="space-y-1">
-                <span className="text-sm text-muted-foreground">{t('lastReplaced')}</span>
-                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="date" value={serviceLastDate} onChange={e => setServiceLastDate(e.target.value)} />
-              </label>
-              <label className="space-y-1">
-                <span className="text-sm text-muted-foreground">{t('mileage')}</span>
-                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min={0} value={serviceLastMileage} onChange={e => setServiceLastMileage(e.target.value)} />
-              </label>
-              <label className="space-y-1">
-                <span className="text-sm text-muted-foreground">{t('replaceEveryKm')}</span>
-                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min={0} value={serviceEveryKm} onChange={e => setServiceEveryKm(e.target.value)} />
-              </label>
-              <label className="space-y-1">
-                <span className="text-sm text-muted-foreground">{t('replaceEveryMonths')}</span>
-                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min={0} value={serviceEveryMonths} onChange={e => setServiceEveryMonths(e.target.value)} />
-              </label>
-            </div>
-            <label className="space-y-1 block">
-              <span className="text-sm text-muted-foreground">{common('note')}</span>
-              <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={serviceNotes} onChange={e => setServiceNotes(e.target.value)} />
-            </label>
-            <button type="submit" disabled={createServiceItem.isPending || updateServiceItem.isPending} className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
-              {editingServiceId ? common('save') : t('addServiceItem')}
-            </button>
-          </form>
+              <div className="flex gap-2">
+                <button type="submit" disabled={createServiceItem.isPending || updateServiceItem.isPending} className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
+                  {editingServiceId ? common('save') : t('addServiceItem')}
+                </button>
+                <button type="button" onClick={() => { resetServiceForm(); setServiceFormOpen(false) }} className="rounded-xl border px-4 py-2 text-sm text-muted-foreground hover:text-foreground">
+                  {common('cancel')}
+                </button>
+              </div>
+            </form>
+          </CollapseForm>
 
           {svcLoading ? <Skeleton className="h-32 w-full" /> : serviceItems.length === 0
             ? <p className="text-sm text-muted-foreground text-center py-8">{t('noServiceItems')}</p>
@@ -740,43 +800,53 @@ export default function VehicleDetailPage() {
 
         {/* ── EXPENSES ── */}
         <TabsContent value="expenses" className="space-y-4 mt-4">
-          <form onSubmit={handleAddExpense} className="rounded-2xl border bg-card p-4 space-y-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{t('addExpense')}</h2>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="space-y-1">
-                <span className="text-sm text-muted-foreground">{common('account')}</span>
-                <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={expenseAccountId} onChange={e => setExpenseAccountId(e.target.value)} required>
-                  <option value="">{t('selectAccount')}</option>
-                  {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                </select>
+          <CollapseForm
+            label={t('addExpense')}
+            open={expenseFormOpen}
+            onToggle={() => setExpenseFormOpen(v => !v)}
+          >
+            <form onSubmit={handleAddExpense} className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="space-y-1">
+                  <span className="text-sm text-muted-foreground">{common('account')}</span>
+                  <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={expenseAccountId} onChange={e => setExpenseAccountId(e.target.value)} required>
+                    <option value="">{t('selectAccount')}</option>
+                    {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
+                </label>
+                <label className="space-y-1">
+                  <span className="text-sm text-muted-foreground">{common('category')}</span>
+                  <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={expenseCategory} onChange={e => setExpenseCategory(e.target.value as VehicleExpenseCategory)} required>
+                    {expenseCategories.map(cat => <option key={cat} value={cat}>{t(`expenseCategories.${cat}` as const)}</option>)}
+                  </select>
+                </label>
+                <label className="space-y-1">
+                  <span className="text-sm text-muted-foreground">{common('amount')}</span>
+                  <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min="0" step="0.01" value={expenseAmount} onChange={e => setExpenseAmount(e.target.value)} required />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-sm text-muted-foreground">{common('date')}</span>
+                  <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="date" value={expenseDate} onChange={e => setExpenseDate(e.target.value)} required />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-sm text-muted-foreground">{t('mileageOptional')}</span>
+                  <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min={0} value={expenseMileage} onChange={e => setExpenseMileage(e.target.value)} placeholder={defaultMileage} />
+                </label>
+              </div>
+              <label className="space-y-1 block">
+                <span className="text-sm text-muted-foreground">{common('note')}</span>
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={expenseNote} onChange={e => setExpenseNote(e.target.value)} />
               </label>
-              <label className="space-y-1">
-                <span className="text-sm text-muted-foreground">{common('category')}</span>
-                <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={expenseCategory} onChange={e => setExpenseCategory(e.target.value as VehicleExpenseCategory)} required>
-                  {expenseCategories.map(cat => <option key={cat} value={cat}>{t(`expenseCategories.${cat}` as const)}</option>)}
-                </select>
-              </label>
-              <label className="space-y-1">
-                <span className="text-sm text-muted-foreground">{common('amount')}</span>
-                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min="0" step="0.01" value={expenseAmount} onChange={e => setExpenseAmount(e.target.value)} required />
-              </label>
-              <label className="space-y-1">
-                <span className="text-sm text-muted-foreground">{common('date')}</span>
-                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="date" value={expenseDate} onChange={e => setExpenseDate(e.target.value)} required />
-              </label>
-              <label className="space-y-1">
-                <span className="text-sm text-muted-foreground">{t('mileageOptional')}</span>
-                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min={0} value={expenseMileage} onChange={e => setExpenseMileage(e.target.value)} placeholder={defaultMileage} />
-              </label>
-            </div>
-            <label className="space-y-1 block">
-              <span className="text-sm text-muted-foreground">{common('note')}</span>
-              <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={expenseNote} onChange={e => setExpenseNote(e.target.value)} />
-            </label>
-            <button type="submit" disabled={addExpense.isPending || !isVehicleReady} className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
-              {addExpense.isPending ? common('loading') : t('addExpense')}
-            </button>
-          </form>
+              <div className="flex gap-2">
+                <button type="submit" disabled={addExpense.isPending || !isVehicleReady} className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
+                  {addExpense.isPending ? common('loading') : t('addExpense')}
+                </button>
+                <button type="button" onClick={() => setExpenseFormOpen(false)} className="rounded-xl border px-4 py-2 text-sm text-muted-foreground hover:text-foreground">
+                  {common('cancel')}
+                </button>
+              </div>
+            </form>
+          </CollapseForm>
 
           {expLoading ? <Skeleton className="h-32 w-full" /> : (
             <div className="space-y-3">
@@ -825,49 +895,57 @@ export default function VehicleDetailPage() {
 
         {/* ── FINES ── */}
         <TabsContent value="fines" className="space-y-4 mt-4">
-          <form onSubmit={handleSaveFine} className="rounded-2xl border bg-card p-4 space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                {editingFineId ? t('editFine') : t('addFine')}
-              </h2>
-              {editingFineId && <button type="button" onClick={resetFineForm} className="text-sm text-muted-foreground hover:text-foreground">{common('cancel')}</button>}
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="space-y-1">
-                <span className="text-sm text-muted-foreground">{common('amount')}</span>
-                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min="0" step="0.01" value={fineAmount} onChange={e => setFineAmount(e.target.value)} required />
+          <CollapseForm
+            label={editingFineId ? t('editFine') : t('addFine')}
+            open={fineFormOpen}
+            onToggle={() => {
+              if (fineFormOpen && editingFineId) resetFineForm()
+              setFineFormOpen(v => !v)
+            }}
+          >
+            <form onSubmit={handleSaveFine} className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="space-y-1">
+                  <span className="text-sm text-muted-foreground">{common('amount')}</span>
+                  <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min="0" step="0.01" value={fineAmount} onChange={e => setFineAmount(e.target.value)} required />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-sm text-muted-foreground">{t('discountedAmount')}</span>
+                  <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min="0" step="0.01" value={fineDiscountAmount} onChange={e => setFineDiscountAmount(e.target.value)} />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-sm text-muted-foreground">{t('issuedDate')}</span>
+                  <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="date" value={fineIssuedDate} onChange={e => setFineIssuedDate(e.target.value)} />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-sm text-muted-foreground">{t('discountUntil')}</span>
+                  <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="date" value={fineDiscountUntil} onChange={e => setFineDiscountUntil(e.target.value)} />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-sm text-muted-foreground">ID</span>
+                  <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={fineExternalId} onChange={e => setFineExternalId(e.target.value)} />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-sm text-muted-foreground">{t('status')}</span>
+                  <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={fineStatus} onChange={e => setFineStatus(e.target.value as FineStatus)}>
+                    {fineStatuses.map(s => <option key={s} value={s}>{t(`fineStatuses.${s}` as const)}</option>)}
+                  </select>
+                </label>
+              </div>
+              <label className="space-y-1 block">
+                <span className="text-sm text-muted-foreground">{common('note')}</span>
+                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={fineDescription} onChange={e => setFineDescription(e.target.value)} />
               </label>
-              <label className="space-y-1">
-                <span className="text-sm text-muted-foreground">{t('discountedAmount')}</span>
-                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="number" min="0" step="0.01" value={fineDiscountAmount} onChange={e => setFineDiscountAmount(e.target.value)} />
-              </label>
-              <label className="space-y-1">
-                <span className="text-sm text-muted-foreground">{t('issuedDate')}</span>
-                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="date" value={fineIssuedDate} onChange={e => setFineIssuedDate(e.target.value)} />
-              </label>
-              <label className="space-y-1">
-                <span className="text-sm text-muted-foreground">{t('discountUntil')}</span>
-                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" type="date" value={fineDiscountUntil} onChange={e => setFineDiscountUntil(e.target.value)} />
-              </label>
-              <label className="space-y-1">
-                <span className="text-sm text-muted-foreground">ID</span>
-                <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={fineExternalId} onChange={e => setFineExternalId(e.target.value)} />
-              </label>
-              <label className="space-y-1">
-                <span className="text-sm text-muted-foreground">{t('status')}</span>
-                <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={fineStatus} onChange={e => setFineStatus(e.target.value as FineStatus)}>
-                  {fineStatuses.map(s => <option key={s} value={s}>{t(`fineStatuses.${s}` as const)}</option>)}
-                </select>
-              </label>
-            </div>
-            <label className="space-y-1 block">
-              <span className="text-sm text-muted-foreground">{common('note')}</span>
-              <input className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={fineDescription} onChange={e => setFineDescription(e.target.value)} />
-            </label>
-            <button type="submit" disabled={createFine.isPending || updateFine.isPending} className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
-              {editingFineId ? common('save') : t('addFine')}
-            </button>
-          </form>
+              <div className="flex gap-2">
+                <button type="submit" disabled={createFine.isPending || updateFine.isPending} className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
+                  {editingFineId ? common('save') : t('addFine')}
+                </button>
+                <button type="button" onClick={() => { resetFineForm(); setFineFormOpen(false) }} className="rounded-xl border px-4 py-2 text-sm text-muted-foreground hover:text-foreground">
+                  {common('cancel')}
+                </button>
+              </div>
+            </form>
+          </CollapseForm>
 
           {finesLoading ? <Skeleton className="h-32 w-full" /> : fines.length === 0
             ? <p className="text-sm text-muted-foreground text-center py-8">{t('noFines')}</p>
