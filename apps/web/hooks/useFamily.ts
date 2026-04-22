@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useUIStore } from '@/store/ui.store'
 import type { Database } from '@/lib/supabase/types'
 
-type FamilyMember = Database['public']['Tables']['family_members']['Row'] & {
+export type FamilyMember = Database['public']['Tables']['family_members']['Row'] & {
   family: Database['public']['Tables']['families']['Row'] | null
 }
 
