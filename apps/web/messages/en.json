@@ -79,7 +79,8 @@
     "net_savings": "Net Savings",
     "spent": "spent",
     "of": "of",
-    "expense_ratio": "Expense-to-income ratio"
+    "expense_ratio": "Expense-to-income ratio",
+    "who_spent_what": "Who spent what"
   },
   "transaction": {
     "add": "Add Transaction",
