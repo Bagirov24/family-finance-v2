@@ -35,7 +35,9 @@ export interface BudgetView {
   } | null
 }
 
-async function fetchBudgets(familyId: string, month: number, year: number) {
+async function fetchBudgets(familyId: string, month: number, year: number): Promise<BudgetView[]> {
+  if (!familyId) return []
+
   const supabase = createClient()
   const from = `${year}-${String(month).padStart(2, '0')}-01`
   const to = new Date(year, month, 0).toISOString().split('T')[0]
@@ -98,7 +100,7 @@ export function useBudgets() {
 
   const query = useQuery({
     queryKey: ['budgets', family?.id, month, year],
-    queryFn: () => fetchBudgets(family!.id, month, year),
+    queryFn: () => fetchBudgets(family?.id ?? '', month, year),
     enabled: !!family?.id,
   })
 
