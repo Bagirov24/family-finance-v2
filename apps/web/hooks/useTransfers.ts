@@ -31,15 +31,15 @@ export interface CreateTransferInput {
   from_account_id: string
   to_account_id: string
   amount: number
-  note: string          // required for all transfers
+  note: string
   family_id: string
   transfer_type?: TransferType
 }
 
 export interface CreateRequestInput {
-  to_user_id: string    // кому адресован запрос
+  to_user_id: string
   amount: number
-  note: string          // обязательно — причина запроса
+  note: string
   family_id: string
 }
 
@@ -70,29 +70,31 @@ export function useTransfers() {
     }
   })
 
-  // Realtime: слушаем оба направления
+  // Realtime: слушаем только ВХОДЯЩИЕ события (to_user_id === me).
+  // Исходящие (from_user_id === me) игнорируем — onSuccess мутации
+  // уже вызвал invalidateQueries, двойной рефетч не нужен.
   useEffect(() => {
     if (!userId) return
     const supabase = createClient()
-    const invalidate = () => {
+
+    const invalidateIncoming = () => {
       qc.invalidateQueries({ queryKey: ['transfers'] })
       qc.invalidateQueries({ queryKey: ['accounts'] })
     }
+
     const channel = supabase
-      .channel('transfers-realtime')
+      .channel(`transfers-incoming:${userId}`)
       .on('postgres_changes', {
-        event: '*', schema: 'public', table: 'member_transfers',
-        filter: `to_user_id=eq.${userId}`
-      }, invalidate)
-      .on('postgres_changes', {
-        event: '*', schema: 'public', table: 'member_transfers',
-        filter: `from_user_id=eq.${userId}`
-      }, invalidate)
+        event: '*',
+        schema: 'public',
+        table: 'member_transfers',
+        filter: `to_user_id=eq.${userId}`,
+      }, invalidateIncoming)
       .subscribe()
+
     return () => { supabase.removeChannel(channel) }
   }, [userId, qc])
 
-  // Обычный перевод (send) — note обязателен
   const createTransfer = useMutation({
     mutationFn: async (payload: CreateTransferInput) => {
       const supabase = createClient()
@@ -108,13 +110,12 @@ export function useTransfers() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['transfers'] })
   })
 
-  // Запрос денег (request) — без счетов, note обязателен
   const createRequest = useMutation({
     mutationFn: async (payload: CreateRequestInput) => {
       const supabase = createClient()
       const { error } = await supabase.from('member_transfers').insert({
         family_id: payload.family_id,
-        from_user_id: userId,     // инициатор запроса
+        from_user_id: userId,
         to_user_id: payload.to_user_id,
         from_account_id: null,
         to_account_id: null,
@@ -133,7 +134,7 @@ export function useTransfers() {
     mutationFn: async ({ transfer_id, action, from_account_id, to_account_id }: {
       transfer_id: string
       action: 'confirmed' | 'declined'
-      from_account_id?: string  // нужен при принятии request
+      from_account_id?: string
       to_account_id?: string
     }) => {
       const supabase = createClient()
@@ -176,15 +177,12 @@ export function useTransfers() {
 
   const all = query.data ?? []
 
-  // Входящие ожидающие переводы (to_user_id === me, type = send)
   const pending = all.filter(
     t => t.status === 'pending' && t.to_user_id === userId && t.transfer_type === 'send'
   )
-  // Входящие запросы денег (from_user_id просит меня, to_user_id === me, type = request)
   const pendingRequests = all.filter(
     t => t.status === 'pending' && t.to_user_id === userId && t.transfer_type === 'request'
   )
-  // Мои исходящие ожидающие (я отправил/запросил)
   const outgoingPending = all.filter(
     t => t.status === 'pending' && t.from_user_id === userId
   )
