@@ -27,7 +27,14 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+  // If Supabase is unreachable (network error), allow the request through
+  // rather than crashing or redirect-looping. Auth session missing is expected
+  // for unauthenticated users and should not be treated as a server error.
+  if (authError && authError.message !== 'Auth session missing!') {
+    return supabaseResponse
+  }
 
   const pathname = request.nextUrl.pathname
   const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/auth')

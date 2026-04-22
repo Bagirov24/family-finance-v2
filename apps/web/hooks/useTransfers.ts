@@ -95,14 +95,21 @@ export function useTransfers() {
       action: 'confirmed' | 'declined'
     }) => {
       const supabase = createClient()
+      // Use getUser() for secure server-validated auth check
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError || !user) throw new Error('Not authenticated')
+
+      // Then get session for the access token
       const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error('No active session')
+
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/confirm-transfer`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${session!.access_token}`
+            Authorization: `Bearer ${session.access_token}`
           },
           body: JSON.stringify({ transfer_id, action })
         }
@@ -117,9 +124,7 @@ export function useTransfers() {
   })
 
   const all = query.data ?? []
-  // Pending transfers incoming to the current user
   const pending = all.filter(t => t.status === 'pending' && t.to_user_id === userId)
-  // All non-pending + outgoing pending sent by me
   const history = all.filter(t => t.status !== 'pending' || t.from_user_id === userId)
 
   return {

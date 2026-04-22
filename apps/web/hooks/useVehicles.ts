@@ -3,8 +3,6 @@ import { createClient } from '@/lib/supabase/client'
 import { useUIStore } from '@/store/ui.store'
 import { calcFuelConsumption } from '@/lib/fuelCalc'
 
-const supabase = createClient()
-
 export type FuelType = 'gasoline' | 'diesel' | 'gas' | 'electric' | 'hybrid'
 
 export type VehicleExpenseCategory =
@@ -148,6 +146,7 @@ export function useVehicles() {
     queryKey: ['vehicles', userId],
     enabled: !!userId,
     queryFn: async () => {
+      const supabase = createClient()
       const { data, error } = await supabase
         .from('vehicles')
         .select('*')
@@ -171,6 +170,7 @@ export function useVehicles() {
       vin?: string
       license_plate?: string
     }) => {
+      const supabase = createClient()
       const initialMileage = payload.initial_mileage ?? 0
       const { error } = await supabase.from('vehicles').insert({
         user_id: userId,
@@ -192,6 +192,7 @@ export function useVehicles() {
 
   const updateMileage = useMutation({
     mutationFn: async ({ id, mileage }: { id: string; mileage: number }) => {
+      const supabase = createClient()
       const { error } = await supabase
         .from('vehicles')
         .update({ current_mileage: mileage })
@@ -217,6 +218,7 @@ export function useFuelLog(vehicleId: string) {
     queryKey: ['fuel-log', vehicleId],
     enabled: !!vehicleId,
     queryFn: async () => {
+      const supabase = createClient()
       const { data, error } = await supabase
         .from('fuel_entries')
         .select('*, expense:vehicle_expenses(date, amount_rub, note)')
@@ -250,6 +252,7 @@ export function useFuelLog(vehicleId: string) {
       full_tank: boolean
       note?: string
     }) => {
+      const supabase = createClient()
       const amount = payload.liters * payload.price_per_liter
 
       const { data: transaction, error: txError } = await supabase
@@ -267,7 +270,7 @@ export function useFuelLog(vehicleId: string) {
         })
         .select('id')
         .single()
-      if (txError || !transaction) throw txError
+      if (txError || !transaction) throw txError ?? new Error('Failed to create transaction')
 
       const { data: expense, error: expError } = await supabase
         .from('vehicle_expenses')
@@ -283,7 +286,7 @@ export function useFuelLog(vehicleId: string) {
         })
         .select('id')
         .single()
-      if (expError || !expense) throw expError
+      if (expError || !expense) throw expError ?? new Error('Failed to create vehicle expense')
 
       const { error: fuelError } = await supabase.from('fuel_entries').insert({
         expense_id: expense.id,
@@ -318,6 +321,7 @@ export function useServiceItems(vehicleId: string) {
     queryKey: ['service-items', vehicleId],
     enabled: !!vehicleId,
     queryFn: async () => {
+      const supabase = createClient()
       const { data, error } = await supabase
         .from('service_items')
         .select('*')
@@ -330,6 +334,7 @@ export function useServiceItems(vehicleId: string) {
 
   const createServiceItem = useMutation({
     mutationFn: async (payload: ServiceItemInput) => {
+      const supabase = createClient()
       const next_due_date = calcNextDueDate(payload.last_replaced_date, payload.replace_every_months)
       const { error } = await supabase.from('service_items').insert({
         ...payload,
@@ -342,8 +347,9 @@ export function useServiceItems(vehicleId: string) {
 
   const updateServiceItem = useMutation({
     mutationFn: async ({ id, ...patch }: Partial<ServiceItemInput> & { id: string }) => {
+      const supabase = createClient()
       const current = query.data?.find((i) => i.id === id)
-      if (!current) throw new Error('Not found')
+      if (!current) throw new Error('Service item not found')
       const last_replaced_date = patch.last_replaced_date ?? current.last_replaced_date
       const replace_every_months = patch.replace_every_months ?? current.replace_every_months
       const next_due_date = calcNextDueDate(last_replaced_date, replace_every_months)
@@ -359,6 +365,7 @@ export function useServiceItems(vehicleId: string) {
 
   const deleteServiceItem = useMutation({
     mutationFn: async (id: string) => {
+      const supabase = createClient()
       const { error } = await supabase
         .from('service_items')
         .delete()
@@ -384,6 +391,7 @@ export function useVehicleExpenses(vehicleId: string) {
     queryKey: ['vehicle-expenses', vehicleId],
     enabled: !!vehicleId,
     queryFn: async () => {
+      const supabase = createClient()
       const { data, error } = await supabase
         .from('vehicle_expenses')
         .select('*')
@@ -417,6 +425,7 @@ export function useVehicleExpenses(vehicleId: string) {
       note?: string
       mileage_at_moment?: number
     }) => {
+      const supabase = createClient()
       const { data: transaction, error: txError } = await supabase
         .from('transactions')
         .insert({
@@ -432,7 +441,7 @@ export function useVehicleExpenses(vehicleId: string) {
         })
         .select('id')
         .single()
-      if (txError || !transaction) throw txError
+      if (txError || !transaction) throw txError ?? new Error('Failed to create transaction')
 
       const { error: expError } = await supabase
         .from('vehicle_expenses')
@@ -470,6 +479,7 @@ export function useVehicleFines(vehicleId: string) {
     queryKey: ['vehicle-fines', vehicleId],
     enabled: !!vehicleId,
     queryFn: async () => {
+      const supabase = createClient()
       const { data, error } = await supabase
         .from('vehicle_fines')
         .select('*')
@@ -483,6 +493,7 @@ export function useVehicleFines(vehicleId: string) {
 
   const createFine = useMutation({
     mutationFn: async (payload: FineInput) => {
+      const supabase = createClient()
       const { error } = await supabase
         .from('vehicle_fines')
         .insert({
@@ -503,6 +514,7 @@ export function useVehicleFines(vehicleId: string) {
 
   const updateFine = useMutation({
     mutationFn: async ({ id, ...patch }: Partial<FineInput> & { id: string }) => {
+      const supabase = createClient()
       const data: Record<string, unknown> = { ...patch }
       if (patch.status === 'paid') {
         data.paid_at = new Date().toISOString()
@@ -522,6 +534,7 @@ export function useVehicleFines(vehicleId: string) {
 
   const deleteFine = useMutation({
     mutationFn: async (id: string) => {
+      const supabase = createClient()
       const { error } = await supabase
         .from('vehicle_fines')
         .delete()

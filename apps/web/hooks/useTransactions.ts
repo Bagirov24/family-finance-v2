@@ -111,7 +111,9 @@ export function useCreateTransaction() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['transactions', userId] })
-      qc.invalidateQueries({ queryKey: ['accounts', userId] })
+      // Invalidate by prefix to cover all family/userId combinations
+      qc.invalidateQueries({ queryKey: ['accounts'] })
+      qc.invalidateQueries({ queryKey: ['summary'] })
     },
   })
 }
@@ -134,7 +136,9 @@ export function useUpdateTransaction() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['transactions', userId] })
-      qc.invalidateQueries({ queryKey: ['accounts', userId] })
+      // Invalidate by prefix to cover all family/userId combinations
+      qc.invalidateQueries({ queryKey: ['accounts'] })
+      qc.invalidateQueries({ queryKey: ['summary'] })
     },
   })
 }
@@ -151,7 +155,9 @@ export function useDeleteTransaction() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['transactions', userId] })
-      qc.invalidateQueries({ queryKey: ['accounts', userId] })
+      // Invalidate by prefix to cover all family/userId combinations
+      qc.invalidateQueries({ queryKey: ['accounts'] })
+      qc.invalidateQueries({ queryKey: ['summary'] })
     },
   })
 }

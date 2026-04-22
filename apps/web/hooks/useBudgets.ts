@@ -3,6 +3,20 @@ import { createClient } from '@/lib/supabase/client'
 import { useUIStore } from '@/store/ui.store'
 import { useFamily } from '@/hooks/useFamily'
 
+export interface BudgetRow {
+  id: string
+  family_id: string | null
+  category_id: string | null
+  amount: number
+  period_month: number
+  period_year: number
+  categories: {
+    name_key: string
+    icon: string
+    color: string
+  } | null
+}
+
 export interface BudgetView {
   id: string
   family_id: string | null
@@ -52,9 +66,9 @@ async function fetchBudgets(familyId: string, month: number, year: number) {
     }
   })
 
-  return (budgets ?? []).map((b: any) => {
+  return (budgets ?? []).map((b: BudgetRow) => {
     const amount = Number(b.amount)
-    const spent = Number(spentMap[b.category_id] ?? 0)
+    const spent = Number(spentMap[b.category_id ?? ''] ?? 0)
     const remaining = amount - spent
     const rawPercent = amount > 0 ? Math.round((spent / amount) * 100) : 0
     const displayPercent = Math.min(100, rawPercent)
@@ -73,8 +87,8 @@ async function fetchBudgets(familyId: string, month: number, year: number) {
       category: b.categories
         ? { name_key: b.categories.name_key, icon: b.categories.icon, color: b.categories.color }
         : null,
-    }
-  }) as BudgetView[]
+    } satisfies BudgetView
+  })
 }
 
 export function useBudgets() {
