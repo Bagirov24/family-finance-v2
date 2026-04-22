@@ -77,10 +77,17 @@ export function useTransactions(params?: UseTransactionsParams) {
   const { userId, activePeriod } = useUIStore()
   const { month, year } = activePeriod
 
+  // Исторические периоды (не текущий месяц) кешируем дольше — данные не меняются
+  const now = new Date()
+  const isCurrentPeriod =
+    month === now.getMonth() + 1 && year === now.getFullYear()
+
   const query = useQuery({
     queryKey: ['transactions', userId, month, year, params?.familyId, params?.categoryId, params?.type, params?.limit],
     queryFn: () => fetchTransactions(userId!, month, year, params),
     enabled: !!userId,
+    staleTime: isCurrentPeriod ? 30_000 : 5 * 60_000,
+    gcTime: isCurrentPeriod ? 10 * 60_000 : 30 * 60_000,
   })
 
   const transactions = query.data ?? []
