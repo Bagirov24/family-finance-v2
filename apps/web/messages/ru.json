@@ -41,7 +41,9 @@
     "all": "Все",
     "show": "Показать",
     "hide": "Скрыть",
-    "archive": "Архивировать"
+    "archive": "Архивировать",
+    "today": "Сегодня",
+    "yesterday": "Вчера"
   },
   "quickAdd": {
     "placeholder": "Быстро добавить расход...",
@@ -51,6 +53,17 @@
     "title": "Уведомления",
     "mark_all_read": "Прочитать все",
     "mark_read": "Отметить прочитанным"
+  },
+  "auth": {
+    "login": "Войти",
+    "register": "Регистрация",
+    "logout": "Выйти",
+    "email": "Email",
+    "password": "Пароль",
+    "forgot_password": "Забыли пароль?",
+    "no_account": "Нет аккаунта?",
+    "have_account": "Уже есть аккаунт?",
+    "name": "Имя"
   },
   "transaction": {
     "add": "Добавить транзакцию",
@@ -65,6 +78,21 @@
     "addedExpense": "Расход добавлен",
     "updated": "Транзакция обновлена",
     "noCategory": "Без категории"
+  },
+  "transactions": {
+    "title": "Транзакции",
+    "income": "Доход",
+    "expense": "Расход",
+    "expenses": "Расходы",
+    "allTypes": "Все типы",
+    "allCategories": "Все категории",
+    "no_transactions": "Транзакций пока нет",
+    "filter": "Фильтр",
+    "search": "Поиск",
+    "deleteTitle": "Удалить транзакцию?",
+    "deleteDescription": "Это действие нельзя отменить.",
+    "edit": "Редактировать",
+    "delete": "Удалить"
   },
   "budget": {
     "title": "Бюджеты",
@@ -125,6 +153,10 @@
     "expenses": "Расходы",
     "days_left": "{count, plural, one {# день остался} few {# дня осталось} many {# дней осталось} other {# дня осталось}}",
     "view_all": "Смотреть все",
+    "rule_5030": "Правило 50/30/20",
+    "needs": "Нужды",
+    "wants": "Желания",
+    "savings": "Сбережения",
     "net_savings": "Чистые сбережения",
     "spent": "потрачено",
     "of": "из",
