@@ -408,6 +408,8 @@
     "overdue": "Просрочено",
     "today": "Сегодня",
     "tomorrow": "Завтра",
-    "days_left": "Через {days} дн."
+    "days_left": "Через {days} дн.",
+    "per_month": "В месяц",
+    "per_year": "В год"
   }
 }
