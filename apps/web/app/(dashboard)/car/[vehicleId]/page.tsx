@@ -21,6 +21,7 @@ import {
   type VehicleExpenseCategory,
   type VehicleFine,
 } from '@/hooks/useVehicles'
+import { VehicleHealthScore } from '@/components/car/VehicleHealthScore'
 import { formatAmount, formatDate, formatKm, formatLper100 } from '@/lib/formatters'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
@@ -68,7 +69,7 @@ function isExpenseCategory(value: string): value is VehicleExpenseCategory {
   return expenseCategories.includes(value as VehicleExpenseCategory)
 }
 
-// ── Edit Vehicle Form (inline in header) ──────────────────────────────────────
+// ── Edit Vehicle Form ────────────────────────────────────────────────────────
 function EditVehicleForm({
   vehicle,
   onClose,
@@ -216,7 +217,7 @@ function EditVehicleForm({
   )
 }
 
-// ── Archive / Delete confirmation dialog ──────────────────────────────────────
+// ── Archive / Delete confirmation dialog ─────────────────────────────────────
 type DangerAction = 'archive' | 'delete'
 
 function DangerDialog({
@@ -234,7 +235,6 @@ function DangerDialog({
 }) {
   const [confirmText, setConfirmText] = useState('')
   const isDelete = action === 'delete'
-  const required = isDelete ? vehicleName : ''
   const canConfirm = isDelete ? confirmText === vehicleName : true
 
   return (
@@ -553,7 +553,6 @@ export default function VehicleDetailPage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-4">
-      {/* Danger dialog overlay */}
       {dangerAction && (
         <DangerDialog
           action={dangerAction}
@@ -585,8 +584,6 @@ export default function VehicleDetailPage() {
                 {vehicle.fuel_type ? <span>• {t(`fuelTypes.${vehicle.fuel_type}` as const)}</span> : null}
               </div>
             </div>
-
-            {/* Action buttons */}
             <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={() => setIsEditing(true)}
@@ -612,6 +609,11 @@ export default function VehicleDetailPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Health Score ───────────────────────────────────────────── */}
+      {!svcLoading && serviceItems.length > 0 && (
+        <VehicleHealthScore vehicle={vehicle} serviceItems={serviceItems} />
       )}
 
       {/* Stats row */}
@@ -653,12 +655,7 @@ export default function VehicleDetailPage() {
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="space-y-1">
                 <span className="text-sm text-muted-foreground">{common('account')}</span>
-                <select
-                  className="w-full rounded-xl border bg-background px-3 py-2 text-sm"
-                  value={fuelAccountId}
-                  onChange={(e) => setFuelAccountId(e.target.value)}
-                  required
-                >
+                <select className="w-full rounded-xl border bg-background px-3 py-2 text-sm" value={fuelAccountId} onChange={(e) => setFuelAccountId(e.target.value)} required>
                   <option value="">{t('selectAccount')}</option>
                   {accounts.map((account) => (
                     <option key={account.id} value={account.id}>{account.name}</option>
@@ -773,7 +770,6 @@ export default function VehicleDetailPage() {
                   ? item.last_replaced_mileage + item.replace_every_km
                   : null
 
-                // Progress bar: km-based
                 const kmProgress = (() => {
                   if (!item.replace_every_km || item.last_replaced_mileage == null) return null
                   const driven = Number(vehicle.current_mileage ?? 0) - item.last_replaced_mileage
@@ -792,7 +788,6 @@ export default function VehicleDetailPage() {
                           {nextMileage ? <p>{t('nextDueMileage')}: {formatKm(nextMileage)}</p> : null}
                           {item.notes ? <p>{item.notes}</p> : null}
                         </div>
-                        {/* Progress bar */}
                         {kmProgress ? (
                           <div className="mt-2">
                             <div className="flex justify-between text-xs text-muted-foreground mb-1">
@@ -964,7 +959,6 @@ export default function VehicleDetailPage() {
               {fines.map((fine) => {
                 const discountedAmount = Number(fine.discount_amount_rub ?? fine.amount_rub)
                 const hasDiscount = fine.discount_amount_rub != null && Number(fine.discount_amount_rub) < Number(fine.amount_rub)
-                // Days until discount expires
                 const discountDaysLeft = fine.discount_until && fine.status === 'unpaid'
                   ? Math.ceil((new Date(fine.discount_until).getTime() - Date.now()) / 86_400_000)
                   : null
@@ -978,12 +972,8 @@ export default function VehicleDetailPage() {
                           {fine.issued_date ? `${t('issuedDate')}: ${formatDate(fine.issued_date)}` : t('issuedDateUnknown')}
                           {fine.external_id ? ` • ID: ${fine.external_id}` : ''}
                         </p>
-                        {/* Discount countdown */}
                         {discountDaysLeft != null && discountDaysLeft >= 0 ? (
-                          <p className={cn(
-                            'text-xs mt-1 font-medium',
-                            discountDaysLeft <= 3 ? 'text-red-500' : 'text-amber-500'
-                          )}>
+                          <p className={cn('text-xs mt-1 font-medium', discountDaysLeft <= 3 ? 'text-red-500' : 'text-amber-500')}>
                             ⏰ Скидка истекает через {discountDaysLeft === 0 ? 'сегодня' : `${discountDaysLeft} дн.`}
                           </p>
                         ) : discountDaysLeft != null && discountDaysLeft < 0 ? (
