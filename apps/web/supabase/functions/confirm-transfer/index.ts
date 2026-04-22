@@ -2,17 +2,23 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
 Deno.serve(async (req: Request) => {
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Content-Type': 'application/json',
+  }
+
   if (req.method === 'OPTIONS') {
-    return new Response('ok', {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-      },
-    })
+    return new Response('ok', { headers: corsHeaders })
   }
 
   const authHeader = req.headers.get('Authorization')
-  if (!authHeader) return new Response('Unauthorized', { status: 401 })
+  if (!authHeader) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: corsHeaders,
+    })
+  }
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -20,13 +26,36 @@ Deno.serve(async (req: Request) => {
     { auth: { persistSession: false } }
   )
 
-  const { transferId, action } = await req.json() as { transferId: string; action: 'confirm' | 'decline' }
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
 
-  if (!transferId || !action) {
-    return new Response(JSON.stringify({ error: 'Missing transferId or action' }), { status: 400 })
+  if (userError || !user) {
+    return new Response(JSON.stringify({ error: 'Invalid token' }), {
+      status: 401,
+      headers: corsHeaders,
+    })
   }
 
-  // Fetch transfer
+  const body = await req.json() as {
+    transfer_id?: string
+    transferId?: string
+    action?: 'confirmed' | 'declined' | 'confirm' | 'decline'
+  }
+
+  const transferId = body.transfer_id ?? body.transferId
+  const action = body.action
+
+  if (!transferId || !action) {
+    return new Response(JSON.stringify({ error: 'Missing transfer_id/transferId or action' }), {
+      status: 400,
+      headers: corsHeaders,
+    })
+  }
+
+  const normalizedAction = action === 'confirmed' ? 'confirm' : action === 'declined' ? 'decline' : action
+
   const { data: transfer, error: fetchErr } = await supabase
     .from('member_transfers')
     .select('*')
@@ -34,28 +63,56 @@ Deno.serve(async (req: Request) => {
     .single()
 
   if (fetchErr || !transfer) {
-    return new Response(JSON.stringify({ error: 'Transfer not found' }), { status: 404 })
+    return new Response(JSON.stringify({ error: 'Transfer not found' }), {
+      status: 404,
+      headers: corsHeaders,
+    })
+  }
+
+  if (transfer.to_user_id !== user.id) {
+    return new Response(JSON.stringify({ error: 'Forbidden' }), {
+      status: 403,
+      headers: corsHeaders,
+    })
   }
 
   if (transfer.status !== 'pending') {
-    return new Response(JSON.stringify({ error: 'Transfer already processed' }), { status: 409 })
+    return new Response(JSON.stringify({ error: 'Transfer already processed' }), {
+      status: 409,
+      headers: corsHeaders,
+    })
   }
 
-  if (action === 'decline') {
-    await supabase.from('member_transfers').update({ status: 'declined' }).eq('id', transferId)
-    return new Response(JSON.stringify({ ok: true, status: 'declined' }))
+  if (normalizedAction === 'decline') {
+    const { error: updateError } = await supabase
+      .from('member_transfers')
+      .update({ status: 'declined' })
+      .eq('id', transferId)
+
+    if (updateError) {
+      return new Response(JSON.stringify({ error: updateError.message }), {
+        status: 500,
+        headers: corsHeaders,
+      })
+    }
+
+    return new Response(JSON.stringify({ ok: true, status: 'declined' }), {
+      headers: corsHeaders,
+    })
   }
 
-  // Confirm: call atomic DB function
   const { error: rpcErr } = await supabase.rpc('confirm_transfer_atomic', {
     p_transfer_id: transferId,
   })
 
   if (rpcErr) {
-    return new Response(JSON.stringify({ error: rpcErr.message }), { status: 500 })
+    return new Response(JSON.stringify({ error: rpcErr.message }), {
+      status: 500,
+      headers: corsHeaders,
+    })
   }
 
   return new Response(JSON.stringify({ ok: true, status: 'confirmed' }), {
-    headers: { 'Content-Type': 'application/json' },
+    headers: corsHeaders,
   })
 })
