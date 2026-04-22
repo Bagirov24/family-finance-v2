@@ -357,7 +357,16 @@
     "freelance": "Freelance",
     "investment": "Investments",
     "gifts": "Gifts",
-    "other_income": "Other Income"
+    "other_income": "Other Income",
+    "housing": "Housing",
+    "insurance": "Insurance",
+    "medicine": "Medicine",
+    "other_expense": "Other Expenses",
+    "pets": "Pets",
+    "repairs": "Repairs",
+    "sport": "Sport",
+    "taxes": "Taxes",
+    "vehicle": "Vehicle"
   },
   "subscriptions": {
     "title": "Subscriptions",
@@ -380,6 +389,17 @@
     "all": "All subscriptions",
     "due_today": "Today",
     "due_tomorrow": "Tomorrow",
-    "due_in_days": "{count, plural, one {In # day} other {In # days}}"
+    "due_in_days": "{count, plural, one {In # day} other {In # days}}",
+    "no_account": "No account linked",
+    "reminder_days": "Remind me in advance",
+    "no_reminder": "No reminder",
+    "days_before": "days before billing",
+    "auto_create_tx": "Auto-create transaction on billing",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "overdue": "Overdue",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "days_left": "In {days} days"
   }
 }
