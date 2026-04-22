@@ -1,69 +1,32 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { useUIStore } from '@/store/ui.store'
+import type { Database } from '@/lib/supabase/types'
 
-export type FamilyMemberRole = 'owner' | 'member'
-
-export type FamilyMember = {
-  id: string
-  family_id: string | null
-  user_id: string
-  role: FamilyMemberRole
-  display_name: string | null
-  avatar_url: string | null
-  locale: string
-  metadata: Record<string, unknown> | null
-  joined_at: string | null
-  family: {
-    id: string
-    name: string
-    invite_code: string
-    currency: string
-  } | null
+type FamilyMember = Database['public']['Tables']['family_members']['Row'] & {
+  family: Database['public']['Tables']['families']['Row'] | null
 }
 
-interface UseFamilyOptions {
-  initialMembers?: FamilyMember[]
-}
-
-export function useFamily({ initialMembers }: UseFamilyOptions = {}) {
-  const currentUserId = useUIStore(s => s.userId)
-  const queryClient = useQueryClient()
-
-  const membersQuery = useQuery({
-    queryKey: ['family-members'],
+export function useFamily(userId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['family', userId],
+    enabled: !!userId,
+    staleTime: 5 * 60_000, // family changes rarely
+    gcTime: 30 * 60_000,
     queryFn: async () => {
-      // createClient() внутри queryFn — гарантирует свежую сессию при каждом запросе
+      // createClient() called inside queryFn — not at module level
       const supabase = createClient()
       const { data, error } = await supabase
         .from('family_members')
         .select('*, family:families(id, name, invite_code, currency)')
-        .eq('user_id', currentUserId!)
+        .eq('user_id', userId!)
         .order('joined_at')
+
       if (error) throw error
-      return data as FamilyMember[]
+
+      const members = (data ?? []) as FamilyMember[]
+      const family = members[0]?.family ?? null
+
+      return { members, family }
     },
-    enabled: !!currentUserId,
-    initialData: initialMembers,
-    staleTime: 60_000, // 1 минута — повторные заходы мгновенны
   })
-
-  const family = membersQuery.data?.[0]?.family ?? null
-  const members = membersQuery.data ?? []
-  const currentMember = members.find(m => m.user_id === currentUserId)
-  const isOwner = currentMember?.role === 'owner'
-
-  function invalidateMembers() {
-    queryClient.invalidateQueries({ queryKey: ['family-members'] })
-  }
-
-  return {
-    family,
-    members,
-    currentUserId,
-    currentMember,
-    isOwner,
-    isLoading: membersQuery.isLoading,
-    invalidateMembers,
-  }
 }

@@ -1,77 +1,61 @@
-import { createClient } from '@/lib/supabase/server'
-import type { FamilyMember } from '@/hooks/useFamily'
-import type { Account } from '@/hooks/useAccounts'
-import type { Transaction } from '@/hooks/useTransactions'
+import { createServerClient } from './server'
 
-/**
- * Серверный prefetch данных для /overview.
- * Вызывается в Server Component, результат передаётся как initialData
- * в React Query — клиент получает данные без единого дополнительного запроса.
- */
-export async function prefetchOverviewData(userId: string) {
-  const supabase = await createClient()
+export async function prefetchAppData(userId: string) {
+  const supabase = await createServerClient()
 
-  const now = new Date()
-  const month = now.getMonth() + 1
-  const year = now.getFullYear()
-
-  // Шаг 1: получаем members (нужен family.id для остальных запросов)
-  const { data: membersData } = await supabase
+  // Step 1: fetch members first (needed to determine family)
+  const { data: membersData, error: membersError } = await supabase
     .from('family_members')
     .select('*, family:families(id, name, invite_code, currency)')
     .eq('user_id', userId)
     .order('joined_at')
 
-  const members = (membersData ?? []) as FamilyMember[]
-  const family = members[0]?.family ?? null
+  if (membersError) {
+    console.error('[prefetch] members error:', membersError)
+  }
 
-  let accounts: Account[] = []
-  let summary: { total_income: number; total_expense: number; net: number; top_category: string } | null = null
-  let transactions: Transaction[] = []
+  const family = membersData?.[0]?.family ?? null
 
-  if (family?.id) {
-    const from = `${year}-${String(month).padStart(2, '0')}-01`
-    const to = new Date(year, month, 0).toISOString().split('T')[0]
+  // Step 2: single batched request — accounts + summary in parallel
+  const now = new Date()
+  const month = now.getMonth() + 1
+  const year = now.getFullYear()
 
-    // Шаг 2: один батчевый Promise.all — accounts + summary + транзакции текущего периода
-    const [accountsResult, summaryResult, transactionsResult] = await Promise.all([
-      supabase
-        .from('accounts')
-        .select('*')
-        .eq('is_archived', false)
-        .or(`family_id.eq.${family.id},owner_user_id.eq.${userId}`)
-        .order('created_at'),
-      supabase.rpc('get_monthly_summary', {
-        p_family_id: family.id,
-        p_month: month,
-        p_year: year,
-      }),
-      // Префетч транзакций: устраняет клиентский waterfall для TransactionList и
-      // useCategoryBreakdown — оба компонента получают данные без RTT через initialData
-      supabase
-        .from('transactions')
-        .select('*, category:categories(name_key,icon,color), account:accounts(name,currency)')
-        .eq('family_id', family.id)
-        .gte('date', from)
-        .lte('date', to)
-        .order('date', { ascending: false })
-        .order('created_at', { ascending: false })
-        .limit(30),
-    ])
+  const accountsFilter = family?.id
+    ? `family_id.eq.${family.id},owner_user_id.eq.${userId}`
+    : `owner_user_id.eq.${userId}`
 
-    if (!accountsResult.error) accounts = accountsResult.data as Account[]
-    if (!summaryResult.error) summary = summaryResult.data?.[0] ?? null
-    if (!transactionsResult.error) transactions = transactionsResult.data as Transaction[]
-  } else {
-    // Нет семьи — берём только личные счета
-    const { data } = await supabase
+  const [accountsResult, summaryResult, categoriesResult] = await Promise.all([
+    supabase
       .from('accounts')
       .select('*')
       .eq('is_archived', false)
-      .eq('owner_user_id', userId)
-      .order('created_at')
-    accounts = (data ?? []) as Account[]
-  }
+      .or(accountsFilter)
+      .order('created_at'),
 
-  return { members, family, accounts, summary, transactions, month, year }
+    family?.id
+      ? supabase.rpc('get_monthly_summary', {
+          p_family_id: family.id,
+          p_month: month,
+          p_year: year,
+        })
+      : Promise.resolve({ data: null, error: null }),
+
+    supabase.from('categories').select('*').order('name'),
+  ])
+
+  if (accountsResult.error)
+    console.error('[prefetch] accounts error:', accountsResult.error)
+  if (summaryResult.error)
+    console.error('[prefetch] summary error:', summaryResult.error)
+  if (categoriesResult.error)
+    console.error('[prefetch] categories error:', categoriesResult.error)
+
+  return {
+    members: membersData ?? [],
+    family,
+    accounts: accountsResult.data ?? [],
+    summary: summaryResult.data ?? null,
+    categories: categoriesResult.data ?? [],
+  }
 }
