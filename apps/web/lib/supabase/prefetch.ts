@@ -1,9 +1,8 @@
-import { createServerClient } from './server'
+import { createClient } from './server'
 
 export async function prefetchAppData(userId: string) {
-  const supabase = await createServerClient()
+  const supabase = await createClient()
 
-  // Step 1: fetch members first (needed to determine family)
   const { data: membersData, error: membersError } = await supabase
     .from('family_members')
     .select('*, family:families(id, name, invite_code, currency)')
@@ -16,7 +15,6 @@ export async function prefetchAppData(userId: string) {
 
   const family = membersData?.[0]?.family ?? null
 
-  // Step 2: single batched request — accounts + summary in parallel
   const now = new Date()
   const month = now.getMonth() + 1
   const year = now.getFullYear()
@@ -59,3 +57,6 @@ export async function prefetchAppData(userId: string) {
     categories: categoriesResult.data ?? [],
   }
 }
+
+// Alias used by overview/page.tsx
+export const prefetchOverviewData = prefetchAppData

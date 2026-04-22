@@ -1,19 +1,26 @@
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { useUIStore } from '@/store/ui.store'
 import type { Database } from '@/lib/supabase/types'
 
 type FamilyMember = Database['public']['Tables']['family_members']['Row'] & {
   family: Database['public']['Tables']['families']['Row'] | null
 }
 
-export function useFamily(userId: string | null | undefined) {
-  return useQuery({
+/**
+ * Returns family + members for the current user.
+ * Uses userId from ui.store — no argument needed.
+ * Returns { family, members, currentUserId, ...queryResult }
+ */
+export function useFamily() {
+  const userId = useUIStore((s) => s.userId)
+
+  const query = useQuery({
     queryKey: ['family', userId],
     enabled: !!userId,
-    staleTime: 5 * 60_000, // family changes rarely
+    staleTime: 5 * 60_000,
     gcTime: 30 * 60_000,
     queryFn: async () => {
-      // createClient() called inside queryFn — not at module level
       const supabase = createClient()
       const { data, error } = await supabase
         .from('family_members')
@@ -29,4 +36,11 @@ export function useFamily(userId: string | null | undefined) {
       return { members, family }
     },
   })
+
+  return {
+    ...query,
+    family: query.data?.family ?? null,
+    members: query.data?.members ?? [],
+    currentUserId: userId,
+  }
 }
