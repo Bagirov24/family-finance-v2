@@ -107,6 +107,18 @@ export type VehicleFine = {
   created_at: string | null
 }
 
+export type VehicleUpdateInput = {
+  id: string
+  name?: string
+  make?: string
+  model?: string
+  year?: number
+  fuel_type?: FuelType | null
+  license_plate?: string | null
+  vin?: string | null
+  current_mileage?: number
+}
+
 type ServiceItemInput = {
   vehicle_id: string
   name_key: ServiceItemNameKey
@@ -190,6 +202,45 @@ export function useVehicles() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vehicles', userId] })
   })
 
+  // Update vehicle fields (name, make, model, year, fuel_type, license_plate, vin, mileage)
+  const updateVehicle = useMutation({
+    mutationFn: async ({ id, ...patch }: VehicleUpdateInput) => {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('vehicles')
+        .update(patch)
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vehicles', userId] })
+  })
+
+  // Soft-delete: set is_active = false, vehicle stays in DB for history
+  const archiveVehicle = useMutation({
+    mutationFn: async (id: string) => {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('vehicles')
+        .update({ is_active: false })
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vehicles', userId] })
+  })
+
+  // Hard-delete: remove vehicle and all related data (cascades in DB)
+  const deleteVehicle = useMutation({
+    mutationFn: async (id: string) => {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('vehicles')
+        .delete()
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vehicles', userId] })
+  })
+
   const updateMileage = useMutation({
     mutationFn: async ({ id, mileage }: { id: string; mileage: number }) => {
       const supabase = createClient()
@@ -206,6 +257,9 @@ export function useVehicles() {
     vehicles: query.data ?? [],
     isLoading: query.isLoading,
     createVehicle,
+    updateVehicle,
+    archiveVehicle,
+    deleteVehicle,
     updateMileage
   }
 }
