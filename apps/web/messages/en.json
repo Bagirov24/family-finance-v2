@@ -105,20 +105,26 @@
     "send": "Send",
     "accept": "Accept",
     "decline": "Decline",
+    "cancel_transfer": "Cancel",
     "pending": "Awaiting confirmation",
     "confirmed": "Confirmed",
     "declined": "Declined",
+    "cancelled": "Cancelled",
     "recipient": "Recipient",
     "from_account": "From account",
     "to_account": "To account",
     "history": "Transfer History",
     "no_transfers": "No transfers yet",
     "transfer_received": "{from} sent you {amount}",
+    "transfer_sent_pending": "Awaiting confirmation from {to} · {amount}",
     "created": "Transfer sent",
     "sentTo": "Sent to {name}",
     "receivedFrom": "Received from {name}",
     "no_family": "Join a family to send transfers",
-    "no_recipient": "Select a recipient"
+    "no_recipient": "Select a recipient",
+    "errors": {
+      "selfTransfer": "You cannot transfer money to yourself"
+    }
   },
   "budgets": {
     "title": "Budgets",

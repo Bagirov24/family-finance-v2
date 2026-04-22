@@ -42,6 +42,13 @@ export function TransferModal() {
     if (!fromAccountId || !toAccountId || !amount) return
     if (!family?.id) { toast.error(t('no_family')); return }
     if (!toUserId) { toast.error(t('no_recipient')); return }
+
+    // Guard: нельзя переводить самому себе
+    if (toUserId === currentUserId) {
+      toast.error(t('errors.selfTransfer'))
+      return
+    }
+
     try {
       await createTransfer.mutateAsync({
         family_id: family.id,

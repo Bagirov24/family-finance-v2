@@ -3,6 +3,8 @@ import { useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useUIStore } from '@/store/ui.store'
 
+export type TransferStatus = 'pending' | 'confirmed' | 'declined' | 'cancelled'
+
 export interface MemberTransfer {
   id: string
   family_id: string | null
@@ -12,7 +14,7 @@ export interface MemberTransfer {
   to_account_id: string | null
   amount: number
   note: string | null
-  status: 'pending' | 'confirmed' | 'declined'
+  status: TransferStatus
   date: string
   confirmed_at: string | null
   created_at: string
@@ -95,11 +97,9 @@ export function useTransfers() {
       action: 'confirmed' | 'declined'
     }) => {
       const supabase = createClient()
-      // Use getUser() for secure server-validated auth check
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       if (userError || !user) throw new Error('Not authenticated')
 
-      // Then get session for the access token
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('No active session')
 
@@ -123,16 +123,33 @@ export function useTransfers() {
     }
   })
 
+  const cancelTransfer = useMutation({
+    mutationFn: async (transfer_id: string) => {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('member_transfers')
+        .update({ status: 'cancelled' })
+        .eq('id', transfer_id)
+        .eq('status', 'pending')
+        .eq('from_user_id', userId!)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['transfers'] })
+  })
+
   const all = query.data ?? []
   const pending = all.filter(t => t.status === 'pending' && t.to_user_id === userId)
+  const outgoingPending = all.filter(t => t.status === 'pending' && t.from_user_id === userId)
   const history = all.filter(t => t.status !== 'pending' || t.from_user_id === userId)
 
   return {
     pending,
+    outgoingPending,
     history,
     allTransfers: all,
     isLoading: query.isLoading,
     createTransfer,
     respondTransfer,
+    cancelTransfer,
   }
 }

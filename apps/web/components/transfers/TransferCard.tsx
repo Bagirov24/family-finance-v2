@@ -2,7 +2,7 @@
 import { useTranslations } from 'next-intl'
 import { formatAmount, formatDate } from '@/lib/formatters'
 import { cn } from '@/lib/utils'
-import { ArrowUpRight, ArrowDownLeft, Clock } from 'lucide-react'
+import { ArrowUpRight, ArrowDownLeft, Clock, Ban } from 'lucide-react'
 import type { MemberTransfer } from '@/hooks/useTransfers'
 
 interface Props {
@@ -15,6 +15,7 @@ export function TransferCard({ transfer: tx, myUserId }: Props) {
   const isOutgoing = tx.from_user_id === myUserId
   const isPending = tx.status === 'pending'
   const isDeclined = tx.status === 'declined'
+  const isCancelled = tx.status === 'cancelled'
 
   const fromName = tx.from_member?.display_name ?? tx.from_user_id
   const toName = tx.to_member?.display_name ?? tx.to_user_id
@@ -22,17 +23,21 @@ export function TransferCard({ transfer: tx, myUserId }: Props) {
   return (
     <div className={cn(
       'flex items-center gap-3 p-3 rounded-xl border transition-colors',
-      isDeclined && 'opacity-50',
+      (isDeclined || isCancelled) && 'opacity-50',
     )}>
       <div className={cn(
         'h-10 w-10 rounded-full flex items-center justify-center shrink-0',
-        isOutgoing ? 'bg-red-100 dark:bg-red-950' : 'bg-green-100 dark:bg-green-950'
+        isCancelled
+          ? 'bg-gray-100 dark:bg-gray-800'
+          : isOutgoing ? 'bg-red-100 dark:bg-red-950' : 'bg-green-100 dark:bg-green-950'
       )}>
-        {isPending
-          ? <Clock size={18} className="text-yellow-600" />
-          : isOutgoing
-            ? <ArrowUpRight size={18} className="text-red-600" />
-            : <ArrowDownLeft size={18} className="text-green-600" />
+        {isCancelled
+          ? <Ban size={18} className="text-gray-500" />
+          : isPending
+            ? <Clock size={18} className="text-yellow-600" />
+            : isOutgoing
+              ? <ArrowUpRight size={18} className="text-red-600" />
+              : <ArrowDownLeft size={18} className="text-green-600" />
         }
       </div>
 
@@ -54,12 +59,19 @@ export function TransferCard({ transfer: tx, myUserId }: Props) {
               {t('declined')}
             </span>
           )}
+          {isCancelled && (
+            <span className="text-xs px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+              {t('cancelled')}
+            </span>
+          )}
         </div>
       </div>
 
       <p className={cn(
         'text-sm font-semibold tabular-nums shrink-0',
-        isOutgoing ? 'text-foreground' : 'text-green-600 dark:text-green-400'
+        (isDeclined || isCancelled)
+          ? 'text-muted-foreground line-through'
+          : isOutgoing ? 'text-foreground' : 'text-green-600 dark:text-green-400'
       )}>
         {isOutgoing ? '−' : '+'}{formatAmount(Number(tx.amount))}
       </p>
