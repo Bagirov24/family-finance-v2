@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { redirect } from 'next/navigation'
-import { useUIStore } from '@/store/useUIStore'
+import { useUIStore } from '@/store/ui.store'
 
 interface AuthGuardProps {
   userId: string | null
