@@ -21,7 +21,10 @@ const config: Config = {
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
         background: 'hsl(var(--background))',
-        foreground: 'hsl(var(--foreground))',
+        foreground: {
+          DEFAULT: 'hsl(var(--foreground))',
+          subtle: 'hsl(var(--foreground-subtle))',
+        },
         primary: {
           DEFAULT: 'hsl(var(--primary))',
           foreground: 'hsl(var(--primary-foreground))',
@@ -50,9 +53,10 @@ const config: Config = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
-        income: '#22c55e',
-        expense: '#ef4444',
-        transfer: '#8b5cf6',
+        /* Semantic finance colors — now theme-aware via CSS vars */
+        income: 'hsl(var(--income))',
+        expense: 'hsl(var(--expense))',
+        transfer: 'hsl(var(--transfer))',
       },
       borderRadius: {
         lg: 'var(--radius)',

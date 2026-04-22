@@ -6,6 +6,7 @@
   :root {
     --background: 0 0% 98%;
     --foreground: 224 10% 12%;
+    --foreground-subtle: 220 9% 46%;
     --card: 0 0% 100%;
     --card-foreground: 224 10% 12%;
     --popover: 0 0% 100%;
@@ -24,14 +25,19 @@
     --input: 220 13% 91%;
     --ring: 186 98% 22%;
     --radius: 0.75rem;
+    /* Semantic finance colors — light theme */
+    --income: 142 72% 29%;
+    --expense: 0 84% 60%;
+    --transfer: 263 70% 50%;
   }
 
   .dark {
     --background: 224 10% 8%;
     --foreground: 220 14% 88%;
-    --card: 224 10% 11%;
+    --foreground-subtle: 220 9% 54%;
+    --card: 224 10% 12%;
     --card-foreground: 220 14% 88%;
-    --popover: 224 10% 11%;
+    --popover: 224 10% 15%;
     --popover-foreground: 220 14% 88%;
     --primary: 186 50% 55%;
     --primary-foreground: 224 10% 8%;
@@ -41,11 +47,16 @@
     --muted-foreground: 220 9% 54%;
     --accent: 224 10% 18%;
     --accent-foreground: 220 14% 88%;
-    --destructive: 0 63% 51%;
+    /* Fixed: raised lightness for WCAG AA on dark background */
+    --destructive: 0 70% 60%;
     --destructive-foreground: 0 0% 98%;
     --border: 224 10% 18%;
     --input: 224 10% 18%;
     --ring: 186 50% 55%;
+    /* Semantic finance colors — dark theme (desaturated, lighter) */
+    --income: 145 65% 55%;
+    --expense: 0 70% 62%;
+    --transfer: 263 60% 68%;
   }
 }
 
@@ -57,9 +68,10 @@
 
 @layer utilities {
   .tabular-nums { font-variant-numeric: tabular-nums; }
-  .income-text { @apply text-green-500; }
-  .expense-text { @apply text-red-500; }
-  .transfer-text { @apply text-violet-500; }
+  /* Semantic finance utility classes — theme-aware */
+  .income-text { color: hsl(var(--income)); }
+  .expense-text { color: hsl(var(--expense)); }
+  .transfer-text { color: hsl(var(--transfer)); }
   .skeleton-shimmer {
     background: linear-gradient(90deg, hsl(var(--muted)) 25%, hsl(var(--accent)) 50%, hsl(var(--muted)) 75%);
     background-size: 200% 100%;
