@@ -51,15 +51,7 @@ async function fetchGoals(familyId: string) {
       monthsLeft = Math.max(0, diffMonths)
     }
 
-    return {
-      ...goal,
-      target_amount: target,
-      current_amount: current,
-      percent,
-      remaining,
-      completed,
-      monthsLeft,
-    }
+    return { ...goal, target_amount: target, current_amount: current, percent, remaining, completed, monthsLeft }
   })
 }
 
@@ -72,10 +64,7 @@ export function useGoals() {
     enabled: !!family?.id,
   })
 
-  return {
-    ...query,
-    goals: query.data ?? [],
-  }
+  return { ...query, goals: query.data ?? [] }
 }
 
 export function useCreateGoal() {
@@ -94,21 +83,19 @@ export function useCreateGoal() {
       auto_save_value?: number | null
     }) => {
       const supabase = createClient()
-      const payload = {
-        family_id: family?.id,
-        name: input.name,
-        target_amount: input.target_amount,
-        current_amount: input.current_amount ?? 0,
-        deadline: input.deadline ?? null,
-        icon: input.icon ?? '🎯',
-        color: input.color ?? null,
-        auto_save_type: input.auto_save_type ?? null,
-        auto_save_value: input.auto_save_value ?? null,
-      }
-
       const { data, error } = await supabase
         .from('goals')
-        .insert(payload)
+        .insert({
+          family_id: family?.id,
+          name: input.name,
+          target_amount: input.target_amount,
+          current_amount: input.current_amount ?? 0,
+          deadline: input.deadline ?? null,
+          icon: input.icon ?? '🎯',
+          color: input.color ?? null,
+          auto_save_type: input.auto_save_type ?? null,
+          auto_save_value: input.auto_save_value ?? null,
+        })
         .select()
         .single()
       if (error) throw error
@@ -118,18 +105,50 @@ export function useCreateGoal() {
   })
 }
 
+export function useUpdateGoal() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ id, ...patch }: Partial<Goal> & { id: string }) => {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('goals')
+        .update(patch)
+        .eq('id', id)
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['goals'] }),
+  })
+}
+
+export function useDeleteGoal() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const supabase = createClient()
+      const { error } = await supabase.from('goals').delete().eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['goals'] }),
+  })
+}
+
+/**
+ * Atomic goal contribution via Postgres RPC.
+ * Prevents race conditions when multiple family members contribute simultaneously.
+ */
 export function useContributeGoal() {
   const qc = useQueryClient()
 
   return useMutation({
     mutationFn: async ({ id, amount }: { id: string; amount: number }) => {
       const supabase = createClient()
-      // Use atomic RPC to prevent race conditions when multiple
-      // family members contribute to the same goal simultaneously
-      const { data, error } = await supabase.rpc('contribute_to_goal', {
-        p_goal_id: id,
-        p_amount: amount,
-      })
+      const { data, error } = await supabase
+        .rpc('contribute_to_goal', { p_goal_id: id, p_amount: amount })
       if (error) throw error
       return data
     },
