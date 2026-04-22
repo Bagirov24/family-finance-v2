@@ -22,6 +22,7 @@ import {
   type VehicleFine,
 } from '@/hooks/useVehicles'
 import { VehicleHealthScore } from '@/components/car/VehicleHealthScore'
+import { FuelChart } from '@/components/car/FuelChart'
 import { formatAmount, formatDate, formatKm, formatLper100 } from '@/lib/formatters'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
@@ -63,7 +64,7 @@ function periodStart(period: ExpensePeriod): Date | null {
   return d
 }
 
-// ── Edit Vehicle Form ─────────────────────────────────────────────────────────
+// ── Edit Vehicle Form ───────────────────────────────────────────────────────
 function EditVehicleForm({
   vehicle,
   onClose,
@@ -152,7 +153,7 @@ function EditVehicleForm({
   )
 }
 
-// ── Danger dialog ────────────────────────────────────────────────────────────────
+// ── Danger dialog ────────────────────────────────────────────────────────────
 type DangerAction = 'archive' | 'delete'
 
 function DangerDialog({
@@ -218,7 +219,7 @@ function DangerDialog({
   )
 }
 
-// ── Period toggle ─────────────────────────────────────────────────────────────────
+// ── Period toggle ────────────────────────────────────────────────────────────
 const PERIOD_LABELS: Record<ExpensePeriod, string> = {
   month: 'Месяц',
   year: 'Год',
@@ -247,7 +248,7 @@ function PeriodToggle({ value, onChange }: { value: ExpensePeriod; onChange: (v:
   )
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
+// ── Main page ────────────────────────────────────────────────────────────────
 export default function VehicleDetailPage() {
   const { vehicleId } = useParams<{ vehicleId: string }>()
   const router = useRouter()
@@ -303,7 +304,7 @@ export default function VehicleDetailPage() {
     createFine, updateFine, deleteFine,
   } = useVehicleFines(vehicleId)
 
-  // ── Period-filtered expenses ──────────────────────────────────────────────────
+  // ── Period-filtered expenses ──────────────────────────────────────────────
   const filteredExpenses = useMemo(() => {
     const start = periodStart(expensePeriod)
     if (!start) return expenses
@@ -323,13 +324,11 @@ export default function VehicleDetailPage() {
     [filteredExpenses]
   )
 
-  // Cost per month: total filtered / number of months in period
   const costPerMonth = useMemo(() => {
     if (filteredTotal === 0) return null
     if (expensePeriod === 'month') return filteredTotal
     if (expensePeriod === 'year') return filteredTotal / 12
-    // all time: divide by months since first expense
-    const first = expenses.at(-1) // sorted desc, last = oldest
+    const first = expenses.at(-1)
     if (!first) return null
     const months = Math.max(1,
       Math.ceil((Date.now() - new Date(first.date).getTime()) / (30.44 * 86_400_000))
@@ -337,7 +336,7 @@ export default function VehicleDetailPage() {
     return filteredTotal / months
   }, [filteredTotal, expensePeriod, expenses])
 
-  // ── Misc ────────────────────────────────────────────────────────────────────
+  // ── Misc ──────────────────────────────────────────────────────────────────
   const unpaidFinesTotal = useMemo(
     () => fines.filter(f => f.status === 'unpaid').reduce((s, f) => s + Number(f.discount_amount_rub ?? f.amount_rub), 0),
     [fines]
@@ -539,6 +538,11 @@ export default function VehicleDetailPage() {
 
         {/* ── FUEL ── */}
         <TabsContent value="fuel" className="space-y-4 mt-4">
+          {/* Chart — appears above the form when there's data */}
+          {!fuelLoading && entries.length >= 2 && (
+            <FuelChart entries={entries} />
+          )}
+
           <form onSubmit={handleAddFuel} className="rounded-2xl border bg-card p-4 space-y-3">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{t('addFuelEntry')}</h2>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -575,19 +579,32 @@ export default function VehicleDetailPage() {
             </button>
           </form>
 
-          {fuelLoading ? <Skeleton className="h-32 w-full" /> : entries.length === 0
-            ? <p className="text-sm text-muted-foreground text-center py-8">{t('noFuelEntries')}</p>
-            : <ul className="space-y-2">
-                {entries.map(e => (
-                  <li key={e.id} className="rounded-xl border bg-card p-3 flex justify-between items-center gap-4">
-                    <div>
-                      <p className="text-sm font-medium">{e.liters} L · {Number(e.price_per_liter).toFixed(1)} ₽/L</p>
-                      <p className="text-xs text-muted-foreground">{formatKm(Number(e.mileage))}{e.expense?.date ? ` • ${formatDate(e.expense.date)}` : ''}</p>
-                    </div>
-                    <p className="font-semibold tabular-nums text-sm">{formatAmount(Number(e.liters) * Number(e.price_per_liter))}</p>
-                  </li>
-                ))}
-              </ul>}
+          {fuelLoading
+            ? <Skeleton className="h-32 w-full" />
+            : entries.length === 0
+              ? <p className="text-sm text-muted-foreground text-center py-8">{t('noFuelEntries')}</p>
+              : <ul className="space-y-2">
+                  {entries.map(e => (
+                    <li key={e.id} className="rounded-xl border bg-card p-3 flex justify-between items-center gap-4">
+                      <div>
+                        <p className="text-sm font-medium">
+                          {e.liters} L · {Number(e.price_per_liter).toFixed(1)} ₽/L
+                          {e.fuel_consumption_calculated != null && (
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              · {Number(e.fuel_consumption_calculated).toFixed(1)} л/100км
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatKm(Number(e.mileage))}
+                          {e.expense?.date ? ` • ${formatDate(e.expense.date)}` : ''}
+                          {e.full_tank ? ' • ⛽ полный' : ''}
+                        </p>
+                      </div>
+                      <p className="font-semibold tabular-nums text-sm">{formatAmount(Number(e.liters) * Number(e.price_per_liter))}</p>
+                    </li>
+                  ))}
+                </ul>}
         </TabsContent>
 
         {/* ── SERVICE ── */}
@@ -729,13 +746,11 @@ export default function VehicleDetailPage() {
 
           {expLoading ? <Skeleton className="h-32 w-full" /> : (
             <div className="space-y-3">
-              {/* Period toggle + total */}
               <div className="flex items-center justify-between gap-3">
                 <PeriodToggle value={expensePeriod} onChange={setExpensePeriod} />
                 <p className="text-sm font-bold tabular-nums shrink-0">{formatAmount(filteredTotal)}</p>
               </div>
 
-              {/* Category breakdown for selected period */}
               {Object.keys(filteredByCategory).length > 0 && (
                 <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
                   {Object.entries(filteredByCategory).map(([cat, sum]) => {
