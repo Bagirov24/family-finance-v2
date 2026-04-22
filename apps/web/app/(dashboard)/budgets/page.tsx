@@ -2,6 +2,7 @@
 import { useLocale, useTranslations } from 'next-intl'
 import { useBudgets } from '@/hooks/useBudgets'
 import { BudgetCard } from '@/components/budgets/BudgetCard'
+import { BudgetAlertBanner } from '@/components/budgets/BudgetAlertBanner'
 import { UpsertBudgetModal } from '@/components/budgets/UpsertBudgetModal'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useUIStore } from '@/store/ui.store'
@@ -38,11 +39,14 @@ export default function BudgetsPage() {
           <p>{t('empty')}</p>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {budgets.map(b => (
-            <BudgetCard key={b.id} budget={b} />
-          ))}
-        </div>
+        <>
+          <BudgetAlertBanner budgets={budgets} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            {budgets.map(b => (
+              <BudgetCard key={b.id} budget={b} />
+            ))}
+          </div>
+        </>
       )}
     </div>
   )
