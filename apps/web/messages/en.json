@@ -111,6 +111,14 @@
     "edit": "Edit",
     "delete": "Delete"
   },
+  "budget": {
+    "title": "Budgets",
+    "spent": "Spent",
+    "remaining": "Remaining",
+    "of": "of",
+    "net_savings": "Net Savings",
+    "expense_ratio": "Expense-to-income ratio"
+  },
   "transfers": {
     "title": "Transfers",
     "request_title": "Request Money",
