@@ -400,6 +400,8 @@
     "overdue": "Overdue",
     "today": "Today",
     "tomorrow": "Tomorrow",
-    "days_left": "In {days} days"
+    "days_left": "In {days} days",
+    "per_month": "Per month",
+    "per_year": "Per year"
   }
 }
