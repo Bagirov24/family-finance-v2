@@ -20,6 +20,9 @@ export function TransferCard({ transfer: tx, myUserId }: Props) {
   const fromName = tx.from_member?.display_name ?? tx.from_user_id
   const toName = tx.to_member?.display_name ?? tx.to_user_id
 
+  // created_at может прийти null до того, как Supabase присвоит default
+  const dateStr = tx.created_at ? tx.created_at.split('T')[0] : tx.date
+
   return (
     <div className={cn(
       'flex items-center gap-3 p-3 rounded-xl border transition-colors',
@@ -48,7 +51,7 @@ export function TransferCard({ transfer: tx, myUserId }: Props) {
             : t('receivedFrom', { name: fromName })}
         </p>
         <div className="flex items-center gap-2">
-          <p className="text-xs text-muted-foreground">{formatDate(tx.created_at.split('T')[0])}</p>
+          <p className="text-xs text-muted-foreground">{formatDate(dateStr)}</p>
           {isPending && (
             <span className="text-xs px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300">
               {t('pending')}

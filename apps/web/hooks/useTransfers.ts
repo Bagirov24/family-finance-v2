@@ -17,7 +17,7 @@ export interface MemberTransfer {
   status: TransferStatus
   date: string
   confirmed_at: string | null
-  created_at: string
+  created_at: string | null  // nullable: Supabase default назначается серверно
   from_account?: { name: string; color: string | null; icon: string | null } | null
   to_account?: { name: string; color: string | null; icon: string | null } | null
   from_member?: { display_name: string | null } | null
