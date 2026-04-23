@@ -52,8 +52,8 @@ export function useWeekdaySpending(familyId: string) {
   return useQuery({
     queryKey: ['weekday-spending', familyId],
     enabled: !!familyId,
-    staleTime: 10 * 60_000,   // 10 мин — исторические данные меняются редко
-    gcTime: 60 * 60_000,      // держать в памяти 1 час
+    staleTime: 10 * 60_000,
+    gcTime: 60 * 60_000,
     queryFn: async () => {
       const supabase = createClient()
       const { data, error } = await supabase.rpc('get_weekday_spending', {
@@ -67,9 +67,11 @@ export function useWeekdaySpending(familyId: string) {
 
 /**
  * Переиспользует транзакции из кеша useTransactions — нулевой RTT.
+ * Параметры month/year убраны: фильтрация по периоду уже выполняется
+ * внутри useTransactions через activePeriod из ui.store.
  * useMemo пересчитывает breakdown только при изменении списка транзакций.
  */
-export function useCategoryBreakdown(familyId: string, month: number, year: number) {
+export function useCategoryBreakdown(familyId: string) {
   const { transactions, isLoading } = useTransactions({ familyId })
 
   const breakdown = useMemo(() => {

@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, useMemo } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useFamily } from '@/hooks/useFamily'
 import { useUIStore } from '@/store/ui.store'
@@ -29,7 +29,7 @@ export function useCashbackCards() {
   const query = useQuery({
     queryKey: ['cashback-cards', family?.id],
     enabled: !!family?.id,
-    staleTime: 5 * 60_000,   // кешбэк-карты меняются редко
+    staleTime: 5 * 60_000,
     gcTime: 15 * 60_000,
     queryFn: async () => {
       const supabase = createClient()
@@ -44,27 +44,55 @@ export function useCashbackCards() {
     },
   })
 
-  const getBestCard = (categoryId: string) => {
+  /**
+   * O(N) Map-индекс: категория → лучший процент среди всех карт.
+   * Пересчитывается только при смене query.data.
+   */
+  const bestByCategory = useMemo(() => {
     const cards = query.data ?? []
-    let best: { cardId: string; cardName: string; percent: number } | null = null
+    // map: categoryId → { cardId, cardName, percent }
+    const map = new Map<string, { cardId: string; cardName: string; percent: number }>()
 
     for (const card of cards) {
-      let matched = false
+      const cats = card.cashback_card_categories ?? []
+      const coveredCategories = new Set<string>()
 
-      for (const cc of card.cashback_card_categories ?? []) {
-        if (cc.category_id === categoryId) {
-          matched = true
-          if (!best || cc.cashback_percent > best.percent) {
-            best = { cardId: card.id, cardName: card.name, percent: cc.cashback_percent }
-          }
+      for (const cc of cats) {
+        coveredCategories.add(cc.category_id)
+        const prev = map.get(cc.category_id)
+        if (!prev || cc.cashback_percent > prev.percent) {
+          map.set(cc.category_id, { cardId: card.id, cardName: card.name, percent: cc.cashback_percent })
         }
       }
 
-      if (!matched && (!best || card.default_cashback_percent > best.percent)) {
+      // default_cashback_percent применяется к категориям БЕЗ явной ставки
+      // Обновляем '__default__' — виртуальный ключ для «любая другая категория»
+      const defKey = `__default__:${card.id}`
+      map.set(defKey, { cardId: card.id, cardName: card.name, percent: card.default_cashback_percent })
+    }
+
+    return map
+  }, [query.data])
+
+  /**
+   * O(1) lookup после построения индекса.
+   * Для категорий без явной ставки берём карту с максимальным default.
+   */
+  const getBestCard = (categoryId: string) => {
+    const explicit = bestByCategory.get(categoryId)
+    if (explicit) return explicit
+
+    // Нет явной ставки — ищем лучший default среди всех карт
+    const cards = query.data ?? []
+    let best: { cardId: string; cardName: string; percent: number } | null = null
+    for (const card of cards) {
+      const hasCategoryRate = (card.cashback_card_categories ?? []).some(
+        cc => cc.category_id === categoryId
+      )
+      if (!hasCategoryRate && (!best || card.default_cashback_percent > best.percent)) {
         best = { cardId: card.id, cardName: card.name, percent: card.default_cashback_percent }
       }
     }
-
     return best
   }
 

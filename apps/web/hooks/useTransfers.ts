@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useUIStore } from '@/store/ui.store'
 
@@ -44,7 +43,6 @@ export interface CreateRequestInput {
 }
 
 export function useTransfers() {
-  // ✅ точный селектор — не подписываемся на весь стор
   const userId = useUIStore(s => s.userId)
   const qc = useQueryClient()
 
@@ -71,30 +69,8 @@ export function useTransfers() {
     }
   })
 
-  // Realtime: слушаем только ВХОДЯЩИЕ события (to_user_id === me).
-  // Исходящие (from_user_id === me) игнорируем — onSuccess мутации
-  // уже вызвал invalidateQueries, двойной рефетч не нужен.
-  useEffect(() => {
-    if (!userId) return
-    const supabase = createClient()
-
-    const invalidateIncoming = () => {
-      qc.invalidateQueries({ queryKey: ['transfers'] })
-      qc.invalidateQueries({ queryKey: ['accounts'] })
-    }
-
-    const channel = supabase
-      .channel(`transfers-incoming:${userId}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'member_transfers',
-        filter: `to_user_id=eq.${userId}`,
-      }, invalidateIncoming)
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
-  }, [userId, qc])
+  // Realtime перенесён в useRealtimeSync (глобальный провайдер).
+  // useTransfers больше не открывает собственный канал.
 
   const createTransfer = useMutation({
     mutationFn: async (payload: CreateTransferInput) => {

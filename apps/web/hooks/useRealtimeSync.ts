@@ -1,13 +1,14 @@
 /**
  * useRealtimeSync — глобальная Realtime-подписка.
  *
- * Слушает INSERT/UPDATE/DELETE в таблицах transactions и accounts
- * по family_id текущей семьи.
+ * Слушает INSERT/UPDATE/DELETE в таблицах:
+ *   - transactions  (по family_id)
+ *   - accounts      (по family_id)
+ *   - member_transfers (входящие to_user_id === userId)
  *
- * Ключевой принцип: события, порождённые САМИМ пользователем
- * (payload.new.user_id === userId), игнорируются — их инвалидация
- * уже выполнена через onSuccess мутации. Это исключает двойной
- * рефетч при собственных действиях.
+ * Принцип: события, порождённые САМИМ пользователем, игнорируются —
+ * их инвалидация уже выполнена через onSuccess мутации.
+ * Это исключает двойной рефетч при собственных действиях.
  */
 'use client'
 
@@ -19,8 +20,6 @@ import { useUIStore } from '@/store/ui.store'
 
 export function useRealtimeSync() {
   const { family } = useFamily()
-  // Точный селектор — компонент не ре-рендерится при изменении
-  // других полей стора (sidebarOpen, theme, activePeriod и т.д.)
   const userId = useUIStore(s => s.userId)
   const qc = useQueryClient()
 
@@ -38,7 +37,6 @@ export function useRealtimeSync() {
         { event: '*', schema: 'public', table: 'transactions', filter: `family_id=eq.${family.id}` },
         (payload) => {
           const row = (payload.new ?? payload.old) as { user_id?: string } | null
-          // Пропускаем собственные события — onSuccess мутации уже инвалидировал
           if (row?.user_id === userId) return
 
           qc.invalidateQueries({ queryKey: ['transactions'] })
@@ -55,6 +53,22 @@ export function useRealtimeSync() {
           const row = (payload.new ?? payload.old) as { owner_user_id?: string } | null
           if (row?.owner_user_id === userId) return
 
+          qc.invalidateQueries({ queryKey: ['accounts'] })
+        }
+      )
+
+      // Переводы — ВХОДЯЩИЕ события (to_user_id === me).
+      // Исходящие не слушаем — onSuccess мутации уже вызвал invalidateQueries.
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'member_transfers',
+          filter: `to_user_id=eq.${userId}`,
+        },
+        () => {
+          qc.invalidateQueries({ queryKey: ['transfers'] })
           qc.invalidateQueries({ queryKey: ['accounts'] })
         }
       )
