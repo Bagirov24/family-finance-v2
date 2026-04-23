@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useUIStore } from '@/store/ui.store'
 
 export type TransferStatus = 'pending' | 'confirmed' | 'declined' | 'cancelled'
-export type TransferType = 'send' | 'request'
+export type TransferType = 'send' | 'request' | 'recurring'
 
 export interface MemberTransfer {
   id: string
@@ -19,6 +19,7 @@ export interface MemberTransfer {
   date: string
   confirmed_at: string | null
   created_at: string | null
+  recurring_transfer_id: string | null
   from_account?: { name: string; color: string | null; icon: string | null } | null
   to_account?: { name: string; color: string | null; icon: string | null } | null
   from_member?: { display_name: string | null } | null
@@ -115,16 +116,9 @@ export function useTransfers() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('No active session')
 
-      // H-2: validate env var before using it in URL construction.
-      // Without this check, a missing var produces the URL "undefined/functions/v1/..."
-      // which silently fails with a confusing network error.
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
       if (!supabaseUrl) throw new Error('NEXT_PUBLIC_SUPABASE_URL is not configured')
 
-      // H-1: wrap the fetch in try/catch to distinguish network failures
-      // (DNS, timeout, offline) from application-level errors (4xx/5xx).
-      // Without this, a network error throws an unhandled Promise rejection
-      // that bypasses the mutation's onError handler.
       let res: Response
       try {
         res = await fetch(
@@ -161,7 +155,6 @@ export function useTransfers() {
 
   const cancelTransfer = useMutation({
     mutationFn: async (transfer_id: string) => {
-      // Guard replaces the previous userId! non-null assertion.
       if (!userId) throw new Error('userId is required to cancel a transfer')
       const supabase = createClient()
       const { error } = await supabase
@@ -183,6 +176,10 @@ export function useTransfers() {
   const pendingRequests = all.filter(
     t => t.status === 'pending' && t.to_user_id === userId && t.transfer_type === 'request'
   )
+  // recurring pending — получатель принимает так же как send
+  const pendingRecurring = all.filter(
+    t => t.status === 'pending' && t.to_user_id === userId && t.transfer_type === 'recurring'
+  )
   const outgoingPending = all.filter(
     t => t.status === 'pending' && t.from_user_id === userId
   )
@@ -191,6 +188,7 @@ export function useTransfers() {
   return {
     pending,
     pendingRequests,
+    pendingRecurring,
     outgoingPending,
     history,
     allTransfers: all,
