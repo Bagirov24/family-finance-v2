@@ -22,11 +22,17 @@ export function useFamily() {
     staleTime: 5 * 60_000,
     gcTime: 30 * 60_000,
     queryFn: async () => {
+      // M-3: type guard replaces userId! non-null assertion.
+      // `enabled: !!userId` prevents this from running when userId is nullish,
+      // but TypeScript does not see that invariant — the guard makes it explicit
+      // and surfaces a meaningful error if the invariant is ever broken.
+      if (!userId) throw new Error('[useFamily] userId is required')
+
       const supabase = createClient()
       const { data, error } = await supabase
         .from('family_members')
         .select('*, family:families(id, name, invite_code, currency)')
-        .eq('user_id', userId!)
+        .eq('user_id', userId)
         .order('joined_at')
 
       if (error) throw error
