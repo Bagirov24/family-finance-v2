@@ -14,11 +14,11 @@ export interface MonthlySummary {
 /**
  * useSummary — без сетевого запроса.
  * Вычисляет сводку через useMemo из кеша useTransactions.
- * month/year берётся явно из activePeriod — корректно даже при пустом списке транзакций.
+ * Точные Zustand-селекторы — не ре-рендерится при изменении sidebarOpen/theme/etc.
  */
 export function useSummary() {
-  const { activePeriod } = useUIStore()
-  const { month, year } = activePeriod
+  const month = useUIStore(s => s.activePeriod.month)
+  const year  = useUIStore(s => s.activePeriod.year)
 
   const { isLoading, isPending, isError, totalIncome: income, totalExpense: expense } =
     useTransactions()

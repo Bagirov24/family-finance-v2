@@ -61,12 +61,12 @@ export function useAccounts({ initialAccounts }: UseAccountsOptions = {}) {
     queryFn: () => fetchAccounts(userId!, family?.id),
     enabled: !!userId,
     initialData: initialAccounts,
-    staleTime: 30_000,
+    staleTime: 5 * 60_000,  // 5 мин — балансы актуализируются через invalidateQueries после мутаций
+    gcTime: 30 * 60_000,
   })
 
   const accounts = query.data ?? []
 
-  // Счета с is_hidden_from_total не учитываются в общем балансе
   const totalBalance = accounts
     .filter(a => !a.is_hidden_from_total)
     .reduce((sum, a) => sum + Number(a.balance), 0)

@@ -14,7 +14,6 @@ export interface Category {
 
 async function fetchCategories(userId: string) {
   const supabase = createClient()
-  // fetch family_id for this user first via family_members
   const { data: memberData } = await supabase
     .from('family_members')
     .select('family_id')
@@ -47,7 +46,8 @@ export function useCategories(type?: 'income' | 'expense') {
     queryKey: ['categories', userId],
     queryFn: () => fetchCategories(userId!),
     enabled: !!userId,
-    staleTime: 5 * 60_000,
+    staleTime: 30 * 60_000,  // 30 мин — категории меняются крайне редко
+    gcTime: 60 * 60_000,
   })
 
   const filtered = type
