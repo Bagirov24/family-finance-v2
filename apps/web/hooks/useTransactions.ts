@@ -59,12 +59,17 @@ interface UseTransactionsParams {
   initialData?: Transaction[]
 }
 
+// Separate internal type to avoid polluting the public params interface
+interface FetchTransactionsParams extends UseTransactionsParams {
+  resolvedFamilyId?: string
+}
+
 async function fetchTransactions(
   userId: string,
   month: number,
   year: number,
-  params?: UseTransactionsParams & { resolvedFamilyId?: string }
-) {
+  params?: FetchTransactionsParams
+): Promise<Transaction[]> {
   const supabase = createClient()
   const from = `${year}-${String(month).padStart(2, '0')}-01`
   const to = new Date(year, month, 0).toISOString().split('T')[0]
@@ -120,10 +125,15 @@ export function useTransactions(params?: UseTransactionsParams) {
       resolvedFamilyId,
       params?.categoryId,
       params?.type,
-      params?.limit,
+      params?.limit ?? null,
     ],
-    queryFn: () =>
-      fetchTransactions(userId!, month, year, { ...params, resolvedFamilyId }),
+    // C-4: replaced userId! non-null assertion with an explicit type guard.
+    // `enabled: !!userId` prevents execution, but TypeScript does not know
+    // that invariant — the guard makes it explicit and eliminates the unsafe cast.
+    queryFn: () => {
+      if (!userId) throw new Error('[useTransactions] userId is required but was null')
+      return fetchTransactions(userId, month, year, { ...params, resolvedFamilyId })
+    },
     // Ждём пока useFamily() разрешится: не запускаем запрос с неверным ключом
     enabled: !!userId && family !== undefined,
     staleTime: isCurrentPeriod ? 30_000 : 5 * 60_000,
@@ -170,6 +180,7 @@ export function useCreateTransaction() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['transactions', userId] })
       qc.invalidateQueries({ queryKey: ['accounts'] })
+      qc.invalidateQueries({ queryKey: ['monthly-summary'] })
     },
   })
 }
