@@ -10,7 +10,9 @@ export default function CashbackPage() {
   const t = useTranslations('cashback')
   const tcat = useTranslations('categories')
   const { cards, isLoading, getBestCard } = useCashbackCards()
-  const { data: categories } = useCategories()
+  // L-3 fix: useCategories now returns `categories` (not `data`) to avoid
+  // shadowing TanStack Query's own `data` field on the returned object.
+  const { categories } = useCategories()
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
