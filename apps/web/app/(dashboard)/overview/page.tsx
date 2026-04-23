@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
-import { prefetchOverviewData } from '@/lib/supabase/prefetch'
+import { prefetchOverviewData, PREFETCH_TX_LIMIT } from '@/lib/supabase/prefetch'
 import { HeroBalanceCard } from '@/components/overview/HeroBalanceCard'
 import { NetSavingsBar } from '@/components/overview/NetSavingsBar'
 import { DailyBudgetPulse } from '@/components/overview/DailyBudgetPulse'
@@ -114,11 +114,15 @@ export default async function OverviewPage() {
         </Suspense>
       </section>
 
-      {/* Latest transactions */}
+      {/* Latest transactions — limit matches PREFETCH_TX_LIMIT so React Query
+          cache is seeded on the server and no extra network request is made */}
       <section>
         <h2 className="text-base font-semibold mb-3">{t('recent_transactions')}</h2>
         <Suspense fallback={<TransactionListSkeleton />}>
-          <TransactionList limit={5} />
+          <TransactionList
+            limit={PREFETCH_TX_LIMIT}
+            initialTransactions={initialData?.transactions}
+          />
         </Suspense>
       </section>
     </div>

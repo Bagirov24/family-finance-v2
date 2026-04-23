@@ -15,14 +15,23 @@ interface Props {
   showDate?: boolean
   categoryId?: string
   type?: 'income' | 'expense'
+  /** Server-prefetched transactions to seed the React Query cache.
+   *  When provided and the period matches, no client fetch will be made. */
+  initialTransactions?: Transaction[]
 }
 
-export function TransactionList({ limit, showDate = true, categoryId, type }: Props) {
+export function TransactionList({ limit, showDate = true, categoryId, type, initialTransactions }: Props) {
   const t = useTranslations('transactions')
   const tc = useTranslations('common')
   const tcat = useTranslations('categories')
   const { family } = useFamily()
-  const { transactions, isLoading } = useTransactions({ familyId: family?.id, categoryId, limit, type })
+  const { transactions, isLoading } = useTransactions({
+    familyId: family?.id,
+    categoryId,
+    limit,
+    type,
+    initialData: initialTransactions,
+  })
   const { mutate: deleteTransaction, isPending: isDeleting } = useDeleteTransaction()
   const [editTx, setEditTx] = useState<Transaction | null>(null)
   const [deleteTx, setDeleteTx] = useState<Transaction | null>(null)

@@ -50,6 +50,13 @@ interface UseTransactionsParams {
   categoryId?: string
   type?: 'expense' | 'income'
   limit?: number
+  /**
+   * Server-prefetched data to seed the React Query cache.
+   * TanStack Query uses this as the initial cache value so no client
+   * fetch is made on first render — provided `staleTime` has not elapsed.
+   * Must come from a prefetch with the SAME limit/familyId/period params.
+   */
+  initialData?: Transaction[]
 }
 
 async function fetchTransactions(
@@ -121,6 +128,10 @@ export function useTransactions(params?: UseTransactionsParams) {
     enabled: !!userId && family !== undefined,
     staleTime: isCurrentPeriod ? 30_000 : 5 * 60_000,
     gcTime: isCurrentPeriod ? 10 * 60_000 : 30 * 60_000,
+    // Seed the cache from server-prefetched data.
+    // TanStack Query treats this as fresh for the duration of staleTime,
+    // so no network request is made on first render.
+    ...(params?.initialData ? { initialData: params.initialData } : {}),
   })
 
   const transactions = query.data ?? []
@@ -163,29 +174,6 @@ export function useCreateTransaction() {
   })
 }
 
-export function useUpdateTransaction() {
-  const qc = useQueryClient()
-  const userId = useUIStore(s => s.userId)
-
-  return useMutation({
-    mutationFn: async ({ id, ...patch }: UpdateTransactionInput) => {
-      const supabase = createClient()
-      const { data, error } = await supabase
-        .from('transactions')
-        .update(patch)
-        .eq('id', id)
-        .select()
-        .single()
-      if (error) throw error
-      return data
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['transactions', userId] })
-      qc.invalidateQueries({ queryKey: ['accounts'] })
-    },
-  })
-}
-
 export function useDeleteTransaction() {
   const qc = useQueryClient()
   const userId = useUIStore(s => s.userId)
@@ -199,6 +187,28 @@ export function useDeleteTransaction() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['transactions', userId] })
       qc.invalidateQueries({ queryKey: ['accounts'] })
+    },
+  })
+}
+
+export function useUpdateTransaction() {
+  const qc = useQueryClient()
+  const userId = useUIStore(s => s.userId)
+
+  return useMutation({
+    mutationFn: async ({ id, ...input }: UpdateTransactionInput) => {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('transactions')
+        .update(input)
+        .eq('id', id)
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transactions', userId] })
     },
   })
 }

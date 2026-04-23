@@ -1,5 +1,10 @@
 import { createClient } from './server'
 
+/** Matches the default `limit` prop of TransactionList on the overview page.
+ *  Keeping both in sync prevents a React Query cache miss that causes a
+ *  double-fetch immediately after hydration. */
+export const PREFETCH_TX_LIMIT = 5
+
 export async function prefetchAppData(userId: string) {
   const supabase = await createClient()
 
@@ -49,12 +54,12 @@ export async function prefetchAppData(userId: string) {
     family?.id
       ? supabase
           .from('transactions')
-          .select('*, account:accounts(name, currency), category:categories(name, icon)')
+          .select('*, account:accounts(name, currency), category:categories(name, key, icon)')
           .eq('family_id', family.id)
           .gte('date', periodStart)
           .lt('date', periodEnd)
           .order('date', { ascending: false })
-          .limit(30)
+          .limit(PREFETCH_TX_LIMIT)   // ← was 30, now matches client TransactionList default
       : Promise.resolve({ data: [], error: null }),
   ])
 
