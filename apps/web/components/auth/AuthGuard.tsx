@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { redirect } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { useUIStore } from '@/store/ui.store'
 
 interface AuthGuardProps {
@@ -10,16 +10,21 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ userId, children }: AuthGuardProps) {
+  const router = useRouter()
   const setUserId = useUIStore((s) => s.setUserId)
 
-  // Side effect moved to useEffect — no setState during render
   useEffect(() => {
     setUserId(userId)
   }, [userId, setUserId])
 
-  if (!userId) {
-    redirect('/sign-in')
-  }
+  useEffect(() => {
+    if (!userId) {
+      router.replace('/login')
+    }
+  }, [userId, router])
+
+  // Не рендерим children пока userId не определён
+  if (!userId) return null
 
   return <>{children}</>
 }
