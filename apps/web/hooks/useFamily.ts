@@ -29,9 +29,11 @@ export function useFamily() {
       if (!userId) throw new Error('[useFamily] userId is required')
 
       const supabase = createClient()
+      // created_at added so the runtime shape matches
+      // FamilyMember.family = Database['public']['Tables']['families']['Row']
       const { data, error } = await supabase
         .from('family_members')
-        .select('*, family:families(id, name, invite_code, currency)')
+        .select('*, family:families(id, name, invite_code, currency, created_at)')
         .eq('user_id', userId)
         .order('joined_at')
 

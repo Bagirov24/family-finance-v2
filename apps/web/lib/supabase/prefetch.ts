@@ -8,9 +8,11 @@ export const PREFETCH_TX_LIMIT = 5
 export async function prefetchAppData(userId: string) {
   const supabase = await createClient()
 
+  // created_at added to families select so the returned shape matches
+  // FamilyMember.family = Database['public']['Tables']['families']['Row']
   const { data: membersData, error: membersError } = await supabase
     .from('family_members')
-    .select('*, family:families(id, name, invite_code, currency)')
+    .select('*, family:families(id, name, invite_code, currency, created_at)')
     .eq('user_id', userId)
     .order('joined_at')
 
@@ -59,7 +61,7 @@ export async function prefetchAppData(userId: string) {
           .gte('date', periodStart)
           .lt('date', periodEnd)
           .order('date', { ascending: false })
-          .limit(PREFETCH_TX_LIMIT)   // ← was 30, now matches client TransactionList default
+          .limit(PREFETCH_TX_LIMIT)
       : Promise.resolve({ data: [], error: null }),
   ])
 
