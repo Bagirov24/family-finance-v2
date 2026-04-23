@@ -1,6 +1,7 @@
 import { AnalyticsTrendSection } from './_TrendSection'
 import { AnalyticsWeekdaySection } from './_WeekdaySection'
 import { AnalyticsPieSection } from './_PieCategorySection'
+import { AnalyticsCashbackSection } from './_CashbackSection'
 
 export default function AnalyticsPage() {
   return (
@@ -8,6 +9,7 @@ export default function AnalyticsPage() {
       <AnalyticsTrendSection />
       <AnalyticsPieSection />
       <AnalyticsWeekdaySection />
+      <AnalyticsCashbackSection />
     </div>
   )
 }
