@@ -1,6 +1,6 @@
 'use client'
 import { useTranslations } from 'next-intl'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useUIStore } from '@/store/ui.store'
 import { Users, Plus, LogIn, Loader2 } from 'lucide-react'
@@ -25,7 +25,8 @@ export function FamilySetup({ onSuccess }: Props) {
   const [joining, setJoining] = useState(false)
   const [joinError, setJoinError] = useState('')
 
-  const supabase = createClient()
+  // createClient() возвращает один и тот же singleton на протяжении жизни компонента
+  const supabase = useMemo(() => createClient(), [])
 
   async function handleCreate() {
     if (!familyName.trim() || !userId) return
