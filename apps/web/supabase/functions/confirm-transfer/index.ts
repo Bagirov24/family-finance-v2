@@ -1,12 +1,36 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
-Deno.serve(async (req: Request) => {
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
+/**
+ * Allowed origin for CORS.
+ * Set ALLOWED_ORIGIN env var to your production frontend URL, e.g.:
+ *   https://your-app.netlify.app
+ * For local dev set it to http://localhost:3000
+ *
+ * Supabase Dashboard → Edge Functions → Secrets
+ */
+const ALLOWED_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') ?? ''
+
+/**
+ * Returns CORS headers scoped to the request origin.
+ * Only reflects the Origin header if it matches ALLOWED_ORIGIN.
+ * Falls back to ALLOWED_ORIGIN itself (never '*') so the browser
+ * blocks cross-origin requests from unknown sites.
+ */
+function getCorsHeaders(req: Request): Record<string, string> {
+  const requestOrigin = req.headers.get('Origin') ?? ''
+  const allowedOrigin = requestOrigin === ALLOWED_ORIGIN ? requestOrigin : ALLOWED_ORIGIN
+
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Content-Type': 'application/json',
   }
+}
+
+Deno.serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req)
 
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
