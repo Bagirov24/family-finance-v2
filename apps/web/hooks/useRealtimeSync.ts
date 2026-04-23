@@ -19,7 +19,9 @@ import { useUIStore } from '@/store/ui.store'
 
 export function useRealtimeSync() {
   const { family } = useFamily()
-  const { userId } = useUIStore()
+  // Точный селектор — компонент не ре-рендерится при изменении
+  // других полей стора (sidebarOpen, theme, activePeriod и т.д.)
+  const userId = useUIStore(s => s.userId)
   const qc = useQueryClient()
 
   useEffect(() => {
