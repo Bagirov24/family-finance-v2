@@ -353,7 +353,7 @@ export default function SettingsPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">
-                      {m.display_name ?? m.user_id.slice(0, 8)}
+                      {m.display_name ?? m.user_id?.slice(0, 8) ?? '—'}
                       {m.user_id === userId && (
                         <span className="ml-1.5 text-xs text-muted-foreground">({t('you')})</span>
                       )}
