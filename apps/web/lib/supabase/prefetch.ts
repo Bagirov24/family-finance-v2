@@ -1,4 +1,7 @@
 import { createClient } from './server'
+import type { Account } from '@/hooks/useAccounts'
+import type { FamilyMember } from '@/hooks/useFamily'
+import type { Transaction } from '@/hooks/useTransactions'
 
 /** Matches the default `limit` prop of TransactionList on the overview page.
  *  Keeping both in sync prevents a React Query cache miss that causes a
@@ -75,12 +78,12 @@ export async function prefetchAppData(userId: string) {
     console.error('[prefetch] transactions error:', transactionsResult.error)
 
   return {
-    members: membersData ?? [],
+    members: (membersData ?? []) as unknown as FamilyMember[],
     family,
-    accounts: accountsResult.data ?? [],
+    accounts: (accountsResult.data ?? []) as unknown as Account[],
     summary: summaryResult.data ?? null,
     categories: categoriesResult.data ?? [],
-    transactions: transactionsResult.data ?? [],
+    transactions: (transactionsResult.data ?? []) as unknown as Transaction[],
     month,
     year,
   }
