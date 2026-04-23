@@ -3,6 +3,7 @@ import { PendingTransferBanner } from '@/components/transfers/PendingTransferBan
 import { TransfersList } from '@/components/transfers/TransfersList'
 import { TransferModal } from '@/components/transfers/TransferModal'
 import { OpenTransferModalButton } from '@/components/transfers/OpenTransferModalButton'
+import { RecurringTransfersList } from '@/components/transfers/RecurringTransfersList'
 
 export async function generateMetadata() {
   const t = await getTranslations('transfers')
@@ -20,6 +21,8 @@ export default async function TransfersPage() {
       </div>
 
       <PendingTransferBanner />
+
+      <RecurringTransfersList />
 
       <section>
         <h2 className="text-base font-semibold mb-3">{t('history')}</h2>
