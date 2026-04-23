@@ -43,7 +43,12 @@
     "hide": "Скрыть",
     "archive": "Архивировать",
     "today": "Сегодня",
-    "yesterday": "Вчера"
+    "yesterday": "Вчера",
+    "actions": "Действия",
+    "theme": "Тема",
+    "theme_light": "Светлая",
+    "theme_dark": "Тёмная",
+    "theme_system": "Системная"
   },
   "quickAdd": {
     "placeholder": "Быстро добавить расход...",
@@ -77,7 +82,9 @@
     "addedIncome": "Доход добавлен",
     "addedExpense": "Расход добавлен",
     "updated": "Транзакция обновлена",
-    "noCategory": "Без категории"
+    "noCategory": "Без категории",
+    "fab_add_subtitle": "Быстро добавить доход или расход",
+    "fab_transfer_subtitle": "Перевод между счетами семьи"
   },
   "transactions": {
     "title": "Транзакции",

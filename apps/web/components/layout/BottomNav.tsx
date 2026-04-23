@@ -60,9 +60,9 @@ export function BottomNav() {
   const moreActive = MORE_ITEMS.some(i => pathname.startsWith(i.href))
 
   const THEME_OPTIONS: { value: 'light' | 'dark' | 'system'; icon: typeof Sun; label: string }[] = [
-    { value: 'light',  icon: Sun,     label: 'Светлая' },
-    { value: 'dark',   icon: Moon,    label: 'Тёмная' },
-    { value: 'system', icon: Monitor, label: 'Системная' },
+    { value: 'light',  icon: Sun,     label: tc('theme_light') },
+    { value: 'dark',   icon: Moon,    label: tc('theme_dark') },
+    { value: 'system', icon: Monitor, label: tc('theme_system') },
   ]
 
   return (
@@ -86,7 +86,7 @@ export function BottomNav() {
               </span>
               <div>
                 <div className="text-sm font-semibold">{tx('add')}</div>
-                <div className="text-xs text-primary-foreground/75">Быстро добавить доход или расход</div>
+                <div className="text-xs text-primary-foreground/75">{tx('fab_add_subtitle')}</div>
               </div>
             </button>
 
@@ -102,7 +102,7 @@ export function BottomNav() {
               </span>
               <div>
                 <div className="text-sm font-semibold">{tt('send')}</div>
-                <div className="text-xs text-muted-foreground">Перевод между счетами семьи</div>
+                <div className="text-xs text-muted-foreground">{tx('fab_transfer_subtitle')}</div>
               </div>
             </button>
           </div>
@@ -113,7 +113,7 @@ export function BottomNav() {
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
         <SheetContent>
           <SheetHeader>
-            <SheetTitle>Ещё</SheetTitle>
+            <SheetTitle>{t('more')}</SheetTitle>
           </SheetHeader>
 
           {/* Nav links */}
@@ -141,7 +141,7 @@ export function BottomNav() {
           </div>
 
           {/* Theme picker */}
-          <p className="px-1 pb-2 text-xs font-medium text-muted-foreground">Тема</p>
+          <p className="px-1 pb-2 text-xs font-medium text-muted-foreground">{tc('theme')}</p>
           <div className="grid grid-cols-3 gap-2">
             {THEME_OPTIONS.map(({ value, icon: Icon, label }) => (
               <button
@@ -223,7 +223,7 @@ export function BottomNav() {
           )}
         >
           <MoreHorizontal className="h-5 w-5" />
-          <span className="leading-none">Ещё</span>
+          <span className="leading-none">{t('more')}</span>
         </button>
       </div>
     </nav>

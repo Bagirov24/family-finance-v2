@@ -43,7 +43,12 @@
     "show": "Show",
     "hide": "Hide",
     "currency": "Currency",
-    "archive": "Archive"
+    "archive": "Archive",
+    "actions": "Actions",
+    "theme": "Theme",
+    "theme_light": "Light",
+    "theme_dark": "Dark",
+    "theme_system": "System"
   },
   "quickAdd": {
     "placeholder": "Quick add expense...",
@@ -97,7 +102,9 @@
     "addedIncome": "Income added",
     "addedExpense": "Expense added",
     "updated": "Transaction updated",
-    "noCategory": "No category"
+    "noCategory": "No category",
+    "fab_add_subtitle": "Quickly add income or expense",
+    "fab_transfer_subtitle": "Transfer between family accounts"
   },
   "transactions": {
     "title": "Transactions",
