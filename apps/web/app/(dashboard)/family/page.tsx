@@ -8,6 +8,7 @@ import { Crown, User, Copy, Check, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/store/ui.store'
 import { FamilySetup } from '@/components/family/FamilySetup'
+import { FamilyDebtSummary } from '@/components/family/FamilyDebtSummary'
 import { toast } from 'sonner'
 
 export default function FamilyPage() {
@@ -56,6 +57,7 @@ export default function FamilyPage() {
 
   return (
     <div className="max-w-md mx-auto space-y-6">
+      {/* Заголовок + код приглашения */}
       <div>
         <h1 className="text-xl font-bold">{family.name}</h1>
         {family.invite_code && (
@@ -64,8 +66,6 @@ export default function FamilyPage() {
             <span className="font-mono text-sm font-bold tracking-widest bg-muted px-2 py-0.5 rounded">
               {family.invite_code}
             </span>
-
-            {/* Copy */}
             <button
               onClick={copyCode}
               className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
@@ -75,8 +75,6 @@ export default function FamilyPage() {
                 ? <Check size={14} className="text-green-500" />
                 : <Copy size={14} />}
             </button>
-
-            {/* Rotate — только owner */}
             {isOwner && (
               <button
                 onClick={rotateCode}
@@ -91,6 +89,15 @@ export default function FamilyPage() {
         )}
       </div>
 
+      {/* Сводка долгов */}
+      {userId && members && members.length > 1 && (
+        <FamilyDebtSummary
+          myUserId={userId}
+          members={members.map(m => ({ user_id: m.user_id, display_name: m.display_name }))}
+        />
+      )}
+
+      {/* Участники */}
       <section>
         <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">{t('members')}</h2>
         <div className="space-y-2">

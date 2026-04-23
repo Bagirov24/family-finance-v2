@@ -245,6 +245,12 @@
     "note_placeholder": "За что перевод?",
     "history": "История переводов",
     "no_transfers": "Переводов пока нет",
+    "filter_member": "Участник",
+    "filter_status": "Статус",
+    "filter_date_from": "Дата от",
+    "filter_date_to": "Дата до",
+    "filter_reset": "Сбросить",
+    "filter_empty": "Нет переводов по выбранным фильтрам",
     "transfer_received": "{from} отправил(а) вам {amount}",
     "transfer_sent_pending": "Ожидает подтверждения от {to} · {amount}",
     "request_received": "{from} просит у вас {amount}",
@@ -383,7 +389,11 @@
     "errorCreate": "Не удалось создать семью",
     "errorJoin": "Не удалось войти в семью",
     "invalidCode": "Неверный код приглашения",
-    "alreadyMember": "Вы уже состоите в этой семье"
+    "alreadyMember": "Вы уже состоите в этой семье",
+    "debt_summary_title": "Взаиморасчёты",
+    "debt_i_owe_prefix": "Ты должен",
+    "debt_i_owe_suffix": "",
+    "debt_owes_me": "должен тебе"
   },
   "settings": {
     "title": "Настройки",
