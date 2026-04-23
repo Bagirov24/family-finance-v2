@@ -12,21 +12,25 @@
  */
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useFamily } from '@/hooks/useFamily'
 import { useUIStore } from '@/store/ui.store'
 
-export function useRealtimeSync() {
+export function useRealtimeSync(): void {
   const { family } = useFamily()
   const userId = useUIStore(s => s.userId)
   const qc = useQueryClient()
 
+  // L-4: memoize the Supabase client so the same instance is reused across
+  // renders. createClient() is cheap, but calling it on every render before
+  // the useEffect dep-array fires creates a new object reference each time,
+  // which would invalidate any code that compared clients by reference.
+  const supabase = useMemo(() => createClient(), [])
+
   useEffect(() => {
     if (!family?.id || !userId) return
-
-    const supabase = createClient()
 
     const channel = supabase
       .channel(`realtime-sync:${family.id}`)
@@ -76,5 +80,5 @@ export function useRealtimeSync() {
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
-  }, [family?.id, userId, qc])
+  }, [family?.id, userId, qc, supabase])
 }
