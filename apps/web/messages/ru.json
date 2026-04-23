@@ -396,7 +396,12 @@
     "category_rates_count": "{count} категор.",
     "reminder_title": "Новый расчётный период — настройте категории кэшбэка",
     "reminder_body": "Начался новый месяц. Проверьте и обновите категории повышенного кэшбэка для каждой карты.",
-    "reminder_dismiss": "Закрыть напоминание"
+    "reminder_dismiss": "Закрыть напоминание",
+    "cashback_stats_title": "Потенциальный кэшбэк",
+    "cashback_stats_total": "Итого",
+    "cashback_stats_earned": "Кэшбэк",
+    "cashback_stats_from": "С расходов",
+    "cashback_stats_by_category": "По категориям"
   },
   "categories": {
     "food": "Еда и продукты",
