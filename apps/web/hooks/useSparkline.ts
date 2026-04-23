@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useUIStore } from '@/store/ui.store'
 import { subDays, format } from 'date-fns'
@@ -40,12 +40,22 @@ async function fetchSparkline(
   })
 }
 
-export function useSparkline(accountId: string) {
-  const { userId } = useUIStore()
+// L-2: scoped Zustand selector instead of useUIStore() (whole store).
+// Reading only `userId` prevents re-renders triggered by unrelated state
+// changes (sidebarOpen, theme, activePeriod, etc.).
+export function useSparkline(accountId: string): UseQueryResult<SparklinePoint[]> {
+  const userId = useUIStore(s => s.userId)
 
   return useQuery({
     queryKey: ['sparkline', userId, accountId],
-    queryFn: () => fetchSparkline(userId!, accountId),
+    queryFn: () => {
+      // L-2: type guard replaces userId! non-null assertion.
+      // `enabled: !!userId && !!accountId` prevents execution when either is
+      // nullish, but TypeScript does not see that invariant — the guard
+      // surfaces a clear error if it is ever broken.
+      if (!userId) throw new Error('[useSparkline] userId is required')
+      return fetchSparkline(userId, accountId)
+    },
     enabled: !!userId && !!accountId,
     staleTime: 60_000,
     gcTime: 5 * 60_000,
