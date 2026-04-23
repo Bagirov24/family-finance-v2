@@ -80,12 +80,13 @@ export function SubscriptionForm({ open, onOpenChange, initial }: Props) {
       is_active: form.is_active,
       currency: form.currency || 'RUB',
       account_id: form.account_id || null,
-      reminder_days: parseInt(form.reminder_days) || 3,
+      reminder_days: parseInt(form.reminder_days, 10) || 3,
       auto_create_tx: form.auto_create_tx,
     }
     try {
-      if (isEdit) {
-        await update.mutateAsync({ id: initial!.id, ...payload })
+      if (initial) {
+        // Use proper type guard instead of non-null assertion (initial!.id)
+        await update.mutateAsync({ id: initial.id, ...payload })
       } else {
         await create.mutateAsync(payload)
       }
