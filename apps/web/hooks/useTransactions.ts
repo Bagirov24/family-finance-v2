@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useUIStore } from '@/store/ui.store'
@@ -74,10 +75,11 @@ async function fetchTransactions(
 }
 
 export function useTransactions(params?: UseTransactionsParams) {
-  const { userId, activePeriod } = useUIStore()
-  const { month, year } = activePeriod
+  // Точные селекторы — компонент не ре-рендерится при изменении sidebarOpen/theme/etc.
+  const userId = useUIStore(s => s.userId)
+  const month = useUIStore(s => s.activePeriod.month)
+  const year = useUIStore(s => s.activePeriod.year)
 
-  // Исторические периоды (не текущий месяц) кешируем дольше — данные не меняются
   const now = new Date()
   const isCurrentPeriod =
     month === now.getMonth() + 1 && year === now.getFullYear()
@@ -91,19 +93,23 @@ export function useTransactions(params?: UseTransactionsParams) {
   })
 
   const transactions = query.data ?? []
-  const totalIncome = transactions
-    .filter(t => t.type === 'income')
-    .reduce((sum, t) => sum + Number(t.amount), 0)
-  const totalExpense = transactions
-    .filter(t => t.type === 'expense')
-    .reduce((sum, t) => sum + Number(t.amount), 0)
+
+  // useMemo: пересчёт только при смене query.data, не на каждый рендер
+  const { totalIncome, totalExpense } = useMemo(() => ({
+    totalIncome: transactions
+      .filter(t => t.type === 'income')
+      .reduce((sum, t) => sum + Number(t.amount), 0),
+    totalExpense: transactions
+      .filter(t => t.type === 'expense')
+      .reduce((sum, t) => sum + Number(t.amount), 0),
+  }), [transactions])
 
   return { ...query, transactions, totalIncome, totalExpense }
 }
 
 export function useCreateTransaction() {
   const qc = useQueryClient()
-  const { userId } = useUIStore()
+  const userId = useUIStore(s => s.userId)
 
   return useMutation({
     mutationFn: async (input: CreateTransactionInput) => {
@@ -118,16 +124,14 @@ export function useCreateTransaction() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['transactions', userId] })
-      // Invalidate by prefix to cover all family/userId combinations
       qc.invalidateQueries({ queryKey: ['accounts'] })
-      qc.invalidateQueries({ queryKey: ['summary'] })
     },
   })
 }
 
 export function useUpdateTransaction() {
   const qc = useQueryClient()
-  const { userId } = useUIStore()
+  const userId = useUIStore(s => s.userId)
 
   return useMutation({
     mutationFn: async ({ id, ...patch }: UpdateTransactionInput) => {
@@ -143,16 +147,14 @@ export function useUpdateTransaction() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['transactions', userId] })
-      // Invalidate by prefix to cover all family/userId combinations
       qc.invalidateQueries({ queryKey: ['accounts'] })
-      qc.invalidateQueries({ queryKey: ['summary'] })
     },
   })
 }
 
 export function useDeleteTransaction() {
   const qc = useQueryClient()
-  const { userId } = useUIStore()
+  const userId = useUIStore(s => s.userId)
 
   return useMutation({
     mutationFn: async (id: string) => {
@@ -162,9 +164,7 @@ export function useDeleteTransaction() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['transactions', userId] })
-      // Invalidate by prefix to cover all family/userId combinations
       qc.invalidateQueries({ queryKey: ['accounts'] })
-      qc.invalidateQueries({ queryKey: ['summary'] })
     },
   })
 }
