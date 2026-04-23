@@ -16,10 +16,10 @@ export function PendingTransferBanner() {
   const { pending, pendingRequests, outgoingPending, respondTransfer, cancelTransfer } = useTransfers()
   const { accounts } = useAccounts()
 
-  // Счёт для оплаты: { [transfer_id]: account_id }
+  // Состояние выбора счёта при принятии запроса денег
   const [payAccounts, setPayAccounts] = useState<Record<string, string>>({})
-  // Частичная сумма: { [transfer_id]: string } — хранится как строка для input
-  const [paidAmounts, setPaidAmounts] = useState<Record<string, string>>({})
+  // Состояние частичной суммы оплаты
+  const [payAmounts, setPayAmounts] = useState<Record<string, string>>({})
 
   const hasAnything = pending.length > 0 || pendingRequests.length > 0 || outgoingPending.length > 0
   if (!hasAnything) return null
@@ -78,13 +78,11 @@ export function PendingTransferBanner() {
         const fromName = tx.from_member?.display_name ?? tx.from_user_id
         const fullAmount = Number(tx.amount)
         const selectedAccount = payAccounts[tx.id] ?? ''
-        const rawPaid = paidAmounts[tx.id]
-        // Если поле не трогали — дефолт = полная сумма
-        const paidValue = rawPaid !== undefined ? rawPaid : String(fullAmount)
-        const parsedPaid = parseFloat(paidValue)
-        const isPartial = !isNaN(parsedPaid) && parsedPaid < fullAmount && parsedPaid > 0
-        const remainder = isPartial ? Math.round((fullAmount - parsedPaid) * 100) / 100 : 0
-        const isInvalid = isNaN(parsedPaid) || parsedPaid <= 0 || parsedPaid > fullAmount
+        const rawPaid = payAmounts[tx.id]
+        const paidAmount = rawPaid !== undefined ? Number(rawPaid) : fullAmount
+        const remainder = fullAmount - paidAmount
+        const isPartial = paidAmount < fullAmount && paidAmount > 0
+        const isInvalid = isNaN(paidAmount) || paidAmount <= 0 || paidAmount > fullAmount
 
         return (
           <div
@@ -103,26 +101,25 @@ export function PendingTransferBanner() {
               </div>
             </div>
 
-            {/* Сумма оплаты (с возможностью частичной) */}
+            {/* Сумма оплаты (с дефолтом = полная сумма) */}
             <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">
-                {t('pay_amount_label')}
-              </label>
+              <label className="text-xs text-muted-foreground">{t('pay_amount_label')}</label>
               <Input
                 type="number"
                 min={0.01}
                 max={fullAmount}
                 step={0.01}
-                className="h-9 text-sm"
-                value={paidValue}
-                onChange={e =>
-                  setPaidAmounts(prev => ({ ...prev, [tx.id]: e.target.value }))
-                }
+                className="h-9 text-xs"
+                value={rawPaid ?? fullAmount}
+                onChange={e => setPayAmounts(prev => ({ ...prev, [tx.id]: e.target.value }))}
               />
-              {isPartial && (
+              {isPartial && !isInvalid && (
                 <p className="text-xs text-muted-foreground">
                   {t('pay_amount_remainder', { remainder: formatAmount(remainder) })}
                 </p>
+              )}
+              {rawPaid !== undefined && isInvalid && (
+                <p className="text-xs text-destructive">{t('pay_amount_invalid')}</p>
               )}
             </div>
 
@@ -164,28 +161,25 @@ export function PendingTransferBanner() {
                     toast.error(t('select_pay_account'))
                     return
                   }
-                  if (isInvalid) {
-                    toast.error(t('pay_amount_invalid'))
-                    return
-                  }
                   respondTransfer.mutate(
                     {
                       transfer_id: tx.id,
                       action: 'confirmed',
                       from_account_id: selectedAccount,
                       to_account_id: tx.to_account_id ?? undefined,
-                      paid_amount: parsedPaid,
+                      paid_amount: paidAmount !== fullAmount ? paidAmount : undefined,
                     },
                     {
                       onSuccess: (data) => {
-                        if (data && 'partial' in data && data.partial) {
-                          toast.success(
-                            t('pay_partial_success', {
-                              paid: formatAmount(parsedPaid),
-                              remainder: formatAmount(remainder),
-                            })
-                          )
+                        if (isPartial) {
+                          toast.success(t('pay_partial_success', {
+                            paid: formatAmount(paidAmount),
+                            remainder: formatAmount(remainder),
+                          }))
                         }
+                        // сброс локального состояния
+                        setPayAmounts(prev => { const n = { ...prev }; delete n[tx.id]; return n })
+                        setPayAccounts(prev => { const n = { ...prev }; delete n[tx.id]; return n })
                       },
                       onError: () => toast.error(tc('error')),
                     }
@@ -199,7 +193,7 @@ export function PendingTransferBanner() {
         )
       })}
 
-      {/* Исходящие ожидающие: отправитель/инициатор может отменить */}
+      {/* Исходящие ожидающие (и переводы и запросы): отправитель/инициатор может отменить */}
       {outgoingPending.map(tx => {
         const toName = tx.to_member?.display_name ?? tx.to_user_id
         const isRequest = tx.transfer_type === 'request'
