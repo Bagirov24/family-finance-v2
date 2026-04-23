@@ -22,22 +22,26 @@ export function WhoSpentWhat() {
 
     // Суммируем расходы по user_id из уже закешированных транзакций
     const map: Record<string, number> = {}
-    for (const t of transactions) {
-      if (t.type !== 'expense') continue
-      map[t.user_id] = (map[t.user_id] ?? 0) + Number(t.amount)
+    for (const tx of transactions) {
+      if (tx.type !== 'expense') continue
+      map[tx.user_id] = (map[tx.user_id] ?? 0) + Number(tx.amount)
     }
 
     const total = Object.values(map).reduce((s, v) => s + v, 0)
     if (total === 0) return []
 
     return members
-      .map(m => ({
-        userId: m.user_id,
-        name: m.display_name ?? m.user_id.slice(0, 8),
-        avatar: m.avatar_url ?? null,
-        amount: map[m.user_id] ?? 0,
-        pct: total > 0 ? Math.round(((map[m.user_id] ?? 0) / total) * 100) : 0,
-      }))
+      .filter(m => m.user_id != null)
+      .map(m => {
+        const uid = m.user_id!
+        return {
+          userId: uid,
+          name: m.display_name ?? uid.slice(0, 8),
+          avatar: m.avatar_url ?? null,
+          amount: map[uid] ?? 0,
+          pct: total > 0 ? Math.round(((map[uid] ?? 0) / total) * 100) : 0,
+        }
+      })
       .filter(r => r.amount > 0)
       .sort((a, b) => b.amount - a.amount)
   }, [transactions, members])
@@ -83,10 +87,7 @@ export function WhoSpentWhat() {
                     className="h-full rounded-full transition-all duration-500"
                     style={{
                       width: `${row.pct}%`,
-                      // Первый — primary, остальные чуть прозрачнее
-                      backgroundColor: i === 0
-                        ? 'var(--color-primary, hsl(var(--primary)))'
-                        : 'var(--color-primary, hsl(var(--primary)))',
+                      backgroundColor: 'var(--color-primary, hsl(var(--primary)))',
                       opacity: i === 0 ? 1 : 0.55,
                     }}
                   />
