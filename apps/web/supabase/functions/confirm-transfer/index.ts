@@ -1,14 +1,6 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
-/**
- * Allowed origin for CORS.
- * Set ALLOWED_ORIGIN env var to your production frontend URL, e.g.:
- *   https://your-app.netlify.app
- * For local dev set it to http://localhost:3000
- *
- * Supabase Dashboard → Edge Functions → Secrets
- */
 const ALLOWED_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') ?? ''
 
 function getCorsHeaders(req: Request): Record<string, string> {
@@ -62,7 +54,6 @@ Deno.serve(async (req: Request) => {
     action?: 'confirmed' | 'declined' | 'confirm' | 'decline'
     from_account_id?: string
     to_account_id?: string
-    /** Частичная оплата: сумма, которую плательщик готов перевести сейчас */
     paid_amount?: number
   }
 
@@ -91,7 +82,6 @@ Deno.serve(async (req: Request) => {
     })
   }
 
-  // Для request-а платит тот, кому запросили (to_user_id), — именно он вызывает confirm
   if (transfer.to_user_id !== user.id) {
     return new Response(JSON.stringify({ error: 'Forbidden' }), {
       status: 403,
@@ -100,10 +90,19 @@ Deno.serve(async (req: Request) => {
   }
 
   if (transfer.status !== 'pending') {
-    return new Response(JSON.stringify({ error: 'Transfer already processed' }), {
-      status: 409,
-      headers: corsHeaders,
-    })
+    // Distinguish expired from other terminal states
+    const isExpired =
+      transfer.status === 'declined' &&
+      transfer.expires_at != null &&
+      new Date(transfer.expires_at) <= new Date()
+
+    return new Response(
+      JSON.stringify({
+        error: isExpired ? 'Transfer expired' : 'Transfer already processed',
+        status: transfer.status,
+      }),
+      { status: isExpired ? 410 : 409, headers: corsHeaders }
+    )
   }
 
   // ── DECLINE ────────────────────────────────────────────────────────────────
@@ -128,7 +127,6 @@ Deno.serve(async (req: Request) => {
   // ── CONFIRM (full or partial) ───────────────────────────────────────────────
   const paidAmount: number = body.paid_amount ?? transfer.amount
 
-  // Validate paid_amount
   if (paidAmount <= 0) {
     return new Response(JSON.stringify({ error: 'paid_amount must be greater than 0' }), {
       status: 400,
@@ -145,7 +143,6 @@ Deno.serve(async (req: Request) => {
   const isPartial = paidAmount < transfer.amount
   const remainder = Math.round((transfer.amount - paidAmount) * 100) / 100
 
-  // Подтверждаем текущий перевод на paid_amount
   const { error: rpcErr } = await supabase.rpc('confirm_transfer_atomic', {
     p_transfer_id: transferId,
     p_paid_amount: paidAmount,
@@ -158,7 +155,6 @@ Deno.serve(async (req: Request) => {
     })
   }
 
-  // Если частичная оплата — создаём новый pending request на остаток
   if (isPartial) {
     const { error: insertErr } = await supabase.from('member_transfers').insert({
       family_id: transfer.family_id,
@@ -176,7 +172,6 @@ Deno.serve(async (req: Request) => {
     })
 
     if (insertErr) {
-      // Основная транзакция прошла — сообщаем об успехе, но предупреждаем о проблеме с остатком
       return new Response(
         JSON.stringify({
           ok: true,
@@ -191,13 +186,7 @@ Deno.serve(async (req: Request) => {
     }
 
     return new Response(
-      JSON.stringify({
-        ok: true,
-        status: 'confirmed',
-        partial: true,
-        paid_amount: paidAmount,
-        remainder,
-      }),
+      JSON.stringify({ ok: true, status: 'confirmed', partial: true, paid_amount: paidAmount, remainder }),
       { headers: corsHeaders }
     )
   }
