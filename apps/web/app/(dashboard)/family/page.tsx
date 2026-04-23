@@ -1,24 +1,44 @@
 'use client'
 import { useTranslations } from 'next-intl'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useFamily } from '@/hooks/useFamily'
+import { createClient } from '@/lib/supabase/client'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Crown, User, Copy, Check } from 'lucide-react'
+import { Crown, User, Copy, Check, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/store/ui.store'
 import { FamilySetup } from '@/components/family/FamilySetup'
+import { toast } from 'sonner'
 
 export default function FamilyPage() {
   const t = useTranslations('family')
   const userId = useUIStore(s => s.userId)
-  const { family, members, isLoading, invalidateMembers } = useFamily()
+  const { family, members, isLoading, invalidateMembers, isOwner } = useFamily()
   const [copied, setCopied] = useState(false)
+  const [rotating, setRotating] = useState(false)
+
+  const supabase = useMemo(() => createClient(), [])
 
   const copyCode = () => {
     if (!family?.invite_code) return
     navigator.clipboard.writeText(family.invite_code)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  const rotateCode = async () => {
+    if (!family?.id) return
+    setRotating(true)
+    try {
+      const { error } = await supabase.rpc('rotate_invite_code', { p_family_id: family.id })
+      if (error) throw error
+      await invalidateMembers()
+      toast.success('Код приглашения обновлён')
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Не удалось обновить код')
+    } finally {
+      setRotating(false)
+    }
   }
 
   if (isLoading) {
@@ -44,6 +64,8 @@ export default function FamilyPage() {
             <span className="font-mono text-sm font-bold tracking-widest bg-muted px-2 py-0.5 rounded">
               {family.invite_code}
             </span>
+
+            {/* Copy */}
             <button
               onClick={copyCode}
               className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
@@ -53,6 +75,18 @@ export default function FamilyPage() {
                 ? <Check size={14} className="text-green-500" />
                 : <Copy size={14} />}
             </button>
+
+            {/* Rotate — только owner */}
+            {isOwner && (
+              <button
+                onClick={rotateCode}
+                disabled={rotating}
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                aria-label="Обновить код приглашения"
+              >
+                <RefreshCw size={14} className={cn(rotating && 'animate-spin')} />
+              </button>
+            )}
           </div>
         )}
       </div>
