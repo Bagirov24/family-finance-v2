@@ -2,6 +2,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useFamily } from '@/hooks/useFamily'
 
+// M-2: explicit union instead of string | null for type safety
+export type AutoSaveType = 'percentage' | 'fixed' | 'monthly_fixed'
+
 export interface Goal {
   id: string
   family_id: string | null
@@ -11,20 +14,48 @@ export interface Goal {
   deadline: string | null
   icon: string | null
   color: string | null
-  auto_save_type: string | null
+  auto_save_type: AutoSaveType | null
   auto_save_value: number | null
   is_completed: boolean
   created_at: string
 }
 
-export interface GoalView extends Goal {
+// L-5: GoalView uses number for already-normalised numeric fields
+export interface GoalView extends Omit<Goal, 'target_amount' | 'current_amount'> {
+  target_amount: number
+  current_amount: number
   percent: number
   remaining: number
   completed: boolean
   monthsLeft: number | null
 }
 
-async function fetchGoals(familyId: string) {
+// H-9: separate input type — excludes readonly/server-generated fields from UPDATE payload
+export interface CreateGoalInput {
+  name: string
+  target_amount: number
+  current_amount?: number
+  deadline?: string | null
+  icon?: string | null
+  color?: string | null
+  auto_save_type?: AutoSaveType | null
+  auto_save_value?: number | null
+}
+
+export interface UpdateGoalInput {
+  id: string
+  name?: string
+  target_amount?: number
+  current_amount?: number
+  deadline?: string | null
+  icon?: string | null
+  color?: string | null
+  auto_save_type?: AutoSaveType | null
+  auto_save_value?: number | null
+  is_completed?: boolean
+}
+
+async function fetchGoals(familyId: string): Promise<GoalView[]> {
   const supabase = createClient()
   const { data, error } = await supabase
     .from('goals')
@@ -51,7 +82,15 @@ async function fetchGoals(familyId: string) {
       monthsLeft = Math.max(0, diffMonths)
     }
 
-    return { ...goal, target_amount: target, current_amount: current, percent, remaining, completed, monthsLeft }
+    return {
+      ...goal,
+      target_amount: target,
+      current_amount: current,
+      percent,
+      remaining,
+      completed,
+      monthsLeft,
+    }
   })
 }
 
@@ -60,9 +99,15 @@ export function useGoals() {
 
   const query = useQuery({
     queryKey: ['goals', family?.id],
-    queryFn: () => fetchGoals(family!.id),
+    // C-6: replaced family!.id non-null assertion with an explicit type guard.
+    // `enabled: !!family?.id` prevents execution, but TypeScript does not know
+    // that invariant — the guard makes it explicit and eliminates the unsafe cast.
+    queryFn: () => {
+      if (!family?.id) throw new Error('[useGoals] family.id is required but was nullish')
+      return fetchGoals(family.id)
+    },
     enabled: !!family?.id,
-    staleTime: 5 * 60_000,   // цели меняются редко
+    staleTime: 5 * 60_000,
     gcTime: 15 * 60_000,
   })
 
@@ -74,21 +119,12 @@ export function useCreateGoal() {
   const { family } = useFamily()
 
   return useMutation({
-    mutationFn: async (input: {
-      name: string
-      target_amount: number
-      current_amount?: number
-      deadline?: string | null
-      icon?: string | null
-      color?: string | null
-      auto_save_type?: string | null
-      auto_save_value?: number | null
-    }) => {
+    mutationFn: async (input: CreateGoalInput) => {
       const supabase = createClient()
       const { data, error } = await supabase
         .from('goals')
         .insert({
-          family_id: family?.id,
+          family_id: family?.id ?? null,
           name: input.name,
           target_amount: input.target_amount,
           current_amount: input.current_amount ?? 0,
@@ -103,15 +139,18 @@ export function useCreateGoal() {
       if (error) throw error
       return data
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['goals'] }),
+    // H-4: scoped invalidation — only invalidate goals for this family
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['goals', family?.id] }),
   })
 }
 
 export function useUpdateGoal() {
   const qc = useQueryClient()
+  const { family } = useFamily()
 
   return useMutation({
-    mutationFn: async ({ id, ...patch }: Partial<Goal> & { id: string }) => {
+    // H-9: UpdateGoalInput instead of Partial<Goal> — readonly fields are excluded
+    mutationFn: async ({ id, ...patch }: UpdateGoalInput) => {
       const supabase = createClient()
       const { data, error } = await supabase
         .from('goals')
@@ -122,12 +161,13 @@ export function useUpdateGoal() {
       if (error) throw error
       return data
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['goals'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['goals', family?.id] }),
   })
 }
 
 export function useDeleteGoal() {
   const qc = useQueryClient()
+  const { family } = useFamily()
 
   return useMutation({
     mutationFn: async (id: string) => {
@@ -135,7 +175,7 @@ export function useDeleteGoal() {
       const { error } = await supabase.from('goals').delete().eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['goals'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['goals', family?.id] }),
   })
 }
 
@@ -145,15 +185,20 @@ export function useDeleteGoal() {
  */
 export function useContributeGoal() {
   const qc = useQueryClient()
+  const { family } = useFamily()
 
   return useMutation({
     mutationFn: async ({ id, amount }: { id: string; amount: number }) => {
       const supabase = createClient()
+      // M-8: added generic type for rpc return value
       const { data, error } = await supabase
-        .rpc('contribute_to_goal', { p_goal_id: id, p_amount: amount })
+        .rpc<number, { p_goal_id: string; p_amount: number }>(
+          'contribute_to_goal',
+          { p_goal_id: id, p_amount: amount }
+        )
       if (error) throw error
       return data
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['goals'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['goals', family?.id] }),
   })
 }
