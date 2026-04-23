@@ -3,7 +3,6 @@ import dynamic from 'next/dynamic'
 import { useTranslations } from 'next-intl'
 import { useFamily } from '@/hooks/useFamily'
 import { useCategoryBreakdown } from '@/hooks/useAnalytics'
-import { useUIStore } from '@/store/ui.store'
 import { formatAmount } from '@/lib/formatters'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -18,14 +17,9 @@ export function AnalyticsPieSection() {
   const tc = useTranslations('common')
   const tcat = useTranslations('categories')
   const { family } = useFamily()
-  // точный селектор — не подписываемся на весь стор
-  const activePeriod = useUIStore(s => s.activePeriod)
 
-  const { data: breakdown, isLoading } = useCategoryBreakdown(
-    family?.id ?? '',
-    activePeriod.month,
-    activePeriod.year
-  )
+  // Период берётся внутри useCategoryBreakdown → useTransactions → activePeriod из ui.store
+  const { data: breakdown, isLoading } = useCategoryBreakdown(family?.id ?? '')
 
   const pieData = (breakdown ?? []).slice(0, 8).map(c => ({
     key: c.name_key,
