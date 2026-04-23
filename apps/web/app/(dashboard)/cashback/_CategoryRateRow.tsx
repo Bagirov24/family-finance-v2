@@ -19,10 +19,14 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
+function daysUntil(iso: string): number {
+  return Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000)
+}
+
 function isExpiringSoon(validUntil: string | null): boolean {
   if (!validUntil) return false
-  const diff = new Date(validUntil).getTime() - Date.now()
-  return diff > 0 && diff < 7 * 24 * 60 * 60 * 1000 // < 7 дней
+  const d = daysUntil(validUntil)
+  return d >= 0 && d <= 7
 }
 
 function isExpired(validUntil: string | null): boolean {
@@ -41,6 +45,7 @@ export function CategoryRateRow({ cat, categoryLabel, categoryIcon }: Props) {
 
   const expired = isExpired(cat.valid_until)
   const expiringSoon = isExpiringSoon(cat.valid_until)
+  const daysLeft = cat.valid_until && !expired ? daysUntil(cat.valid_until) : null
 
   const now = new Date()
   const isCurrentPeriod = cat.period_month === now.getMonth() + 1 && cat.period_year === now.getFullYear()
@@ -91,7 +96,9 @@ export function CategoryRateRow({ cat, categoryLabel, categoryIcon }: Props) {
           {expiringSoon && !expired && (
             <Badge variant="outline" className="text-xs text-yellow-600 border-yellow-400/60 gap-1">
               <AlertTriangle size={10} />
-              {t('cat_expires_soon')}
+              {daysLeft === 0
+                ? t('cat_expires_today')
+                : t('cat_expires_in_days', { count: daysLeft })}
             </Badge>
           )}
         </div>
@@ -162,7 +169,7 @@ export function CategoryRateRow({ cat, categoryLabel, categoryIcon }: Props) {
         </div>
       )}
 
-      {/* Прогресс лимита — только в режиме просмотра для текущего периода */}
+      {/* Прогресс лимита */}
       {!editing && isCurrentPeriod && cat.monthly_limit_rub > 0 && (
         <div className="space-y-0.5">
           <div className="flex justify-between text-xs text-muted-foreground">
@@ -181,7 +188,7 @@ export function CategoryRateRow({ cat, categoryLabel, categoryIcon }: Props) {
         </div>
       )}
 
-      {/* valid_until — только в режиме просмотра */}
+      {/* valid_until в режиме просмотра */}
       {!editing && cat.valid_until && (
         <p className={cn(
           'text-xs',

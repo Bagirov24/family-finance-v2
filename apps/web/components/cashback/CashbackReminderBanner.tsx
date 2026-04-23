@@ -1,34 +1,51 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { Bell, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useCashbackCards, isCategoryActive } from '@/hooks/useCashback'
+
+function daysUntil(iso: string): number {
+  return Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000)
+}
 
 /**
- * Shows a reminder banner at the start of each billing period (1st of month).
- * Dismissed state is kept in memory only — refreshes each new session,
- * which is intentional: the user should see the reminder each month.
+ * Smart reminder banner:
+ * – shows on days 1–3 of month (new billing period)
+ * – OR whenever any active category expires within 7 days
+ * Lists the expiring categories so the user knows what to act on.
  */
 export function CashbackReminderBanner() {
   const t = useTranslations('cashback')
   const [visible, setVisible] = useState(false)
+  const { cards, isLoading } = useCashbackCards()
+
+  // Categories expiring within 7 days (not yet expired)
+  const expiringSoon = useMemo(() => {
+    const result: { cardName: string; categoryKey: string; daysLeft: number }[] = []
+    for (const card of cards) {
+      for (const cat of card.cashback_categories ?? []) {
+        if (!cat.valid_until) continue
+        if (!isCategoryActive(cat)) continue
+        const d = daysUntil(cat.valid_until)
+        if (d >= 0 && d <= 7) {
+          result.push({ cardName: card.card_name, categoryKey: cat.category_key, daysLeft: d })
+        }
+      }
+    }
+    return result
+  }, [cards])
 
   useEffect(() => {
-    const today = new Date()
-    const dayOfMonth = today.getDate()
-    // Show banner on days 1-3 of the month (grace period to catch it)
-    if (dayOfMonth <= 3) {
+    if (isLoading) return
+    const dayOfMonth = new Date().getDate()
+    if (dayOfMonth <= 3 || expiringSoon.length > 0) {
       setVisible(true)
     }
-  }, [])
+  }, [isLoading, expiringSoon.length])
 
   if (!visible) return null
-
-  const monthKey = [
-    'january', 'february', 'march', 'april', 'may', 'june',
-    'july', 'august', 'september', 'october', 'november', 'december',
-  ][new Date().getMonth()]
 
   return (
     <div
@@ -36,11 +53,27 @@ export function CashbackReminderBanner() {
       className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200"
     >
       <Bell size={18} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 space-y-1">
         <p className="text-sm font-semibold">{t('reminder_title')}</p>
-        <p className="text-xs mt-0.5 text-amber-800 dark:text-amber-300">
-          {t('reminder_body', { month: t(`reminder_month_${monthKey}` as never, { defaultValue: '' }) || monthKey })}
-        </p>
+        {expiringSoon.length > 0 ? (
+          <ul className="text-xs mt-1 space-y-0.5 text-amber-800 dark:text-amber-300">
+            {expiringSoon.map((item, i) => (
+              <li key={i} className="flex items-center gap-1">
+                <span className="opacity-60">•</span>
+                <span className="font-medium">{item.cardName}</span>
+                <span className="opacity-70">—</span>
+                <span>{item.categoryKey}</span>
+                <span className="ml-auto font-semibold tabular-nums">
+                  {item.daysLeft === 0
+                    ? t('cat_expires_today')
+                    : t('cat_expires_in_days', { count: item.daysLeft })}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-xs text-amber-800 dark:text-amber-300">{t('reminder_body')}</p>
+        )}
       </div>
       <Button
         type="button"

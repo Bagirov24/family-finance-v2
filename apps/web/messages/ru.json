@@ -282,7 +282,7 @@
     "confirm_transfer": "Подтвердить перевод",
     "decline_transfer": "Отклонить перевод",
     "transfer_confirmed": "Перевод подтверждён",
-    "transfer_declined":"Перевод отклонён",
+    "transfer_declined": "Перевод отклонён",
     "delete_confirm": "Вы уверены, что хотите удалить этого участника?"
   },
   "settings": {
@@ -411,10 +411,12 @@
     "cat_remaining": "Осталось",
     "cat_expired": "Просрочено",
     "cat_expires_soon": "Истекает",
+    "cat_expires_today": "Истекает сегодня",
+    "cat_expires_in_days": "{count, plural, one {# день} few {# дня} other {# дней}}",
     "common_cancel": "Отмена",
     "until": "до",
     "limit_left": "лимит осталось",
-    "reminder_title": "Новый расчётный период — настройте категории кэшбэка",
+    "reminder_title": "Требуется обновить категории кэшбэка",
     "reminder_body": "Начался новый месяц. Проверьте и обновите категории повышенного кэшбэка для каждой карты.",
     "reminder_dismiss": "Закрыть напоминание",
     "cashback_stats_title": "Потенциальный кэшбэк",
