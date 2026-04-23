@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useUIStore } from '@/store/ui.store'
+import { useFamily } from '@/hooks/useFamily'
 import { calcFuelConsumption } from '@/lib/fuelCalc'
 
 export type FuelType = 'gasoline' | 'diesel' | 'gas' | 'electric' | 'hybrid'
@@ -37,19 +38,23 @@ export type Vehicle = {
   created_at: string | null
 }
 
+// M-1: Supabase returns numeric columns as strings over the wire (JSONB transport).
+// Declaring them as `string` here is honest about what arrives from the API.
+// Each consuming site uses Number() to convert — this is now enforced by the type
+// rather than being an invisible runtime assumption.
 export type FuelEntry = {
   id: string
   expense_id: string | null
   vehicle_id: string | null
-  liters: number | string
-  price_per_liter: number | string
+  liters: string
+  price_per_liter: string
   full_tank: boolean
   mileage: number
-  fuel_consumption_calculated: number | string | null
+  fuel_consumption_calculated: string | null
   created_at: string | null
   expense?: {
     date: string
-    amount_rub: number | string
+    amount_rub: string
     note: string | null
   } | null
 }
@@ -76,13 +81,14 @@ export type ServiceItem = {
   created_at: string | null
 }
 
+// M-1: same as FuelEntry — amount_rub comes as string from Supabase numeric column
 export type VehicleExpense = {
   id: string
   vehicle_id: string | null
   user_id: string | null
   transaction_id: string | null
   category: VehicleExpenseCategory
-  amount_rub: number | string
+  amount_rub: string
   date: string
   mileage_at_moment: number | null
   note: string | null
@@ -92,13 +98,14 @@ export type VehicleExpense = {
 
 export type FineStatus = 'unpaid' | 'paid' | 'disputed'
 
+// M-1: same — Supabase numeric columns arrive as strings
 export type VehicleFine = {
   id: string
   vehicle_id: string | null
   user_id: string | null
   external_id: string | null
-  amount_rub: number | string
-  discount_amount_rub: number | string | null
+  amount_rub: string
+  discount_amount_rub: string | null
   discount_until: string | null
   issued_date: string | null
   description: string | null
@@ -144,7 +151,25 @@ type FineInput = {
   status?: FineStatus
 }
 
-function calcNextDueDate(lastReplacedDate?: string | null, replaceEveryMonths?: number | null) {
+// H-6: dedicated update payload type — excludes server-generated and
+// immutable fields (vehicle_id, user_id, created_at, transaction_id) so
+// they can never accidentally end up in an UPDATE statement.
+type FineUpdatePayload = {
+  status?: FineStatus
+  paid_at?: string | null
+  amount_rub?: number
+  discount_amount_rub?: number | null
+  discount_until?: string | null
+  issued_date?: string | null
+  description?: string | null
+  external_id?: string | null
+}
+
+// L-2: explicit return type added
+function calcNextDueDate(
+  lastReplacedDate?: string | null,
+  replaceEveryMonths?: number | null
+): string | null {
   if (!lastReplacedDate || !replaceEveryMonths) return null
   const d = new Date(lastReplacedDate)
   d.setMonth(d.getMonth() + replaceEveryMonths)
@@ -154,18 +179,34 @@ function calcNextDueDate(lastReplacedDate?: string | null, replaceEveryMonths?: 
 export function useVehicles() {
   const queryClient = useQueryClient()
   const userId = useUIStore(s => s.userId)
+  // H-3: read family context so family members can see shared vehicles
+  const { family } = useFamily()
 
   const query = useQuery<Vehicle[]>({
-    queryKey: ['vehicles', userId],
+    // H-3: include familyId in queryKey — family members must get their own cache slice
+    queryKey: ['vehicles', userId, family?.id ?? null],
     enabled: !!userId,
     queryFn: async () => {
+      if (!userId) throw new Error('[useVehicles] userId is required')
       const supabase = createClient()
-      const { data, error } = await supabase
+
+      // H-3: family members should see all vehicles that belong to the family
+      // (family_id match) OR their own personal vehicles (user_id match).
+      // Previously the query only filtered by user_id, so shared family
+      // vehicles owned by other members were invisible.
+      let q = supabase
         .from('vehicles')
         .select('*')
-        .eq('user_id', userId!)
         .eq('is_active', true)
         .order('created_at')
+
+      if (family?.id) {
+        q = q.or(`user_id.eq.${userId},family_id.eq.${family.id}`)
+      } else {
+        q = q.eq('user_id', userId)
+      }
+
+      const { data, error } = await q
       if (error) throw error
       return (data ?? []) as Vehicle[]
     }
@@ -286,6 +327,7 @@ export function useFuelLog(vehicleId: string) {
   const fuelConsumption = calcFuelConsumption(
     entries.map(e => ({
       mileage: e.mileage,
+      // M-1: explicit Number() conversion — liters is now typed as string
       liters: Number(e.liters),
       full_tank: e.full_tank,
       date: e.expense?.date ?? ''
@@ -363,8 +405,14 @@ export function useServiceItems(vehicleId: string) {
   const updateServiceItem = useMutation({
     mutationFn: async ({ id, ...patch }: Partial<ServiceItemInput> & { id: string }) => {
       const supabase = createClient()
-      const current = query.data?.find((i) => i.id === id)
-      if (!current) throw new Error('Service item not found')
+
+      // M-6: read from QueryClient cache instead of closing over `query.data`.
+      // query.data can be stale between a mutation and the subsequent refetch,
+      // causing "Service item not found" errors when mutations are chained quickly.
+      const cachedItems = queryClient.getQueryData<ServiceItem[]>(['service-items', vehicleId])
+      const current = cachedItems?.find(i => i.id === id)
+      if (!current) throw new Error(`Service item ${id} not found in cache`)
+
       const last_replaced_date = patch.last_replaced_date ?? current.last_replaced_date
       const replace_every_months = patch.replace_every_months ?? current.replace_every_months
       const next_due_date = calcNextDueDate(last_replaced_date, replace_every_months)
@@ -418,10 +466,11 @@ export function useVehicleExpenses(vehicleId: string) {
     }
   })
 
-  // useMemo — пересчёт только при смене query.data, не на каждый рендер
+  // useMemo — recalculates only when query.data reference changes
   const { totalByCategory, total } = useMemo(() => {
     const byCategory = (query.data ?? []).reduce<Record<VehicleExpenseCategory, number>>(
       (acc, e) => {
+        // M-1: Number() is now explicit and enforced by the string type
         acc[e.category] = (acc[e.category] ?? 0) + Number(e.amount_rub)
         return acc
       },
@@ -515,19 +564,22 @@ export function useVehicleFines(vehicleId: string) {
   })
 
   const updateFine = useMutation({
-    mutationFn: async ({ id, ...patch }: Partial<FineInput> & { id: string }) => {
+    mutationFn: async ({ id, ...patch }: FineUpdatePayload & { id: string }) => {
       const supabase = createClient()
-      const data: Record<string, unknown> = { ...patch }
-      if (patch.status === 'paid') {
-        data.paid_at = new Date().toISOString()
-      }
-      if (patch.status && patch.status !== 'paid') {
-        data.paid_at = null
+
+      // H-6: FineUpdatePayload is a dedicated type that excludes immutable
+      // server fields (vehicle_id, user_id, created_at, transaction_id).
+      // paid_at is set server-side based on status transition:
+      const payload: FineUpdatePayload = { ...patch }
+      if (patch.status === 'paid' && !payload.paid_at) {
+        payload.paid_at = new Date().toISOString()
+      } else if (patch.status && patch.status !== 'paid') {
+        payload.paid_at = null
       }
 
       const { error } = await supabase
         .from('vehicle_fines')
-        .update(data)
+        .update(payload)
         .eq('id', id)
       if (error) throw error
     },
