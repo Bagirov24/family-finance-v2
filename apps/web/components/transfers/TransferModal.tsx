@@ -34,7 +34,8 @@ export function TransferModal() {
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
 
-  const otherMembers = members.filter(m => m.user_id !== currentUserId)
+  const otherMembers = members
+    .filter(m => m.user_id != null && m.user_id !== currentUserId) as (typeof members[number] & { user_id: string })[]
   const hasFamily = !!family?.id && otherMembers.length > 0
 
   function reset() {
@@ -57,7 +58,6 @@ export function TransferModal() {
     if (!family?.id) { toast.error(t('no_family')); return }
     if (toUserId === currentUserId) { toast.error(t('errors.selfTransfer')); return }
 
-    // note обязателен для запроса и для обычного перевода
     if (!note.trim()) { toast.error(t('errors.noteRequired')); return }
 
     if (mode === 'request') {
@@ -76,7 +76,6 @@ export function TransferModal() {
       return
     }
 
-    // mode === 'send'
     if (!fromAccountId || !toAccountId) return
     try {
       await createTransfer.mutateAsync({
@@ -109,7 +108,6 @@ export function TransferModal() {
         ) : (
           <form onSubmit={handleSubmit} className="space-y-3 mt-2">
 
-            {/* Переключатель режима */}
             <div className="flex gap-2 p-1 rounded-xl bg-muted">
               <button
                 type="button"
@@ -139,7 +137,6 @@ export function TransferModal() {
               </button>
             </div>
 
-            {/* Сумма + быстрый выбор */}
             <div className="space-y-1.5">
               <Label>{tc('amount')}</Label>
               <Input
@@ -173,7 +170,6 @@ export function TransferModal() {
               </div>
             </div>
 
-            {/* Счета — только для send */}
             {mode === 'send' && (
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
@@ -205,7 +201,6 @@ export function TransferModal() {
               </div>
             )}
 
-            {/* Кому */}
             <div className="space-y-1.5">
               <Label>{mode === 'send' ? t('recipient') : t('request_from')}</Label>
               <Select value={toUserId} onValueChange={setToUserId} required>
@@ -220,7 +215,6 @@ export function TransferModal() {
               </Select>
             </div>
 
-            {/* Причина/заметка — обязательна */}
             <div className="space-y-1.5">
               <Label>
                 {mode === 'request' ? t('request_reason') : tc('note')}
