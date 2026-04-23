@@ -13,7 +13,18 @@ export interface Category {
   is_default: boolean
 }
 
-async function fetchCategories(familyId: string | null) {
+// L-3: explicit return type so callers have a stable, named contract
+// rather than relying on inferred widened union types from useQuery.
+export interface UseCategoriesResult {
+  /** Filtered (by type) category list, or all categories when type is omitted. */
+  categories: Category[] | undefined
+  isLoading: boolean
+  isPending: boolean
+  isError: boolean
+  error: unknown
+}
+
+async function fetchCategories(familyId: string | null): Promise<Category[]> {
   const supabase = createClient()
 
   // Single query — no N+1. familyId comes from useFamily cache (already loaded).
@@ -34,7 +45,7 @@ async function fetchCategories(familyId: string | null) {
   return data as Category[]
 }
 
-export function useCategories(type?: 'income' | 'expense') {
+export function useCategories(type?: Category['type']): UseCategoriesResult {
   const userId = useUIStore(s => s.userId)
   // familyId берём из useFamily — данные уже в кеше React Query,
   // отдельного сетевого запроса не происходит
@@ -49,9 +60,21 @@ export function useCategories(type?: 'income' | 'expense') {
     gcTime: 60 * 60_000,
   })
 
-  const filtered = type
+  // L-3: renamed `data` → `categories` to avoid shadowing the TanStack Query
+  // `data` field. The previous `{ ...query, data: filtered }` was confusing:
+  // spreading `query` already brought in `data` (the unfiltered list), then
+  // overwriting it with `filtered` created a hidden gotcha where a caller
+  // destructuring `{ data }` from this hook would silently get the filtered
+  // version even without reading the JSDoc.
+  const categories = type
     ? query.data?.filter(c => c.type === type || c.type === 'both')
     : query.data
 
-  return { ...query, data: filtered }
+  return {
+    categories,
+    isLoading: query.isLoading,
+    isPending: query.isPending,
+    isError: query.isError,
+    error: query.error,
+  }
 }
