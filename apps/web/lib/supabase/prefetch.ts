@@ -59,7 +59,9 @@ export async function prefetchAppData(userId: string) {
     family?.id
       ? supabase
           .from('transactions')
-          .select('*, account:accounts(name, currency), category:categories(name, key, icon)')
+          // Must match Transaction.category shape: { name_key, icon, color }
+          // and Transaction.account shape: { name, currency }
+          .select('*, account:accounts(name, currency), category:categories(name_key,icon,color)')
           .eq('family_id', family.id)
           .gte('date', periodStart)
           .lt('date', periodEnd)
