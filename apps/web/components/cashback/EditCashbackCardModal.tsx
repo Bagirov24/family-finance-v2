@@ -26,7 +26,7 @@ export function EditCashbackCardModal({ card }: Props) {
   const t = useTranslations('cashback')
   const tc = useTranslations('common')
   const tcat = useTranslations('categories')
-  const { updateCard, upsertCategoryRate } = useCashbackCards()
+  const { updateCard, upsertCategoryRate, deleteCategoryRate } = useCashbackCards()
   const { categories } = useCategories()
 
   const [open, setOpen] = useState(false)
@@ -68,6 +68,11 @@ export function EditCashbackCardModal({ card }: Props) {
     c => c.type === 'expense' || c.type === 'both'
   )
 
+  // IDs that had a rate saved in DB before the modal opened
+  const originalRateIds = new Set(
+    (card.cashback_card_categories ?? []).map(cc => cc.category_id)
+  )
+
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
@@ -83,22 +88,43 @@ export function EditCashbackCardModal({ card }: Props) {
       },
     })
 
-    // 2. Upsert category rates that have a value
-    const upserts = Object.entries(categoryRates)
-      .filter(([, val]) => val !== '' && !isNaN(Number(val)))
-      .map(([category_id, val]) =>
-        upsertCategoryRate.mutateAsync({
-          card_id: card.id,
-          category_id,
-          cashback_percent: Number(val),
-        })
-      )
-    await Promise.all(upserts)
+    // 2. Process category rates
+    const ops: Promise<void>[] = []
 
+    for (const cat of expenseCategories) {
+      const val = categoryRates[cat.id] ?? ''
+      const isEmpty = val.trim() === ''
+      const parsed = Number(val)
+      const isValid = !isEmpty && !isNaN(parsed)
+
+      if (isValid) {
+        // Upsert: new or updated rate
+        ops.push(
+          upsertCategoryRate.mutateAsync({
+            card_id: card.id,
+            category_id: cat.id,
+            cashback_percent: parsed,
+          })
+        )
+      } else if (isEmpty && originalRateIds.has(cat.id)) {
+        // Field cleared → delete existing row from DB
+        ops.push(
+          deleteCategoryRate.mutateAsync({
+            card_id: card.id,
+            category_id: cat.id,
+          })
+        )
+      }
+    }
+
+    await Promise.all(ops)
     setOpen(false)
   }
 
-  const isPending = updateCard.isPending || upsertCategoryRate.isPending
+  const isPending =
+    updateCard.isPending ||
+    upsertCategoryRate.isPending ||
+    deleteCategoryRate.isPending
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

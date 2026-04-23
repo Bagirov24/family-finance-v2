@@ -174,6 +174,23 @@ export function useCashbackCards() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cashback-cards', family?.id] }),
   })
 
+  const deleteCategoryRate = useMutation({
+    mutationFn: async (payload: {
+      card_id: string
+      category_id: string
+    }): Promise<void> => {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('cashback_card_categories')
+        .delete()
+        .eq('card_id', payload.card_id)
+        .eq('category_id', payload.category_id)
+
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cashback-cards', family?.id] }),
+  })
+
   return {
     cards: query.data ?? [],
     isLoading: query.isLoading,
@@ -182,5 +199,6 @@ export function useCashbackCards() {
     updateCard,
     deleteCard,
     upsertCategoryRate,
+    deleteCategoryRate,
   }
 }
