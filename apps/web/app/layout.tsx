@@ -11,12 +11,32 @@ export const metadata: Metadata = {
   description: 'Семейный финансовый трекер',
 }
 
+/**
+ * Blocking inline script — runs BEFORE React hydration and CSS paint.
+ * This is the only reliable way to apply the saved theme without FOUC.
+ * dangerouslySetInnerHTML is intentional and safe here (no user input).
+ */
+const themeScript = `
+(function(){
+  try {
+    var t = localStorage.getItem('ff-theme');
+    var dark = t === 'dark' || (!t || t === 'system') &&
+      window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.classList.toggle('dark', dark);
+  } catch(e){}
+})();
+`
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale()
   const messages = await getMessages()
 
   return (
     <html lang={locale} suppressHydrationWarning>
+      <head>
+        {/* Blocking theme script — must be first in <head> to prevent FOUC */}
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body>
         <NextIntlClientProvider messages={messages}>
           <QueryProvider>

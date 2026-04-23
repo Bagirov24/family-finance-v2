@@ -2,13 +2,6 @@ import { create } from 'zustand'
 
 const THEME_KEY = 'ff-theme'
 
-function getPersistedTheme(): 'light' | 'dark' | 'system' {
-  if (typeof window === 'undefined') return 'system'
-  const stored = localStorage.getItem(THEME_KEY)
-  if (stored === 'light' || stored === 'dark' || stored === 'system') return stored
-  return 'system'
-}
-
 interface UIState {
   userId: string | null
   sidebarOpen: boolean
@@ -34,7 +27,12 @@ export const useUIStore = create<UIState>(set => ({
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear(),
   },
-  theme: getPersistedTheme(),
+  // Инициализируем 'system' — безопасно для SSR.
+  // Реальное значение из localStorage подтягивается ThemeProvider при маунте.
+  // Это исключает hydration mismatch: сервер и клиент оба видят 'system'
+  // при первом рендере, DOM-класс .dark уже правильно выставлен
+  // blocking-скриптом в layout.tsx.
+  theme: 'system',
 
   setUserId: (id) => set({ userId: id }),
   setSidebarOpen: (v) => set({ sidebarOpen: v }),
@@ -42,7 +40,11 @@ export const useUIStore = create<UIState>(set => ({
   setAddTransferOpen: (v) => set({ addTransferOpen: v }),
   setActivePeriod: (month, year) => set({ activePeriod: { month, year } }),
   setTheme: (t) => {
-    if (typeof window !== 'undefined') localStorage.setItem(THEME_KEY, t)
+    try {
+      localStorage.setItem(THEME_KEY, t)
+    } catch {
+      // localStorage недоступен — тема работает только в текущей сессии
+    }
     set({ theme: t })
   },
 }))
