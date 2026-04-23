@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient, type UseMutationResult, type UseQueryResult } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useFamily } from '@/hooks/useFamily'
 
@@ -55,11 +55,22 @@ export interface UpdateGoalInput {
   is_completed?: boolean
 }
 
-// L-5: named return-type interface for useGoals().
-// Callers can import this to type props/context without re-deriving
-// the shape via ReturnType<typeof useGoals>.
-export interface UseGoalsResult extends UseQueryResult<GoalView[]> {
+// L-5 fix: structural interface instead of `extends UseQueryResult<GoalView[]>`.
+// TanStack Query v5 UseQueryResult has three generics <TData, TError, TSelected>;
+// extending it without all three causes the discriminated-union status fields
+// (isLoading, isPending, isSuccess …) to resolve to `never` or widen incorrectly.
+// A flat structural interface is stable across TQ minor versions and gives callers
+// a clean, explicit contract with no hidden inherited fields.
+export interface UseGoalsResult {
   goals: GoalView[]
+  data: GoalView[] | undefined
+  isLoading: boolean
+  isPending: boolean
+  isFetching: boolean
+  isSuccess: boolean
+  isError: boolean
+  error: Error | null
+  refetch: () => void
 }
 
 async function fetchGoals(familyId: string): Promise<GoalView[]> {
@@ -118,10 +129,20 @@ export function useGoals(): UseGoalsResult {
     gcTime: 15 * 60_000,
   })
 
-  return { ...query, goals: query.data ?? [] }
+  return {
+    goals: query.data ?? [],
+    data: query.data,
+    isLoading: query.isLoading,
+    isPending: query.isPending,
+    isFetching: query.isFetching,
+    isSuccess: query.isSuccess,
+    isError: query.isError,
+    error: query.error,
+    refetch: query.refetch,
+  }
 }
 
-// L-5: UseMutationResult generics: <TData, TError, TVariables, TContext>
+// L-5: UseMutationResult generics: <TData, TError, TVariables>
 export function useCreateGoal(): UseMutationResult<Goal, Error, CreateGoalInput> {
   const qc = useQueryClient()
   const { family } = useFamily()
