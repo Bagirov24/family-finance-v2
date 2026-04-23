@@ -1,4 +1,5 @@
-import { useQuery, useMutation, useQueryClient, useMemo } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useFamily } from '@/hooks/useFamily'
 import { useUIStore } from '@/store/ui.store'
@@ -50,23 +51,18 @@ export function useCashbackCards() {
    */
   const bestByCategory = useMemo(() => {
     const cards = query.data ?? []
-    // map: categoryId → { cardId, cardName, percent }
     const map = new Map<string, { cardId: string; cardName: string; percent: number }>()
 
     for (const card of cards) {
       const cats = card.cashback_card_categories ?? []
-      const coveredCategories = new Set<string>()
 
       for (const cc of cats) {
-        coveredCategories.add(cc.category_id)
         const prev = map.get(cc.category_id)
         if (!prev || cc.cashback_percent > prev.percent) {
           map.set(cc.category_id, { cardId: card.id, cardName: card.name, percent: cc.cashback_percent })
         }
       }
 
-      // default_cashback_percent применяется к категориям БЕЗ явной ставки
-      // Обновляем '__default__' — виртуальный ключ для «любая другая категория»
       const defKey = `__default__:${card.id}`
       map.set(defKey, { cardId: card.id, cardName: card.name, percent: card.default_cashback_percent })
     }
@@ -82,7 +78,6 @@ export function useCashbackCards() {
     const explicit = bestByCategory.get(categoryId)
     if (explicit) return explicit
 
-    // Нет явной ставки — ищем лучший default среди всех карт
     const cards = query.data ?? []
     let best: { cardId: string; cardName: string; percent: number } | null = null
     for (const card of cards) {
