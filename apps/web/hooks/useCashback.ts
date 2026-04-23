@@ -22,6 +22,14 @@ export interface CashbackCard {
   cashback_card_categories?: CashbackCardCategory[]
 }
 
+export interface UpdateCashbackCardPayload {
+  name: string
+  bank: string
+  card_type: string
+  color: string
+  default_cashback_percent: number
+}
+
 export function useCashbackCards() {
   const queryClient = useQueryClient()
   const { family } = useFamily()
@@ -32,7 +40,7 @@ export function useCashbackCards() {
     enabled: !!family?.id,
     staleTime: 5 * 60_000,
     gcTime: 15 * 60_000,
-    queryFn: async () => {
+    queryFn: async (): Promise<CashbackCard[]> => {
       const supabase = createClient()
       const { data, error } = await supabase
         .from('cashback_cards')
@@ -98,18 +106,14 @@ export function useCashbackCards() {
       card_type: string
       color: string
       default_cashback_percent: number
-    }) => {
+    }): Promise<CashbackCard> => {
       if (!family?.id) throw new Error('Family is required')
       if (!userId) throw new Error('User is required')
 
       const supabase = createClient()
       const { data, error } = await supabase
         .from('cashback_cards')
-        .insert({
-          family_id: family.id,
-          user_id: userId,
-          ...payload,
-        })
+        .insert({ family_id: family.id, user_id: userId, ...payload })
         .select()
         .single()
 
@@ -119,12 +123,47 @@ export function useCashbackCards() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cashback-cards', family?.id] }),
   })
 
+  const updateCard = useMutation({
+    mutationFn: async ({
+      id,
+      payload,
+    }: {
+      id: string
+      payload: UpdateCashbackCardPayload
+    }): Promise<CashbackCard> => {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('cashback_cards')
+        .update(payload)
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data as CashbackCard
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cashback-cards', family?.id] }),
+  })
+
+  const deleteCard = useMutation({
+    mutationFn: async (id: string): Promise<void> => {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('cashback_cards')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cashback-cards', family?.id] }),
+  })
+
   const upsertCategoryRate = useMutation({
     mutationFn: async (payload: {
       card_id: string
       category_id: string
       cashback_percent: number
-    }) => {
+    }): Promise<void> => {
       const supabase = createClient()
       const { error } = await supabase
         .from('cashback_card_categories')
@@ -140,6 +179,8 @@ export function useCashbackCards() {
     isLoading: query.isLoading,
     getBestCard,
     createCard,
+    updateCard,
+    deleteCard,
     upsertCategoryRate,
   }
 }
