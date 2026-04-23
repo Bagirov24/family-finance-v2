@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { CreditCard, Trash2 } from 'lucide-react'
 import { AddCashbackCardModal } from '@/components/cashback/AddCashbackCardModal'
 import { EditCashbackCardModal } from '@/components/cashback/EditCashbackCardModal'
+import { CashbackReminderBanner } from '@/components/cashback/CashbackReminderBanner'
 
 export default function CashbackPage() {
   const t = useTranslations('cashback')
@@ -19,6 +20,9 @@ export default function CashbackPage() {
         <h1 className="text-xl font-bold">{t('title')}</h1>
         <AddCashbackCardModal />
       </div>
+
+      {/* Monthly reminder banner */}
+      <CashbackReminderBanner />
 
       <section>
         <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
@@ -70,6 +74,12 @@ export default function CashbackPage() {
                 <p className="text-sm mt-2 opacity-90">
                   {t('default_cashback')}: {card.default_cashback_percent}%
                 </p>
+                {/* Show count of configured category rates */}
+                {(card.cashback_card_categories?.length ?? 0) > 0 && (
+                  <p className="text-xs mt-1 opacity-75">
+                    {t('category_rates_count', { count: card.cashback_card_categories!.length })}
+                  </p>
+                )}
                 <CreditCard size={48} className="absolute -right-2 -bottom-3 opacity-10" />
               </div>
             ))}
