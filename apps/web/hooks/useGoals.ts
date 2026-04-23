@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, type UseMutationResult, type UseQueryResult } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useFamily } from '@/hooks/useFamily'
 
@@ -55,6 +55,13 @@ export interface UpdateGoalInput {
   is_completed?: boolean
 }
 
+// L-5: named return-type interface for useGoals().
+// Callers can import this to type props/context without re-deriving
+// the shape via ReturnType<typeof useGoals>.
+export interface UseGoalsResult extends UseQueryResult<GoalView[]> {
+  goals: GoalView[]
+}
+
 async function fetchGoals(familyId: string): Promise<GoalView[]> {
   const supabase = createClient()
   const { data, error } = await supabase
@@ -94,7 +101,7 @@ async function fetchGoals(familyId: string): Promise<GoalView[]> {
   })
 }
 
-export function useGoals() {
+export function useGoals(): UseGoalsResult {
   const { family } = useFamily()
 
   const query = useQuery({
@@ -114,7 +121,8 @@ export function useGoals() {
   return { ...query, goals: query.data ?? [] }
 }
 
-export function useCreateGoal() {
+// L-5: UseMutationResult generics: <TData, TError, TVariables, TContext>
+export function useCreateGoal(): UseMutationResult<Goal, Error, CreateGoalInput> {
   const qc = useQueryClient()
   const { family } = useFamily()
 
@@ -137,14 +145,14 @@ export function useCreateGoal() {
         .select()
         .single()
       if (error) throw error
-      return data
+      return data as Goal
     },
     // H-4: scoped invalidation — only invalidate goals for this family
     onSuccess: () => qc.invalidateQueries({ queryKey: ['goals', family?.id] }),
   })
 }
 
-export function useUpdateGoal() {
+export function useUpdateGoal(): UseMutationResult<Goal, Error, UpdateGoalInput> {
   const qc = useQueryClient()
   const { family } = useFamily()
 
@@ -159,13 +167,13 @@ export function useUpdateGoal() {
         .select()
         .single()
       if (error) throw error
-      return data
+      return data as Goal
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['goals', family?.id] }),
   })
 }
 
-export function useDeleteGoal() {
+export function useDeleteGoal(): UseMutationResult<void, Error, string> {
   const qc = useQueryClient()
   const { family } = useFamily()
 
@@ -183,7 +191,7 @@ export function useDeleteGoal() {
  * Atomic goal contribution via Postgres RPC.
  * Prevents race conditions when multiple family members contribute simultaneously.
  */
-export function useContributeGoal() {
+export function useContributeGoal(): UseMutationResult<number, Error, { id: string; amount: number }> {
   const qc = useQueryClient()
   const { family } = useFamily()
 
@@ -197,7 +205,7 @@ export function useContributeGoal() {
           { p_goal_id: id, p_amount: amount }
         )
       if (error) throw error
-      return data
+      return data as number
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['goals', family?.id] }),
   })
