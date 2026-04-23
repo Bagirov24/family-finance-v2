@@ -13,6 +13,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 const DEFAULT_COLORS = ['#6366f1', '#01696f', '#437a22', '#d97706', '#a855f7', '#e11d48']
 
@@ -21,31 +28,29 @@ export function AddCashbackCardModal() {
   const tc = useTranslations('common')
   const { createCard } = useCashbackCards()
   const [open, setOpen] = useState(false)
-  const [name, setName] = useState('')
-  const [bank, setBank] = useState('')
-  const [cardType, setCardType] = useState('debit')
+  const [cardName, setCardName] = useState('')
+  const [bankName, setBankName] = useState('')
+  const [cashbackType, setCashbackType] = useState<'rubles' | 'points' | 'miles'>('rubles')
+  const [pointsRate, setPointsRate] = useState('1')
   const [color, setColor] = useState(DEFAULT_COLORS[0])
-  const [defaultCashbackPercent, setDefaultCashbackPercent] = useState('1')
 
   const reset = () => {
-    setName('')
-    setBank('')
-    setCardType('debit')
+    setCardName('')
+    setBankName('')
+    setCashbackType('rubles')
+    setPointsRate('1')
     setColor(DEFAULT_COLORS[0])
-    setDefaultCashbackPercent('1')
   }
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-
     await createCard.mutateAsync({
-      name: name.trim(),
-      bank: bank.trim(),
-      card_type: cardType.trim(),
+      card_name: cardName.trim(),
+      bank_name: bankName.trim(),
+      cashback_type: cashbackType,
+      points_to_rubles_rate: Number(pointsRate) || 1,
       color,
-      default_cashback_percent: Number(defaultCashbackPercent) || 0,
     })
-
     reset()
     setOpen(false)
   }
@@ -62,34 +67,56 @@ export function AddCashbackCardModal() {
 
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="cashback-name">{t('card_name')}</Label>
-            <Input id="cashback-name" value={name} onChange={e => setName(e.target.value)} required />
+            <Label htmlFor="cashback-card-name">{t('card_name')}</Label>
+            <Input
+              id="cashback-card-name"
+              value={cardName}
+              onChange={e => setCardName(e.target.value)}
+              required
+            />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="cashback-bank">{t('bank')}</Label>
-            <Input id="cashback-bank" value={bank} onChange={e => setBank(e.target.value)} required />
+            <Label htmlFor="cashback-bank-name">{t('bank')}</Label>
+            <Input
+              id="cashback-bank-name"
+              value={bankName}
+              onChange={e => setBankName(e.target.value)}
+              required
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="cashback-type">{t('card_type')}</Label>
-              <Input id="cashback-type" value={cardType} onChange={e => setCardType(e.target.value)} required />
+              <Label>{t('cashback_type')}</Label>
+              <Select
+                value={cashbackType}
+                onValueChange={v => setCashbackType(v as typeof cashbackType)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="rubles">{t('type_rubles')}</SelectItem>
+                  <SelectItem value="points">{t('type_points')}</SelectItem>
+                  <SelectItem value="miles">{t('type_miles')}</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="cashback-percent">{t('default_cashback')}</Label>
-              <Input
-                id="cashback-percent"
-                type="number"
-                min="0"
-                max="100"
-                step="0.1"
-                value={defaultCashbackPercent}
-                onChange={e => setDefaultCashbackPercent(e.target.value)}
-                required
-              />
-            </div>
+            {cashbackType !== 'rubles' && (
+              <div className="space-y-2">
+                <Label htmlFor="cashback-rate">{t('points_rate')}</Label>
+                <Input
+                  id="cashback-rate"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={pointsRate}
+                  onChange={e => setPointsRate(e.target.value)}
+                />
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
