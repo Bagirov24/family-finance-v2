@@ -12,7 +12,8 @@ export default function TransactionsPage() {
   const t = useTranslations('transactions')
   const tcat = useTranslations('categories')
   const { family } = useFamily()
-  const { data: categories } = useCategories()
+  // useCategories returns { categories, isLoading, ... } — not { data }
+  const { categories } = useCategories()
 
   const [categoryId, setCategoryId] = useState<string | undefined>(undefined)
   const [type, setType] = useState<'expense' | 'income' | undefined>(undefined)
