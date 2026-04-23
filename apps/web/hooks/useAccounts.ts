@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useUIStore } from '@/store/ui.store'
 import { useFamily } from '@/hooks/useFamily'
@@ -61,15 +62,19 @@ export function useAccounts({ initialAccounts }: UseAccountsOptions = {}) {
     queryFn: () => fetchAccounts(userId!, family?.id),
     enabled: !!userId,
     initialData: initialAccounts,
-    staleTime: 5 * 60_000,  // 5 мин — балансы актуализируются через invalidateQueries после мутаций
+    staleTime: 5 * 60_000,
     gcTime: 30 * 60_000,
   })
 
   const accounts = query.data ?? []
 
-  const totalBalance = accounts
-    .filter(a => !a.is_hidden_from_total)
-    .reduce((sum, a) => sum + Number(a.balance), 0)
+  // ✅ useMemo — пересчёт только при изменении массива счетов
+  const totalBalance = useMemo(
+    () => accounts
+      .filter(a => !a.is_hidden_from_total)
+      .reduce((sum, a) => sum + Number(a.balance), 0),
+    [accounts]
+  )
 
   return { ...query, accounts, totalBalance }
 }

@@ -37,7 +37,12 @@ export function BottomNav() {
   const tc = useTranslations('common')
   const [moreOpen, setMoreOpen] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
-  const { setAddTransactionOpen, setAddTransferOpen, theme, setTheme } = useUIStore()
+
+  // ✅ точные селекторы — не подписываемся на весь стор
+  const setAddTransactionOpen = useUIStore(s => s.setAddTransactionOpen)
+  const setAddTransferOpen    = useUIStore(s => s.setAddTransferOpen)
+  const theme                 = useUIStore(s => s.theme)
+  const setTheme              = useUIStore(s => s.setTheme)
 
   const MAIN_LEFT = [
     { href: '/overview',      icon: LayoutDashboard, label: t('overview') },

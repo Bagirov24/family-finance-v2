@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useUIStore } from '@/store/ui.store'
 import { useFamily } from '@/hooks/useFamily'
@@ -94,9 +95,10 @@ async function fetchBudgets(familyId: string, month: number, year: number): Prom
 }
 
 export function useBudgets() {
-  const { activePeriod } = useUIStore()
+  // ✅ точные селекторы — не подписываемся на весь стор
+  const month = useUIStore(s => s.activePeriod.month)
+  const year  = useUIStore(s => s.activePeriod.year)
   const { family } = useFamily()
-  const { month, year } = activePeriod
 
   // Исторические периоды (не текущий месяц) кешируем дольше — данные не меняются
   const now = new Date()
@@ -116,7 +118,9 @@ export function useBudgets() {
 
 export function useUpsertBudget() {
   const qc = useQueryClient()
-  const { activePeriod } = useUIStore()
+  // ✅ точные селекторы
+  const month  = useUIStore(s => s.activePeriod.month)
+  const year   = useUIStore(s => s.activePeriod.year)
   const { family } = useFamily()
 
   return useMutation({
@@ -129,8 +133,8 @@ export function useUpsertBudget() {
             family_id: family?.id,
             category_id: input.category_id,
             amount: input.amount,
-            period_month: activePeriod.month,
-            period_year: activePeriod.year,
+            period_month: month,
+            period_year: year,
           },
           { onConflict: 'family_id,category_id,period_month,period_year' }
         )

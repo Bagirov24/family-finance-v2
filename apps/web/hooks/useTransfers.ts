@@ -44,7 +44,8 @@ export interface CreateRequestInput {
 }
 
 export function useTransfers() {
-  const { userId } = useUIStore()
+  // ✅ точный селектор — не подписываемся на весь стор
+  const userId = useUIStore(s => s.userId)
   const qc = useQueryClient()
 
   const query = useQuery({
