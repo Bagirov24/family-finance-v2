@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useUIStore } from '@/store/ui.store'
@@ -291,7 +292,6 @@ export function useFuelLog(vehicleId: string) {
     }))
   )
 
-  // Replaced 3 sequential inserts + update with a single RPC call (1 round-trip)
   const addFuelEntry = useMutation({
     mutationFn: async (payload: {
       vehicle_id: string
@@ -418,17 +418,21 @@ export function useVehicleExpenses(vehicleId: string) {
     }
   })
 
-  const totalByCategory = (query.data ?? []).reduce<Record<VehicleExpenseCategory, number>>(
-    (acc, e) => {
-      acc[e.category] = (acc[e.category] ?? 0) + Number(e.amount_rub)
-      return acc
-    },
-    {} as Record<VehicleExpenseCategory, number>
-  )
+  // useMemo — пересчёт только при смене query.data, не на каждый рендер
+  const { totalByCategory, total } = useMemo(() => {
+    const byCategory = (query.data ?? []).reduce<Record<VehicleExpenseCategory, number>>(
+      (acc, e) => {
+        acc[e.category] = (acc[e.category] ?? 0) + Number(e.amount_rub)
+        return acc
+      },
+      {} as Record<VehicleExpenseCategory, number>
+    )
+    return {
+      totalByCategory: byCategory,
+      total: Object.values(byCategory).reduce((s, v) => s + v, 0),
+    }
+  }, [query.data])
 
-  const total = Object.values(totalByCategory).reduce((s, v) => s + v, 0)
-
-  // Replaced 2 sequential inserts with a single RPC call (1 round-trip)
   const addExpense = useMutation({
     mutationFn: async (payload: {
       vehicle_id: string

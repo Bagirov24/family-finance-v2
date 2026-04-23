@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useUIStore } from '@/store/ui.store'
 import type { Database } from '@/lib/supabase/types'
@@ -14,6 +14,7 @@ export type FamilyMember = Database['public']['Tables']['family_members']['Row']
  */
 export function useFamily() {
   const userId = useUIStore((s) => s.userId)
+  const qc = useQueryClient()
 
   const query = useQuery({
     queryKey: ['family', userId],
@@ -47,6 +48,8 @@ export function useFamily() {
     members,
     currentUserId: userId,
     isOwner,
-    invalidateMembers: query.refetch,
+    // invalidateMembers инвалидирует весь семейный кеш через QueryClient,
+    // а не только делает refetch текущего компонента
+    invalidateMembers: () => qc.invalidateQueries({ queryKey: ['family', userId] }),
   }
 }

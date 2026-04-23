@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useUIStore } from '@/store/ui.store'
+import { useFamily } from '@/hooks/useFamily'
 
 export interface Category {
   id: string
@@ -12,16 +13,10 @@ export interface Category {
   is_default: boolean
 }
 
-async function fetchCategories(userId: string) {
+async function fetchCategories(familyId: string | null) {
   const supabase = createClient()
-  const { data: memberData } = await supabase
-    .from('family_members')
-    .select('family_id')
-    .eq('user_id', userId)
-    .maybeSingle()
 
-  const familyId = memberData?.family_id
-
+  // Single query — no N+1. familyId comes from useFamily cache (already loaded).
   let query = supabase
     .from('categories')
     .select('id, family_id, name_key, icon, color, type, is_default')
@@ -41,12 +36,16 @@ async function fetchCategories(userId: string) {
 
 export function useCategories(type?: 'income' | 'expense') {
   const userId = useUIStore(s => s.userId)
+  // familyId берём из useFamily — данные уже в кеше React Query,
+  // отдельного сетевого запроса не происходит
+  const { family } = useFamily()
+  const familyId = family?.id ?? null
 
   const query = useQuery({
-    queryKey: ['categories', userId],
-    queryFn: () => fetchCategories(userId!),
+    queryKey: ['categories', userId, familyId],
+    queryFn: () => fetchCategories(familyId),
     enabled: !!userId,
-    staleTime: 30 * 60_000,  // 30 мин — категории меняются крайне редко
+    staleTime: 30 * 60_000,
     gcTime: 60 * 60_000,
   })
 
