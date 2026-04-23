@@ -531,7 +531,7 @@ export type Database = {
           from_user_id: string
           id: string
           note: string | null
-          status: string
+          status: TransferStatus
           to_account_id: string | null
           to_user_id: string
         }
@@ -545,7 +545,7 @@ export type Database = {
           from_user_id: string
           id?: string
           note?: string | null
-          status?: string
+          status?: TransferStatus
           to_account_id?: string | null
           to_user_id: string
         }
@@ -559,7 +559,7 @@ export type Database = {
           from_user_id?: string
           id?: string
           note?: string | null
-          status?: string
+          status?: TransferStatus
           to_account_id?: string | null
           to_user_id?: string
         }
@@ -1225,36 +1225,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      add_fuel_entry:
-        | {
-            Args: {
-              p_account_id: string
-              p_date?: string
-              p_family_id: string
-              p_full_tank?: boolean
-              p_liters: number
-              p_mileage: number
-              p_note?: string
-              p_price_per_liter: number
-              p_user_id: string
-              p_vehicle_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_account_id: string
-              p_family_id: string
-              p_full_tank: boolean
-              p_liters: number
-              p_mileage: number
-              p_note?: string
-              p_price_per_liter: number
-              p_user_id: string
-              p_vehicle_id: string
-            }
-            Returns: undefined
-          }
+      add_fuel_entry: {
+        Args: {
+          p_account_id: string
+          p_date?: string
+          p_family_id: string
+          p_full_tank?: boolean
+          p_liters: number
+          p_mileage: number
+          p_note?: string
+          p_price_per_liter: number
+          p_user_id: string
+          p_vehicle_id: string
+        }
+        Returns: Json
+      }
       add_vehicle_expense: {
         Args: {
           p_account_id: string
@@ -1306,6 +1291,10 @@ export type Database = {
           name: string
           target_amount: number
         }
+      }
+      expire_pending_transfers: {
+        Args: Record<string, never>
+        Returns: number
       }
       get_expiring_items: {
         Args: { p_days_ahead?: number; p_family_id: string }
@@ -1509,6 +1498,16 @@ export type CompositeTypes<
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
+
+// ---------------------------------------------------------------------------
+// Domain literal union types — sync with DB constraints
+// ---------------------------------------------------------------------------
+
+/** Статус перевода между участниками семьи */
+export type TransferStatus = 'pending' | 'confirmed' | 'declined' | 'cancelled'
+
+/** Тип перевода между участниками семьи */
+export type TransferType = 'send' | 'request' | 'recurring'
 
 export const Constants = {
   public: {
