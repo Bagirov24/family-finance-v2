@@ -3,7 +3,6 @@ import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { useCategoryBreakdown } from '@/hooks/useAnalytics'
 import { useFamily } from '@/hooks/useFamily'
-import { useUIStore } from '@/store/ui.store'
 import { formatAmount } from '@/lib/formatters'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ChevronRight } from 'lucide-react'
@@ -13,14 +12,11 @@ export function TopCategories() {
   const tc = useTranslations('categories')
   const tCommon = useTranslations('common')
   const { family } = useFamily()
-  const { activePeriod } = useUIStore()
   const currency = family?.currency ?? 'RUB'
 
-  const { data, isLoading } = useCategoryBreakdown(
-    family?.id ?? '',
-    activePeriod.month,
-    activePeriod.year
-  )
+  // month/year убраны — фильтрация по периоду выполняется внутри
+  // useTransactions через activePeriod из ui.store
+  const { data, isLoading } = useCategoryBreakdown(family?.id ?? '')
 
   const top = (data ?? []).slice(0, 5)
   const maxVal = top[0]?.total ?? 1
