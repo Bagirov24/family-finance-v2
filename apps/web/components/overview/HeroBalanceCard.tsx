@@ -22,7 +22,7 @@ export function HeroBalanceCard({ initialData }: HeroBalanceCardProps) {
   const tc = useTranslations('common')
   const [hidden, setHidden] = useState(false)
 
-  const { family } = useFamily({ initialMembers: initialData?.members })
+  const { family } = useFamily()
   const { totalBalance, isLoading: accountsLoading } = useAccounts({ initialAccounts: initialData?.accounts })
   const { activePeriod } = useUIStore()
   const currency = family?.currency ?? 'RUB'
@@ -113,10 +113,9 @@ export function HeroBalanceCard({ initialData }: HeroBalanceCardProps) {
                 {expenseDelta !== null && (
                   <span className={cn(
                     'text-[10px] font-semibold px-1.5 py-0.5 rounded-full leading-none',
-                    // WCAG AA: непрозрачный фон + тёмный текст вместо white на 30%-прозрачном
                     expenseDelta <= 0
-                      ? 'bg-emerald-300 text-emerald-950'  // зелёный: расходы снизились
-                      : 'bg-red-300 text-red-950'          // красный: расходы выросли
+                      ? 'bg-emerald-300 text-emerald-950'
+                      : 'bg-red-300 text-red-950'
                   )}>
                     {expenseDelta > 0 ? '+' : ''}{expenseDelta.toFixed(0)}%
                   </span>
