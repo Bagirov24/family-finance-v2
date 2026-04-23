@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Pencil } from 'lucide-react'
 import { useCashbackCards, type CashbackCard } from '@/hooks/useCashback'
+import { useCategories } from '@/hooks/useCategories'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -24,7 +25,9 @@ interface Props {
 export function EditCashbackCardModal({ card }: Props) {
   const t = useTranslations('cashback')
   const tc = useTranslations('common')
-  const { updateCard } = useCashbackCards()
+  const tcat = useTranslations('categories')
+  const { updateCard, upsertCategoryRate } = useCashbackCards()
+  const { categories } = useCategories()
 
   const [open, setOpen] = useState(false)
   const [name, setName] = useState(card.name)
@@ -35,20 +38,40 @@ export function EditCashbackCardModal({ card }: Props) {
     String(card.default_cashback_percent)
   )
 
+  // Map categoryId → percent string for category-specific rates
+  const [categoryRates, setCategoryRates] = useState<Record<string, string>>(() => {
+    const map: Record<string, string> = {}
+    for (const cc of card.cashback_card_categories ?? []) {
+      map[cc.category_id] = String(cc.cashback_percent)
+    }
+    return map
+  })
+
   const onOpenChange = (next: boolean) => {
-    // Сброс к актуальным данным карты при каждом открытии
     if (next) {
       setName(card.name)
       setBank(card.bank)
       setCardType(card.card_type)
       setColor(card.color ?? DEFAULT_COLORS[0])
       setDefaultCashbackPercent(String(card.default_cashback_percent))
+
+      const map: Record<string, string> = {}
+      for (const cc of card.cashback_card_categories ?? []) {
+        map[cc.category_id] = String(cc.cashback_percent)
+      }
+      setCategoryRates(map)
     }
     setOpen(next)
   }
 
+  const expenseCategories = (categories ?? []).filter(
+    c => c.type === 'expense' || c.type === 'both'
+  )
+
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+
+    // 1. Update card base fields
     await updateCard.mutateAsync({
       id: card.id,
       payload: {
@@ -59,8 +82,23 @@ export function EditCashbackCardModal({ card }: Props) {
         default_cashback_percent: Number(defaultCashbackPercent) || 0,
       },
     })
+
+    // 2. Upsert category rates that have a value
+    const upserts = Object.entries(categoryRates)
+      .filter(([, val]) => val !== '' && !isNaN(Number(val)))
+      .map(([category_id, val]) =>
+        upsertCategoryRate.mutateAsync({
+          card_id: card.id,
+          category_id,
+          cashback_percent: Number(val),
+        })
+      )
+    await Promise.all(upserts)
+
     setOpen(false)
   }
+
+  const isPending = updateCard.isPending || upsertCategoryRate.isPending
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -74,12 +112,13 @@ export function EditCashbackCardModal({ card }: Props) {
         </button>
       </DialogTrigger>
 
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t('edit_card')}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={onSubmit} className="space-y-4">
+          {/* Base fields */}
           <div className="space-y-2">
             <Label htmlFor="edit-cashback-name">{t('card_name')}</Label>
             <Input
@@ -146,12 +185,48 @@ export function EditCashbackCardModal({ card }: Props) {
             </div>
           </div>
 
+          {/* Category-specific rates */}
+          {expenseCategories.length > 0 && (
+            <div className="space-y-3">
+              <Label>{t('category_rates')}</Label>
+              <p className="text-xs text-muted-foreground">{t('category_rates_hint')}</p>
+              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                {expenseCategories.map(cat => (
+                  <div key={cat.id} className="flex items-center gap-3">
+                    <span className="text-base w-6 text-center">{cat.icon}</span>
+                    <span className="text-sm flex-1 truncate">
+                      {tcat(cat.name_key, { defaultValue: cat.name_key })}
+                    </span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        placeholder="—"
+                        className="w-20 h-8 text-sm"
+                        value={categoryRates[cat.id] ?? ''}
+                        onChange={e =>
+                          setCategoryRates(prev => ({
+                            ...prev,
+                            [cat.id]: e.target.value,
+                          }))
+                        }
+                      />
+                      <span className="text-sm text-muted-foreground">%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               {tc('cancel')}
             </Button>
-            <Button type="submit" disabled={updateCard.isPending}>
-              {updateCard.isPending ? tc('loading') : tc('save')}
+            <Button type="submit" disabled={isPending}>
+              {isPending ? tc('loading') : tc('save')}
             </Button>
           </div>
         </form>
