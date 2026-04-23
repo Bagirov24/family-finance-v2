@@ -43,6 +43,15 @@ export interface CreateRequestInput {
   family_id: string
 }
 
+export interface RespondTransferInput {
+  transfer_id: string
+  action: 'confirmed' | 'declined'
+  from_account_id?: string
+  to_account_id?: string
+  /** Для частичной оплаты request-а. Если не передан — оплачивается полная сумма. */
+  paid_amount?: number
+}
+
 export function useTransfers() {
   const userId = useUIStore(s => s.userId)
   const qc = useQueryClient()
@@ -71,7 +80,7 @@ export function useTransfers() {
   })
 
   const createTransfer = useMutation({
-    mutationFn: async (payload: CreateTransferInput) => {
+    mutationFn: async (payload: CreateTransferInput): Promise<void> => {
       const supabase = createClient()
       const { error } = await supabase.from('member_transfers').insert({
         ...payload,
@@ -86,7 +95,7 @@ export function useTransfers() {
   })
 
   const createRequest = useMutation({
-    mutationFn: async (payload: CreateRequestInput) => {
+    mutationFn: async (payload: CreateRequestInput): Promise<void> => {
       const supabase = createClient()
       const { error } = await supabase.from('member_transfers').insert({
         family_id: payload.family_id,
@@ -106,12 +115,13 @@ export function useTransfers() {
   })
 
   const respondTransfer = useMutation({
-    mutationFn: async ({ transfer_id, action, from_account_id, to_account_id }: {
-      transfer_id: string
-      action: 'confirmed' | 'declined'
-      from_account_id?: string
-      to_account_id?: string
-    }) => {
+    mutationFn: async ({
+      transfer_id,
+      action,
+      from_account_id,
+      to_account_id,
+      paid_amount,
+    }: RespondTransferInput): Promise<{ success: boolean }> => {
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('No active session')
@@ -129,7 +139,7 @@ export function useTransfers() {
               'Content-Type': 'application/json',
               Authorization: `Bearer ${session.access_token}`
             },
-            body: JSON.stringify({ transfer_id, action, from_account_id, to_account_id })
+            body: JSON.stringify({ transfer_id, action, from_account_id, to_account_id, paid_amount })
           }
         )
       } catch (networkError) {
@@ -154,7 +164,7 @@ export function useTransfers() {
   })
 
   const cancelTransfer = useMutation({
-    mutationFn: async (transfer_id: string) => {
+    mutationFn: async (transfer_id: string): Promise<void> => {
       if (!userId) throw new Error('userId is required to cancel a transfer')
       const supabase = createClient()
       const { error } = await supabase
@@ -176,7 +186,6 @@ export function useTransfers() {
   const pendingRequests = all.filter(
     t => t.status === 'pending' && t.to_user_id === userId && t.transfer_type === 'request'
   )
-  // recurring pending — получатель принимает так же как send
   const pendingRecurring = all.filter(
     t => t.status === 'pending' && t.to_user_id === userId && t.transfer_type === 'recurring'
   )

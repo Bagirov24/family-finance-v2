@@ -11,12 +11,6 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
  */
 const ALLOWED_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') ?? ''
 
-/**
- * Returns CORS headers scoped to the request origin.
- * Only reflects the Origin header if it matches ALLOWED_ORIGIN.
- * Falls back to ALLOWED_ORIGIN itself (never '*') so the browser
- * blocks cross-origin requests from unknown sites.
- */
 function getCorsHeaders(req: Request): Record<string, string> {
   const requestOrigin = req.headers.get('Origin') ?? ''
   const allowedOrigin = requestOrigin === ALLOWED_ORIGIN ? requestOrigin : ALLOWED_ORIGIN
@@ -66,6 +60,10 @@ Deno.serve(async (req: Request) => {
     transfer_id?: string
     transferId?: string
     action?: 'confirmed' | 'declined' | 'confirm' | 'decline'
+    from_account_id?: string
+    to_account_id?: string
+    /** Частичная оплата: сумма, которую плательщик готов перевести сейчас */
+    paid_amount?: number
   }
 
   const transferId = body.transfer_id ?? body.transferId
@@ -93,6 +91,7 @@ Deno.serve(async (req: Request) => {
     })
   }
 
+  // Для request-а платит тот, кому запросили (to_user_id), — именно он вызывает confirm
   if (transfer.to_user_id !== user.id) {
     return new Response(JSON.stringify({ error: 'Forbidden' }), {
       status: 403,
@@ -107,6 +106,7 @@ Deno.serve(async (req: Request) => {
     })
   }
 
+  // ── DECLINE ────────────────────────────────────────────────────────────────
   if (normalizedAction === 'decline') {
     const { error: updateError } = await supabase
       .from('member_transfers')
@@ -125,8 +125,30 @@ Deno.serve(async (req: Request) => {
     })
   }
 
+  // ── CONFIRM (full or partial) ───────────────────────────────────────────────
+  const paidAmount: number = body.paid_amount ?? transfer.amount
+
+  // Validate paid_amount
+  if (paidAmount <= 0) {
+    return new Response(JSON.stringify({ error: 'paid_amount must be greater than 0' }), {
+      status: 400,
+      headers: corsHeaders,
+    })
+  }
+  if (paidAmount > transfer.amount) {
+    return new Response(JSON.stringify({ error: 'paid_amount cannot exceed the original amount' }), {
+      status: 400,
+      headers: corsHeaders,
+    })
+  }
+
+  const isPartial = paidAmount < transfer.amount
+  const remainder = Math.round((transfer.amount - paidAmount) * 100) / 100
+
+  // Подтверждаем текущий перевод на paid_amount
   const { error: rpcErr } = await supabase.rpc('confirm_transfer_atomic', {
     p_transfer_id: transferId,
+    p_paid_amount: paidAmount,
   })
 
   if (rpcErr) {
@@ -134,6 +156,50 @@ Deno.serve(async (req: Request) => {
       status: 500,
       headers: corsHeaders,
     })
+  }
+
+  // Если частичная оплата — создаём новый pending request на остаток
+  if (isPartial) {
+    const { error: insertErr } = await supabase.from('member_transfers').insert({
+      family_id: transfer.family_id,
+      from_user_id: transfer.from_user_id,
+      to_user_id: transfer.to_user_id,
+      from_account_id: null,
+      to_account_id: null,
+      amount: remainder,
+      note: transfer.note
+        ? `[остаток] ${transfer.note}`
+        : `[остаток от #${transferId.slice(0, 8)}]`,
+      transfer_type: 'request',
+      status: 'pending',
+      date: new Date().toISOString().split('T')[0],
+    })
+
+    if (insertErr) {
+      // Основная транзакция прошла — сообщаем об успехе, но предупреждаем о проблеме с остатком
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          status: 'confirmed',
+          partial: true,
+          paid_amount: paidAmount,
+          remainder,
+          remainder_transfer_error: insertErr.message,
+        }),
+        { status: 207, headers: corsHeaders }
+      )
+    }
+
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        status: 'confirmed',
+        partial: true,
+        paid_amount: paidAmount,
+        remainder,
+      }),
+      { headers: corsHeaders }
+    )
   }
 
   return new Response(JSON.stringify({ ok: true, status: 'confirmed' }), {
