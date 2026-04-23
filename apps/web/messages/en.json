@@ -245,6 +245,12 @@
     "note_placeholder": "What is this transfer for?",
     "history": "Transfer history",
     "no_transfers": "No transfers yet",
+    "filter_member": "Member",
+    "filter_status": "Status",
+    "filter_date_from": "Date from",
+    "filter_date_to": "Date to",
+    "filter_reset": "Reset",
+    "filter_empty": "No transfers match the selected filters",
     "transfer_received": "{from} sent you {amount}",
     "transfer_sent_pending": "Awaiting confirmation from {to} · {amount}",
     "request_received": "{from} is requesting {amount} from you",
@@ -383,7 +389,11 @@
     "errorCreate": "Failed to create family",
     "errorJoin": "Failed to join family",
     "invalidCode": "Invalid invite code",
-    "alreadyMember": "You are already a member of this family"
+    "alreadyMember": "You are already a member of this family",
+    "debt_summary_title": "Who owes whom",
+    "debt_i_owe_prefix": "You owe",
+    "debt_i_owe_suffix": "",
+    "debt_owes_me": "owes you"
   },
   "settings": {
     "title": "Settings",
