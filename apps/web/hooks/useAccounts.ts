@@ -6,7 +6,7 @@ import { useFamily } from '@/hooks/useFamily'
 
 export interface Account {
   id: string
-  owner_user_id: string
+  owner_user_id: string | null
   family_id: string | null
   name: string
   type: 'cash' | 'card' | 'savings' | 'investment' | 'credit'
