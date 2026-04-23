@@ -69,9 +69,6 @@ export function useTransfers() {
     }
   })
 
-  // Realtime перенесён в useRealtimeSync (глобальный провайдер).
-  // useTransfers больше не открывает собственный канал.
-
   const createTransfer = useMutation({
     mutationFn: async (payload: CreateTransferInput) => {
       const supabase = createClient()
@@ -84,7 +81,7 @@ export function useTransfers() {
       })
       if (error) throw error
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['transfers'] })
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['transfers', userId] })
   })
 
   const createRequest = useMutation({
@@ -104,7 +101,7 @@ export function useTransfers() {
       })
       if (error) throw error
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['transfers'] })
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['transfers', userId] })
   })
 
   const respondTransfer = useMutation({
@@ -118,38 +115,64 @@ export function useTransfers() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('No active session')
 
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/confirm-transfer`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.access_token}`
-          },
-          body: JSON.stringify({ transfer_id, action, from_account_id, to_account_id })
-        }
-      )
-      if (!res.ok) throw new Error(await res.text())
-      return res.json()
+      // H-2: validate env var before using it in URL construction.
+      // Without this check, a missing var produces the URL "undefined/functions/v1/..."
+      // which silently fails with a confusing network error.
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      if (!supabaseUrl) throw new Error('NEXT_PUBLIC_SUPABASE_URL is not configured')
+
+      // H-1: wrap the fetch in try/catch to distinguish network failures
+      // (DNS, timeout, offline) from application-level errors (4xx/5xx).
+      // Without this, a network error throws an unhandled Promise rejection
+      // that bypasses the mutation's onError handler.
+      let res: Response
+      try {
+        res = await fetch(
+          `${supabaseUrl}/functions/v1/confirm-transfer`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.access_token}`
+            },
+            body: JSON.stringify({ transfer_id, action, from_account_id, to_account_id })
+          }
+        )
+      } catch (networkError) {
+        throw new Error(
+          `Network error: unable to reach transfer service. ${
+            networkError instanceof Error ? networkError.message : String(networkError)
+          }`
+        )
+      }
+
+      if (!res.ok) {
+        const body = await res.text().catch(() => res.statusText)
+        throw new Error(`Transfer service error ${res.status}: ${body}`)
+      }
+
+      return res.json() as Promise<{ success: boolean }>
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['transfers'] })
+      qc.invalidateQueries({ queryKey: ['transfers', userId] })
       qc.invalidateQueries({ queryKey: ['accounts'] })
     }
   })
 
   const cancelTransfer = useMutation({
     mutationFn: async (transfer_id: string) => {
+      // Guard replaces the previous userId! non-null assertion.
+      if (!userId) throw new Error('userId is required to cancel a transfer')
       const supabase = createClient()
       const { error } = await supabase
         .from('member_transfers')
         .update({ status: 'cancelled' })
         .eq('id', transfer_id)
         .eq('status', 'pending')
-        .eq('from_user_id', userId!)
+        .eq('from_user_id', userId)
       if (error) throw error
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['transfers'] })
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['transfers', userId] })
   })
 
   const all = query.data ?? []
