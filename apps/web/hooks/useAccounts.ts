@@ -29,6 +29,20 @@ export interface CreateAccountInput {
   is_hidden_from_total?: boolean
 }
 
+// H-8: dedicated update type that excludes readonly / server-generated fields.
+// Using Partial<Account> would allow owner_user_id, family_id, created_at,
+// and balance to slip into an UPDATE payload, which is both a type safety gap
+// and a potential data-integrity issue (balance must only change via transactions).
+export interface UpdateAccountInput {
+  id: string
+  name?: string
+  type?: Account['type']
+  color?: string | null
+  icon?: string | null
+  is_hidden_from_total?: boolean
+  is_archived?: boolean
+}
+
 async function fetchAccounts(userId: string, familyId?: string | null) {
   const supabase = createClient()
 
@@ -59,7 +73,10 @@ export function useAccounts({ initialAccounts }: UseAccountsOptions = {}) {
 
   const query = useQuery({
     queryKey: ['accounts', userId, family?.id],
-    queryFn: () => fetchAccounts(userId!, family?.id),
+    queryFn: () => {
+      if (!userId) throw new Error('[useAccounts] userId is required')
+      return fetchAccounts(userId, family?.id)
+    },
     enabled: !!userId,
     initialData: initialAccounts,
     staleTime: 5 * 60_000,
@@ -68,7 +85,6 @@ export function useAccounts({ initialAccounts }: UseAccountsOptions = {}) {
 
   const accounts = query.data ?? []
 
-  // ✅ useMemo — пересчёт только при изменении массива счетов
   const totalBalance = useMemo(
     () => accounts
       .filter(a => !a.is_hidden_from_total)
@@ -105,7 +121,10 @@ export function useUpdateAccount() {
   const { family } = useFamily()
 
   return useMutation({
-    mutationFn: async ({ id, ...patch }: Partial<Account> & { id: string }) => {
+    // H-8: UpdateAccountInput instead of Partial<Account>.
+    // This ensures readonly fields (owner_user_id, family_id, created_at, balance)
+    // can never be passed to the UPDATE statement.
+    mutationFn: async ({ id, ...patch }: UpdateAccountInput) => {
       const supabase = createClient()
       let query = supabase
         .from('accounts')
