@@ -1,6 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
-import { createClient } from '@/lib/supabase/client'
-import { useUIStore } from '@/store/ui.store'
+import { useMemo } from 'react'
+import { useTransactions } from '@/hooks/useTransactions'
 
 export interface MonthlySummary {
   income: number
@@ -11,42 +10,39 @@ export interface MonthlySummary {
   remainingDays: number
 }
 
-async function fetchSummary(userId: string, month: number, year: number): Promise<MonthlySummary> {
-  const supabase = createClient()
-  const from = `${year}-${String(month).padStart(2, '0')}-01`
-  const to = new Date(year, month, 0).toISOString().split('T')[0]
-
-  const { data, error } = await supabase
-    .from('transactions')
-    .select('amount,type')
-    .eq('user_id', userId)
-    .gte('date', from)
-    .lte('date', to)
-
-  if (error) throw error
-
-  const income = (data ?? []).filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-  const expense = (data ?? []).filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
-  const balance = income - expense
-  const savingsRate = income > 0 ? Math.round((balance / income) * 100) : 0
-
-  const today = new Date()
-  const isCurrentMonth = month === today.getMonth() + 1 && year === today.getFullYear()
-  const daysInMonth = new Date(year, month, 0).getDate()
-  const daysPassed = isCurrentMonth ? today.getDate() : daysInMonth
-  const remainingDays = isCurrentMonth ? daysInMonth - today.getDate() + 1 : 0
-  const dailyBudget = remainingDays > 0 ? Math.max(0, Math.round(balance / remainingDays)) : 0
-
-  return { income, expense, balance, savingsRate, dailyBudget, remainingDays }
-}
-
+/**
+ * useSummary — переиспользует кеш useTransactions.
+ *
+ * Раньше делал отдельный SELECT amount,type FROM transactions — дублируя
+ * запрос, который useTransactions уже выполняет. Теперь вычисляет summary
+ * через useMemo из уже полученных данных — нулевой RTT, нет лишнего запроса.
+ */
 export function useSummary() {
-  const { userId, activePeriod } = useUIStore()
-  const { month, year } = activePeriod
+  const { transactions, isLoading, isPending, isError, totalIncome: income, totalExpense: expense } =
+    useTransactions()
 
-  return useQuery({
-    queryKey: ['summary', userId, month, year],
-    queryFn: () => fetchSummary(userId!, month, year),
-    enabled: !!userId,
-  })
+  const data = useMemo((): MonthlySummary => {
+    const balance = income - expense
+    const savingsRate = income > 0 ? Math.round((balance / income) * 100) : 0
+
+    const today = new Date()
+    const now = new Date()
+    // activePeriod доступен через useTransactions внутри → берём из транзакций
+    // Для определения текущего месяца смотрим на дату первой транзакции или now
+    const firstTx = transactions[0]
+    const txDate = firstTx ? new Date(firstTx.date) : now
+    const month = txDate.getMonth() + 1
+    const year = txDate.getFullYear()
+
+    const isCurrentMonth =
+      month === today.getMonth() + 1 && year === today.getFullYear()
+    const daysInMonth = new Date(year, month, 0).getDate()
+    const remainingDays = isCurrentMonth ? daysInMonth - today.getDate() + 1 : 0
+    const dailyBudget =
+      remainingDays > 0 ? Math.max(0, Math.round(balance / remainingDays)) : 0
+
+    return { income, expense, balance, savingsRate, dailyBudget, remainingDays }
+  }, [transactions, income, expense])
+
+  return { data, isLoading, isPending, isError }
 }
