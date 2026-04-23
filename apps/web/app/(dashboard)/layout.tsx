@@ -13,9 +13,22 @@ export default async function DashboardLayout({
   children: React.ReactNode
 }) {
   const supabase = await createClient()
+
+  // C-5: destructure error alongside user. Without this check, a Supabase
+  // network error returns { user: null, error: ... } which would incorrectly
+  // redirect an authenticated user to /login.
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser()
+
+  // 'Auth session missing!' is the expected error code for unauthenticated
+  // visitors — treat it as "no user" and fall through to the redirect below.
+  // Any other error means Supabase is unreachable: throw so Next.js renders
+  // the error boundary instead of redirecting a logged-in user to /login.
+  if (authError && authError.message !== 'Auth session missing!') {
+    throw authError
+  }
 
   if (!user) {
     redirect('/login')
