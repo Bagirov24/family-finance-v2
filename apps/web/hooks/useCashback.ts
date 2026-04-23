@@ -55,6 +55,19 @@ export interface UpdateCardPayload extends Partial<CreateCardPayload> {
   is_active?: boolean
 }
 
+/** Запись в bestByCategory — лучшая активная ставка для категории */
+export interface BestCardEntry {
+  cardId: string
+  cardName: string
+  /** user_id владельца карты — для отображения «Карта мамы» в оптимизаторе */
+  ownerUserId: string
+  percent: number
+  effectivePercent: number   // с учётом points_to_rubles_rate
+  monthlyLimitRub: number
+  remainingLimitRub: number
+  validUntil: string | null
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Возвращает true, если ставка ещё действует на указанную дату */
@@ -102,23 +115,16 @@ export function useCashbackCards() {
   })
 
   /**
-   * Map: category_key → лучшая активная ставка среди всех карт
+   * Map: category_key → лучшая активная ставка среди всех карт семьи.
    * Учитывает:
    *   - valid_until (просроченные игнорируются)
    *   - остаток лимита (spent < limit)
    *   - points_to_rubles_rate для приведения к рублям
+   *   - ownerUserId — для подписи «Карта мамы» в оптимизаторе
    */
   const bestByCategory = useMemo(() => {
     const cards = query.data ?? []
-    const map = new Map<string, {
-      cardId: string
-      cardName: string
-      percent: number
-      effectivePercent: number   // с учётом points_to_rubles_rate
-      monthlyLimitRub: number
-      remainingLimitRub: number
-      validUntil: string | null
-    }>()
+    const map = new Map<string, BestCardEntry>()
 
     for (const card of cards) {
       const cats = card.cashback_categories ?? []
@@ -141,6 +147,7 @@ export function useCashbackCards() {
           map.set(cat.category_key, {
             cardId: card.id,
             cardName: card.card_name,
+            ownerUserId: card.user_id,
             percent: cat.percent,
             effectivePercent,
             monthlyLimitRub: cat.monthly_limit_rub,
@@ -154,9 +161,9 @@ export function useCashbackCards() {
     return map
   }, [query.data, currentMonth, currentYear])
 
-  /** O(1) lookup. Fallback на карту с максимальным базовым процентом не предусмотрен —
-   *  базового кэшбека в новой схеме нет, только категорийные ставки. */
-  const getBestCard = (categoryKey: string) => bestByCategory.get(categoryKey) ?? null
+  /** O(1) lookup. */
+  const getBestCard = (categoryKey: string): BestCardEntry | null =>
+    bestByCategory.get(categoryKey) ?? null
 
   // ── Mutations ──
 

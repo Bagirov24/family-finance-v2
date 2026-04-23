@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { useCashbackCards } from '@/hooks/useCashback'
 import { useCategories } from '@/hooks/useCategories'
+import { useFamily } from '@/hooks/useFamily'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { CreditCard, Trash2, Plus, ChevronDown, ChevronUp } from 'lucide-react'
@@ -22,6 +23,13 @@ export default function CashbackPage() {
   const tcat = useTranslations('categories')
   const { cards, isLoading, getBestCard, deleteCard } = useCashbackCards()
   const { categories } = useCategories()
+  const { members } = useFamily()
+
+  // Map userId → displayName для подписи владельца карты
+  const memberNameById = useMemo(
+    () => new Map(members.map(m => [m.user_id, m.display_name ?? ''])),
+    [members]
+  )
 
   // Раскрытая карта (id | null)
   const [expandedCard, setExpandedCard] = useState<string | null>(null)
@@ -156,7 +164,7 @@ export default function CashbackPage() {
         )}
       </section>
 
-      {/* ── Оптимизатор ── */}
+      {/* ── Семейный оптимизатор ── */}
       <section>
         <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
           {t('optimizer')}
@@ -164,6 +172,16 @@ export default function CashbackPage() {
         <div className="rounded-2xl border bg-card p-4 space-y-1">
           {expenseCategories.slice(0, OPTIMIZER_TOP).map(cat => {
             const best = getBestCard(cat.key)
+
+            // Формируем подпись: «Карта мамы • 5%» или «Тинькофф Black • 5%» (fallback)
+            let cardLabel = best?.cardName ?? ''
+            if (best) {
+              const ownerName = memberNameById.get(best.ownerUserId)
+              if (ownerName) {
+                cardLabel = t('owner_card_label', { owner: ownerName })
+              }
+            }
+
             return (
               <div
                 key={cat.key}
@@ -179,7 +197,7 @@ export default function CashbackPage() {
                 {best ? (
                   <div className="text-right shrink-0">
                     <span className="text-xs font-semibold text-primary">
-                      {best.cardName} • {best.percent}%
+                      {cardLabel} • {best.percent}%
                     </span>
                     {best.validUntil && (
                       <p className="text-[10px] text-muted-foreground">
