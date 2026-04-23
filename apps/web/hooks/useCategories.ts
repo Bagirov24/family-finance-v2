@@ -7,6 +7,8 @@ export interface Category {
   id: string
   family_id: string | null
   name_key: string
+  /** Alias for name_key — used by cashback and other consumers that rely on `.key` */
+  key: string
   icon: string
   color: string
   type: 'income' | 'expense' | 'both'
@@ -42,7 +44,9 @@ async function fetchCategories(familyId: string | null): Promise<Category[]> {
 
   const { data, error } = await query
   if (error) throw error
-  return data as Category[]
+
+  // Map name_key → key so all consumers get a consistent `.key` field
+  return (data as Omit<Category, 'key'>[]).map(row => ({ ...row, key: row.name_key }))
 }
 
 export function useCategories(type?: Category['type']): UseCategoriesResult {
