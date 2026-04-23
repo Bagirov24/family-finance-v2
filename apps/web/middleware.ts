@@ -8,11 +8,25 @@ const SUPPORTED_LOCALES = ['ru', 'en']
 const DEFAULT_LOCALE = 'ru'
 
 export async function middleware(request: NextRequest) {
+  // C-3: env-guard — if vars are missing, allow the request through rather
+  // than crashing the entire middleware pipeline with a TypeError.
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!supabaseUrl || !supabaseKey) {
+    if (process.env.NODE_ENV === 'development') {
+      console.error(
+        '[middleware] Missing Supabase env vars — auth checks disabled. ' +
+        'Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.'
+      )
+    }
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseKey,
     {
       cookies: {
         getAll() { return request.cookies.getAll() },
@@ -58,6 +72,7 @@ export async function middleware(request: NextRequest) {
       path: '/',
       maxAge: 60 * 60 * 24 * 365,
       sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
     })
   }
 
