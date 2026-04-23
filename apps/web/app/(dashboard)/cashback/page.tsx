@@ -1,12 +1,21 @@
 'use client'
+
+import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { useCashbackCards } from '@/hooks/useCashback'
 import { useCategories } from '@/hooks/useCategories'
 import { Skeleton } from '@/components/ui/skeleton'
-import { CreditCard, Trash2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { CreditCard, Trash2, Plus, ChevronDown, ChevronUp } from 'lucide-react'
 import { AddCashbackCardModal } from '@/components/cashback/AddCashbackCardModal'
 import { EditCashbackCardModal } from '@/components/cashback/EditCashbackCardModal'
 import { CashbackReminderBanner } from '@/components/cashback/CashbackReminderBanner'
+import { CategoryRateRow } from './_CategoryRateRow'
+import { AddCategoryModal } from './_AddCategoryModal'
+import { cn } from '@/lib/utils'
+
+// Кол-во категорий в оптимизаторе (top-N по частоте трат)
+const OPTIMIZER_TOP = 10
 
 export default function CashbackPage() {
   const t = useTranslations('cashback')
@@ -14,23 +23,41 @@ export default function CashbackPage() {
   const { cards, isLoading, getBestCard, deleteCard } = useCashbackCards()
   const { categories } = useCategories()
 
+  // Раскрытая карта (id | null)
+  const [expandedCard, setExpandedCard] = useState<string | null>(null)
+  // Модал добавления ставки (id карты | null)
+  const [addCatForCard, setAddCatForCard] = useState<string | null>(null)
+
+  // Индекс категорий для быстрого лукапа label/icon
+  const catMeta = Object.fromEntries(
+    (categories ?? []).map(c => [
+      c.key,
+      { label: tcat(c.key, { defaultValue: c.key }), icon: c.icon ?? '' },
+    ])
+  )
+
+  const expenseCategories = (categories ?? []).filter(
+    c => c.type === 'expense' || c.type === 'both'
+  )
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
+      {/* Заголовок */}
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-xl font-bold">{t('title')}</h1>
         <AddCashbackCardModal />
       </div>
 
-      {/* Monthly reminder banner */}
       <CashbackReminderBanner />
 
+      {/* ── Мои карты ── */}
       <section>
         <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
           {t('my_cards')}
         </h2>
 
         {isLoading ? (
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-3">
             {Array.from({ length: 2 }).map((_, i) => (
               <Skeleton key={i} className="h-28 rounded-2xl" />
             ))}
@@ -41,82 +68,150 @@ export default function CashbackPage() {
             <p>{t('no_cards')}</p>
           </div>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {cards.map(card => (
-              <div
-                key={card.id}
-                className="rounded-2xl p-4 text-white relative overflow-hidden shadow-md"
-                style={{ backgroundColor: card.color ?? '#6366f1' }}
-              >
-                {/* Action buttons */}
-                <div className="absolute top-2 right-2 flex gap-1">
-                  <EditCashbackCardModal card={card} />
-                  <button
-                    type="button"
-                    className="p-1 rounded-md opacity-70 hover:opacity-100 transition-opacity"
-                    aria-label={t('delete_card')}
-                    disabled={deleteCard.isPending}
-                    onClick={() => {
-                      if (confirm(t('delete_card_confirm'))) {
-                        deleteCard.mutate(card.id)
-                      }
-                    }}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
+          <div className="space-y-4">
+            {cards.map(card => {
+              const isExpanded = expandedCard === card.id
+              const cats = card.cashback_categories ?? []
 
-                <p className="text-xs opacity-80 mb-1">{card.bank}</p>
-                <p className="font-bold text-base">{card.name}</p>
-                <p className="text-sm mt-1 opacity-90">
-                  {t('card_type')}: {card.card_type}
-                </p>
-                <p className="text-sm mt-2 opacity-90">
-                  {t('default_cashback')}: {card.default_cashback_percent}%
-                </p>
-                {/* Show count of configured category rates */}
-                {(card.cashback_card_categories?.length ?? 0) > 0 && (
-                  <p className="text-xs mt-1 opacity-75">
-                    {t('category_rates_count', { count: card.cashback_card_categories!.length })}
-                  </p>
-                )}
-                <CreditCard size={48} className="absolute -right-2 -bottom-3 opacity-10" />
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section>
-        <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-          {t('optimizer')}
-        </h2>
-        <div className="rounded-2xl border bg-card p-4 space-y-2">
-          {(categories ?? [])
-            .filter(c => c.type === 'expense' || c.type === 'both')
-            .slice(0, 10)
-            .map(cat => {
-              const best = getBestCard(cat.id)
               return (
-                <div key={cat.id} className="flex items-center justify-between py-1 gap-3">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-base">{cat.icon}</span>
-                    <span className="text-sm truncate">
-                      {tcat(cat.name_key, { defaultValue: cat.name_key })}
-                    </span>
+                <div key={card.id} className="rounded-2xl border bg-card overflow-hidden shadow-sm">
+                  {/* Шапка карты */}
+                  <div
+                    className="p-4 text-white relative overflow-hidden"
+                    style={{ backgroundColor: card.color ?? '#6366f1' }}
+                  >
+                    {/* Кнопки действий */}
+                    <div className="absolute top-2 right-2 flex gap-1">
+                      <EditCashbackCardModal card={card} />
+                      <button
+                        type="button"
+                        className="p-1 rounded-md opacity-70 hover:opacity-100 transition-opacity"
+                        aria-label={t('delete_card')}
+                        disabled={deleteCard.isPending}
+                        onClick={() => {
+                          if (confirm(t('delete_card_confirm'))) deleteCard.mutate(card.id)
+                        }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+
+                    <p className="text-xs opacity-80 mb-0.5">{card.bank_name}</p>
+                    <p className="font-bold text-base">{card.card_name}</p>
+                    <p className="text-xs mt-1 opacity-75">
+                      {t('card_type_label')}: {t(`cashback_type_${card.cashback_type}`)}
+                      {card.cashback_type !== 'rubles' && card.points_to_rubles_rate !== 1 && (
+                        <span className="ml-1 opacity-90">
+                          ({card.points_to_rubles_rate} ₽/{t('point')})
+                        </span>
+                      )}
+                    </p>
+
+                    {/* Кнопка раскрытия категорий */}
+                    <button
+                      type="button"
+                      onClick={() => setExpandedCard(isExpanded ? null : card.id)}
+                      className="mt-3 flex items-center gap-1 text-xs opacity-80 hover:opacity-100 transition-opacity"
+                    >
+                      {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                      {t('category_rates_count', { count: cats.length })}
+                    </button>
+
+                    <CreditCard size={48} className="absolute -right-2 -bottom-3 opacity-10" />
                   </div>
-                  {best ? (
-                    <span className="text-xs font-semibold text-primary shrink-0">
-                      {best.cardName} • {best.percent}%
-                    </span>
-                  ) : (
-                    <span className="text-xs text-muted-foreground shrink-0">—</span>
+
+                  {/* ── Ставки по категориям ── */}
+                  {isExpanded && (
+                    <div className="p-3 space-y-2 bg-muted/30">
+                      {cats.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          {t('no_category_rates')}
+                        </p>
+                      ) : (
+                        cats.map(cat => (
+                          <CategoryRateRow
+                            key={cat.id}
+                            cat={cat}
+                            categoryLabel={catMeta[cat.category_key]?.label ?? cat.category_key}
+                            categoryIcon={catMeta[cat.category_key]?.icon ?? ''}
+                          />
+                        ))
+                      )}
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full mt-1 gap-1"
+                        onClick={() => setAddCatForCard(card.id)}
+                      >
+                        <Plus size={13} />
+                        {t('add_category_rate')}
+                      </Button>
+                    </div>
                   )}
                 </div>
               )
             })}
+          </div>
+        )}
+      </section>
+
+      {/* ── Оптимизатор ── */}
+      <section>
+        <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+          {t('optimizer')}
+        </h2>
+        <div className="rounded-2xl border bg-card p-4 space-y-1">
+          {expenseCategories.slice(0, OPTIMIZER_TOP).map(cat => {
+            const best = getBestCard(cat.key)
+            return (
+              <div
+                key={cat.key}
+                className="flex items-center justify-between py-1.5 gap-3"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-base">{cat.icon}</span>
+                  <span className="text-sm truncate">
+                    {tcat(cat.key, { defaultValue: cat.key })}
+                  </span>
+                </div>
+
+                {best ? (
+                  <div className="text-right shrink-0">
+                    <span className="text-xs font-semibold text-primary">
+                      {best.cardName} • {best.percent}%
+                    </span>
+                    {best.validUntil && (
+                      <p className="text-[10px] text-muted-foreground">
+                        {t('until')} {new Date(best.validUntil).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
+                      </p>
+                    )}
+                    {best.remainingLimitRub < best.monthlyLimitRub && (
+                      <p className={cn(
+                        'text-[10px]',
+                        best.remainingLimitRub <= 0 ? 'text-destructive' : 'text-muted-foreground'
+                      )}>
+                        {t('limit_left')}: {best.remainingLimitRub.toLocaleString('ru-RU')} ₽
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-xs text-muted-foreground shrink-0">—</span>
+                )}
+              </div>
+            )
+          })}
         </div>
       </section>
+
+      {/* Модал добавления ставки */}
+      {addCatForCard && (
+        <AddCategoryModal
+          cardId={addCatForCard}
+          open={!!addCatForCard}
+          onClose={() => setAddCatForCard(null)}
+        />
+      )}
     </div>
   )
 }
