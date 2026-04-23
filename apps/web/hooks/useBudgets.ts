@@ -95,19 +95,24 @@ async function fetchBudgets(familyId: string, month: number, year: number): Prom
 }
 
 export function useBudgets() {
-  // ✅ точные селекторы — не подписываемся на весь стор
   const month = useUIStore(s => s.activePeriod.month)
   const year  = useUIStore(s => s.activePeriod.year)
   const { family } = useFamily()
 
-  // Исторические периоды (не текущий месяц) кешируем дольше — данные не меняются
   const now = new Date()
   const isCurrentPeriod =
     month === now.getMonth() + 1 && year === now.getFullYear()
 
   const query = useQuery({
     queryKey: ['budgets', family?.id, month, year],
-    queryFn: () => fetchBudgets(family?.id ?? '', month, year),
+    // H-7: type guard replaces the implicit assumption that family?.id is
+    // always truthy when enabled fires. fetchBudgets already has an early
+    // return for falsy familyId, but this guard makes the invariant explicit
+    // and produces a descriptive error if the guard ever trips.
+    queryFn: () => {
+      if (!family?.id) throw new Error('[useBudgets] family.id is required')
+      return fetchBudgets(family.id, month, year)
+    },
     enabled: !!family?.id,
     staleTime: isCurrentPeriod ? 30_000 : 5 * 60_000,
     gcTime: isCurrentPeriod ? 10 * 60_000 : 30 * 60_000,
@@ -118,7 +123,6 @@ export function useBudgets() {
 
 export function useUpsertBudget() {
   const qc = useQueryClient()
-  // ✅ точные селекторы
   const month  = useUIStore(s => s.activePeriod.month)
   const year   = useUIStore(s => s.activePeriod.year)
   const { family } = useFamily()
@@ -143,12 +147,19 @@ export function useUpsertBudget() {
       if (error) throw error
       return data
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['budgets'] }),
+    // H-5: scoped invalidation — only the current family+period slice is
+    // invalidated. The previous broad ['budgets'] key would refetch ALL cached
+    // periods (including historical ones) on every upsert.
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ['budgets', family?.id, month, year] }),
   })
 }
 
 export function useDeleteBudget() {
   const qc = useQueryClient()
+  const month  = useUIStore(s => s.activePeriod.month)
+  const year   = useUIStore(s => s.activePeriod.year)
+  const { family } = useFamily()
 
   return useMutation({
     mutationFn: async (id: string) => {
@@ -156,6 +167,8 @@ export function useDeleteBudget() {
       const { error } = await supabase.from('budgets').delete().eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['budgets'] }),
+    // H-5: same as upsert — scope to current family+period
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ['budgets', family?.id, month, year] }),
   })
 }
