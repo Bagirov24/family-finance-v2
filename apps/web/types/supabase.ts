@@ -1273,15 +1273,23 @@ export type Database = {
         Args: { p_account_id: string; p_delta: number }
         Returns: undefined
       }
-      confirm_transfer_atomic: {
-        Args: {
-          p_amount: number
-          p_from_account_id: string
-          p_to_account_id: string
-          p_transfer_id: string
-        }
-        Returns: undefined
-      }
+      confirm_transfer_atomic:
+        | {
+            Args: {
+              p_amount: number
+              p_from_account_id: string
+              p_to_account_id: string
+              p_transfer_id: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_transfer_id: string
+              p_paid_amount?: number
+            }
+            Returns: undefined
+          }
       contribute_to_goal: {
         Args: { p_amount: number; p_goal_id: string }
         Returns: {
