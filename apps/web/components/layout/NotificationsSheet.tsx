@@ -61,7 +61,7 @@ export function NotificationsSheet({ open, onOpenChange }: Props) {
                     <p className="text-xs text-muted-foreground mt-0.5 line-clamp-3">{n.body}</p>
                   )}
                   <p className="text-[10px] text-muted-foreground mt-1">
-                    {new Date(n.created_at).toLocaleDateString()}
+                    {n.created_at ? new Date(n.created_at).toLocaleDateString() : '—'}
                   </p>
                 </div>
                 {!n.is_read && (
