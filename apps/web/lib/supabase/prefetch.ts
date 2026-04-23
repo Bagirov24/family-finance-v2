@@ -79,11 +79,16 @@ export async function prefetchAppData(userId: string) {
   if (transactionsResult.error)
     console.error('[prefetch] transactions error:', transactionsResult.error)
 
+  // get_monthly_summary RPC returns an array — OverviewInitialData.summary expects
+  // a single object or null, so we take the first element.
+  const summaryRaw = summaryResult.data
+  const summary = Array.isArray(summaryRaw) ? (summaryRaw[0] ?? null) : (summaryRaw ?? null)
+
   return {
     members: (membersData ?? []) as unknown as FamilyMember[],
     family,
     accounts: (accountsResult.data ?? []) as unknown as Account[],
-    summary: summaryResult.data ?? null,
+    summary,
     categories: categoriesResult.data ?? [],
     transactions: (transactionsResult.data ?? []) as unknown as Transaction[],
     month,
