@@ -1367,6 +1367,10 @@ export type Database = {
           total: number
         }[]
       }
+      rotate_invite_code: {
+        Args: { p_family_id: string }
+        Returns: string
+      }
       seed_family_categories: {
         Args: { p_family_id: string }
         Returns: undefined
