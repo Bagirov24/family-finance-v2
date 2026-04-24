@@ -19,7 +19,8 @@ export function UpsertBudgetModal() {
   const [categoryId, setCategoryId] = useState('')
   const [amount, setAmount] = useState('')
 
-  const { data: categories = [] } = useCategories('expense')
+  // useCategories returns { categories, isLoading, ... } — not { data }
+  const { categories = [] } = useCategories('expense')
   const upsertBudget = useUpsertBudget()
 
   function reset() {
@@ -62,7 +63,7 @@ export function UpsertBudgetModal() {
               <Select value={categoryId} onValueChange={setCategoryId}>
                 <SelectTrigger><SelectValue placeholder={tc('category')} /></SelectTrigger>
                 <SelectContent>
-                  {categories.map(c => (
+                  {(categories ?? []).map(c => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.icon} {tcat(c.name_key as Parameters<typeof tcat>[0], { defaultValue: c.name_key })}
                     </SelectItem>
