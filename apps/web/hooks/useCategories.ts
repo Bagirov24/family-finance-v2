@@ -20,6 +20,12 @@ export interface Category {
 export interface UseCategoriesResult {
   /** Filtered (by type) category list, or all categories when type is omitted. */
   categories: Category[] | undefined
+  /**
+   * @deprecated This hook returns `categories`, not `data`.
+   * Replace `const { data } = useCategories()` with `const { categories } = useCategories()`.
+   * The `never` type here will produce a compile-time error if `data` is destructured.
+   */
+  data?: never
   isLoading: boolean
   isPending: boolean
   isError: boolean
