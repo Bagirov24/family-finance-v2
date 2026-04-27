@@ -241,7 +241,7 @@ export function useVehicles() {
       })
       if (error) throw error
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vehicles', userId] })
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vehicles', userId, family?.id ?? null] })
   })
 
   const updateVehicle = useMutation({
@@ -253,7 +253,7 @@ export function useVehicles() {
         .eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vehicles', userId] })
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vehicles', userId, family?.id ?? null] })
   })
 
   const archiveVehicle = useMutation({
@@ -265,7 +265,7 @@ export function useVehicles() {
         .eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vehicles', userId] })
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vehicles', userId, family?.id ?? null] })
   })
 
   const deleteVehicle = useMutation({
@@ -277,7 +277,7 @@ export function useVehicles() {
         .eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vehicles', userId] })
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vehicles', userId, family?.id ?? null] })
   })
 
   const updateMileage = useMutation({
@@ -289,7 +289,7 @@ export function useVehicles() {
         .eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vehicles', userId] })
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vehicles', userId, family?.id ?? null] })
   })
 
   return {
@@ -364,7 +364,7 @@ export function useFuelLog(vehicleId: string) {
       queryClient.invalidateQueries({ queryKey: ['fuel-log', vehicleId] })
       queryClient.invalidateQueries({ queryKey: ['vehicles', userId] })
       queryClient.invalidateQueries({ queryKey: ['vehicle-expenses', vehicleId] })
-      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['transactions', userId] })
     }
   })
 
@@ -389,38 +389,20 @@ export function useServiceItems(vehicleId: string) {
     }
   })
 
-  const createServiceItem = useMutation({
+  const upsertServiceItem = useMutation({
     mutationFn: async (payload: ServiceItemInput) => {
       const supabase = createClient()
-      const next_due_date = calcNextDueDate(payload.last_replaced_date, payload.replace_every_months)
-      const { error } = await supabase.from('service_items').insert({
-        ...payload,
-        next_due_date,
-      })
-      if (error) throw error
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['service-items', vehicleId] })
-  })
-
-  const updateServiceItem = useMutation({
-    mutationFn: async ({ id, ...patch }: Partial<ServiceItemInput> & { id: string }) => {
-      const supabase = createClient()
-
-      // M-6: read from QueryClient cache instead of closing over `query.data`.
-      // query.data can be stale between a mutation and the subsequent refetch,
-      // causing "Service item not found" errors when mutations are chained quickly.
-      const cachedItems = queryClient.getQueryData<ServiceItem[]>(['service-items', vehicleId])
-      const current = cachedItems?.find(i => i.id === id)
-      if (!current) throw new Error(`Service item ${id} not found in cache`)
-
-      const last_replaced_date = patch.last_replaced_date ?? current.last_replaced_date
-      const replace_every_months = patch.replace_every_months ?? current.replace_every_months
-      const next_due_date = calcNextDueDate(last_replaced_date, replace_every_months)
-
-      const { error } = await supabase
-        .from('service_items')
-        .update({ ...patch, next_due_date })
-        .eq('id', id)
+      const nextDueDate = calcNextDueDate(
+        payload.last_replaced_date,
+        payload.replace_every_months
+      )
+      const { error } = await supabase.from('service_items').upsert(
+        {
+          ...payload,
+          next_due_date: nextDueDate,
+        },
+        { onConflict: 'vehicle_id,name_key' }
+      )
       if (error) throw error
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['service-items', vehicleId] })
@@ -439,16 +421,16 @@ export function useServiceItems(vehicleId: string) {
   })
 
   return {
-    items: query.data ?? [],
+    serviceItems: query.data ?? [],
     isLoading: query.isLoading,
-    createServiceItem,
-    updateServiceItem,
+    upsertServiceItem,
     deleteServiceItem,
   }
 }
 
 export function useVehicleExpenses(vehicleId: string) {
   const queryClient = useQueryClient()
+  const userId = useUIStore(s => s.userId)
 
   const query = useQuery<VehicleExpense[]>({
     queryKey: ['vehicle-expenses', vehicleId],
@@ -466,22 +448,6 @@ export function useVehicleExpenses(vehicleId: string) {
     }
   })
 
-  // useMemo — recalculates only when query.data reference changes
-  const { totalByCategory, total } = useMemo(() => {
-    const byCategory = (query.data ?? []).reduce<Record<VehicleExpenseCategory, number>>(
-      (acc, e) => {
-        // M-1: Number() is now explicit and enforced by the string type
-        acc[e.category] = (acc[e.category] ?? 0) + Number(e.amount_rub)
-        return acc
-      },
-      {} as Record<VehicleExpenseCategory, number>
-    )
-    return {
-      totalByCategory: byCategory,
-      total: Object.values(byCategory).reduce((s, v) => s + v, 0),
-    }
-  }, [query.data])
-
   const addExpense = useMutation({
     mutationFn: async (payload: {
       vehicle_id: string
@@ -491,8 +457,8 @@ export function useVehicleExpenses(vehicleId: string) {
       category: VehicleExpenseCategory
       amount_rub: number
       date: string
-      note?: string
       mileage_at_moment?: number
+      note?: string
     }) => {
       const supabase = createClient()
       const { error } = await supabase.rpc('add_vehicle_expense', {
@@ -503,23 +469,50 @@ export function useVehicleExpenses(vehicleId: string) {
         p_category: payload.category,
         p_amount_rub: payload.amount_rub,
         p_date: payload.date,
-        p_note: payload.note ?? null,
         p_mileage_at_moment: payload.mileage_at_moment ?? null,
+        p_note: payload.note ?? null,
       })
       if (error) throw error
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicle-expenses', vehicleId] })
-      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['transactions', userId] })
     }
   })
 
+  const deleteExpense = useMutation({
+    mutationFn: async (expenseId: string) => {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('vehicle_expenses')
+        .delete()
+        .eq('id', expenseId)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vehicle-expenses', vehicleId] })
+      queryClient.invalidateQueries({ queryKey: ['transactions', userId] })
+    }
+  })
+
+  // L-2: explicit return type on helper — useMemo provides memoization
+  const totals = useMemo(() => {
+    const expenses = query.data ?? []
+    const byCategory = expenses.reduce<Record<string, number>>((acc, e) => {
+      // M-1: amount_rub is string from Supabase, use Number() to convert
+      acc[e.category] = (acc[e.category] ?? 0) + Number(e.amount_rub)
+      return acc
+    }, {})
+    const total = Object.values(byCategory).reduce((a, b) => a + b, 0)
+    return { byCategory, total }
+  }, [query.data])
+
   return {
     expenses: query.data ?? [],
-    totalByCategory,
-    total,
+    totals,
     isLoading: query.isLoading,
     addExpense,
+    deleteExpense,
   }
 }
 
@@ -536,50 +529,37 @@ export function useVehicleFines(vehicleId: string) {
         .select('*')
         .eq('vehicle_id', vehicleId)
         .order('issued_date', { ascending: false })
-        .limit(100)
       if (error) throw error
       return (data ?? []) as VehicleFine[]
     }
   })
 
-  const createFine = useMutation({
-    mutationFn: async (payload: FineInput) => {
+  const addFine = useMutation({
+    mutationFn: async (input: FineInput) => {
       const supabase = createClient()
-      const { error } = await supabase
-        .from('vehicle_fines')
-        .insert({
-          vehicle_id: payload.vehicle_id,
-          user_id: payload.user_id,
-          external_id: payload.external_id,
-          amount_rub: payload.amount_rub,
-          discount_amount_rub: payload.discount_amount_rub,
-          discount_until: payload.discount_until,
-          issued_date: payload.issued_date,
-          description: payload.description,
-          status: payload.status ?? 'unpaid',
-        })
+      const { error } = await supabase.from('vehicle_fines').insert({
+        vehicle_id: input.vehicle_id,
+        user_id: input.user_id,
+        family_id: input.family_id ?? null,
+        external_id: input.external_id ?? null,
+        amount_rub: input.amount_rub,
+        discount_amount_rub: input.discount_amount_rub ?? null,
+        discount_until: input.discount_until ?? null,
+        issued_date: input.issued_date ?? null,
+        description: input.description ?? null,
+        status: input.status ?? 'unpaid',
+      })
       if (error) throw error
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vehicle-fines', vehicleId] })
   })
 
   const updateFine = useMutation({
-    mutationFn: async ({ id, ...patch }: FineUpdatePayload & { id: string }) => {
+    mutationFn: async ({ id, ...patch }: { id: string } & FineUpdatePayload) => {
       const supabase = createClient()
-
-      // H-6: FineUpdatePayload is a dedicated type that excludes immutable
-      // server fields (vehicle_id, user_id, created_at, transaction_id).
-      // paid_at is set server-side based on status transition:
-      const payload: FineUpdatePayload = { ...patch }
-      if (patch.status === 'paid' && !payload.paid_at) {
-        payload.paid_at = new Date().toISOString()
-      } else if (patch.status && patch.status !== 'paid') {
-        payload.paid_at = null
-      }
-
       const { error } = await supabase
         .from('vehicle_fines')
-        .update(payload)
+        .update(patch)
         .eq('id', id)
       if (error) throw error
     },
@@ -598,10 +578,24 @@ export function useVehicleFines(vehicleId: string) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vehicle-fines', vehicleId] })
   })
 
+  // L-2: explicit return type on helper
+  const totals = useMemo(() => {
+    const fines = query.data ?? []
+    // M-1: amount_rub is string from Supabase
+    const unpaidTotal = fines
+      .filter(f => f.status === 'unpaid')
+      .reduce((sum, f) => sum + Number(f.amount_rub), 0)
+    const paidTotal = fines
+      .filter(f => f.status === 'paid')
+      .reduce((sum, f) => sum + Number(f.amount_rub), 0)
+    return { unpaidTotal, paidTotal, count: fines.length }
+  }, [query.data])
+
   return {
     fines: query.data ?? [],
+    totals,
     isLoading: query.isLoading,
-    createFine,
+    addFine,
     updateFine,
     deleteFine,
   }

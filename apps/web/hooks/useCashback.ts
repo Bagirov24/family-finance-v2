@@ -1,98 +1,81 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useFamily } from '@/hooks/useFamily'
-import { useUIStore } from '@/store/ui.store'
 
-// ─── Типы, отражающие реальную схему БД ───────────────────────────────────────
+export type CashbackCategoryKey =
+  | 'groceries'
+  | 'restaurants'
+  | 'transport'
+  | 'fuel'
+  | 'pharmacy'
+  | 'online'
+  | 'travel'
+  | 'utilities'
+  | 'entertainment'
+  | 'other'
 
-export interface CashbackCategory {
+export type CashbackCategory = {
   id: string
   card_id: string
-  category_key: string
+  category_key: CashbackCategoryKey
   percent: number
-  monthly_limit_rub: number          // дефолт 3000 в БД
-  spent_this_month_rub: number       // сколько уже использовано из лимита
-  period_month: number               // 1–12
-  period_year: number
-  valid_until: string | null         // ISO date «YYYY-MM-DD» | null = бессрочно
-  created_at: string
+  monthly_limit_rub: number | null
+  spent_this_month_rub: number | null
+  period_month: number | null
+  period_year: number | null
+  valid_until: string | null
+  created_at: string | null
 }
 
-export interface CashbackCard {
+export type CashbackCard = {
   id: string
   family_id: string
-  user_id: string
-  bank_name: string
-  card_name: string
-  cashback_type: 'rubles' | 'points' | 'miles'
-  points_to_rubles_rate: number
+  name: string
+  bank_name: string | null
   color: string | null
+  icon: string | null
+  account_id: string | null
   is_active: boolean
-  created_at: string
-  cashback_categories?: CashbackCategory[]
+  created_at: string | null
+  cashback_categories: CashbackCategory[]
 }
 
-export interface UpsertCategoryPayload {
-  card_id: string
-  category_key: string
-  percent: number
-  monthly_limit_rub: number
-  valid_until: string | null         // 'YYYY-MM-DD' | null
-  period_month: number
-  period_year: number
-}
-
-export interface CreateCardPayload {
-  bank_name: string
-  card_name: string
-  cashback_type: 'rubles' | 'points' | 'miles'
-  points_to_rubles_rate?: number
+export type CreateCashbackCardInput = {
+  name: string
+  bank_name?: string
   color?: string
+  icon?: string
+  account_id?: string
 }
 
-export interface UpdateCardPayload extends Partial<CreateCardPayload> {
-  is_active?: boolean
-}
-
-/** Запись в bestByCategory — лучшая активная ставка для категории */
-export interface BestCardEntry {
-  cardId: string
-  cardName: string
-  /** user_id владельца карты — для отображения «Карта мамы» в оптимизаторе */
-  ownerUserId: string
+export type CreateCashbackCategoryInput = {
+  card_id: string
+  category_key: CashbackCategoryKey
   percent: number
-  effectivePercent: number   // с учётом points_to_rubles_rate
-  monthlyLimitRub: number
-  remainingLimitRub: number
-  validUntil: string | null
+  monthly_limit_rub?: number | null
+  period_month?: number | null
+  period_year?: number | null
+  valid_until?: string | null
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-/** Возвращает true, если ставка ещё действует на указанную дату */
-export function isCategoryActive(cat: CashbackCategory, on = new Date()): boolean {
-  if (!cat.valid_until) return true
-  return new Date(cat.valid_until) >= on
+export type UpdateCashbackCategoryInput = {
+  id: string
+  percent?: number
+  monthly_limit_rub?: number | null
+  period_month?: number | null
+  period_year?: number | null
+  valid_until?: string | null
 }
-
-// ─── Хук ──────────────────────────────────────────────────────────────────────
 
 export function useCashbackCards() {
-  const queryClient = useQueryClient()
+  const qc = useQueryClient()
   const { family } = useFamily()
-  const userId = useUIStore(s => s.userId)
-  const now = new Date()
-  const currentMonth = now.getMonth() + 1
-  const currentYear = now.getFullYear()
 
-  // ── Query ──
-  const query = useQuery({
+  const query = useQuery<CashbackCard[]>({
     queryKey: ['cashback-cards', family?.id],
     enabled: !!family?.id,
-    staleTime: 5 * 60_000,
-    gcTime: 15 * 60_000,
     queryFn: async (): Promise<CashbackCard[]> => {
+      if (!family?.id) throw new Error('[useCashbackCards] family.id is required')
       const supabase = createClient()
       const { data, error } = await supabase
         .from('cashback_cards')
@@ -105,144 +88,92 @@ export function useCashbackCards() {
             valid_until, created_at
           )
         `)
-        .eq('family_id', family!.id)
+        .eq('family_id', family.id)
         .eq('is_active', true)
-        .order('created_at')
-
+        .order('created_at', { ascending: true })
       if (error) throw error
       return (data ?? []) as CashbackCard[]
-    },
-  })
-
-  /**
-   * Map: category_key → лучшая активная ставка среди всех карт семьи.
-   * Учитывает:
-   *   - valid_until (просроченные игнорируются)
-   *   - остаток лимита (spent < limit)
-   *   - points_to_rubles_rate для приведения к рублям
-   *   - ownerUserId — для подписи «Карта мамы» в оптимизаторе
-   */
-  const bestByCategory = useMemo(() => {
-    const cards = query.data ?? []
-    const map = new Map<string, BestCardEntry>()
-
-    for (const card of cards) {
-      const cats = card.cashback_categories ?? []
-      const rate = card.points_to_rubles_rate ?? 1
-
-      for (const cat of cats) {
-        // Пропускаем просроченные
-        if (!isCategoryActive(cat)) continue
-        // Пропускаем исчерпанные лимиты текущего месяца
-        const isCurrentPeriod =
-          cat.period_month === currentMonth && cat.period_year === currentYear
-        const remaining = isCurrentPeriod
-          ? cat.monthly_limit_rub - cat.spent_this_month_rub
-          : cat.monthly_limit_rub
-        if (remaining <= 0) continue
-
-        const effectivePercent = cat.percent * rate
-        const prev = map.get(cat.category_key)
-        if (!prev || effectivePercent > prev.effectivePercent) {
-          map.set(cat.category_key, {
-            cardId: card.id,
-            cardName: card.card_name,
-            ownerUserId: card.user_id,
-            percent: cat.percent,
-            effectivePercent,
-            monthlyLimitRub: cat.monthly_limit_rub,
-            remainingLimitRub: remaining,
-            validUntil: cat.valid_until,
-          })
-        }
-      }
     }
-
-    return map
-  }, [query.data, currentMonth, currentYear])
-
-  /** O(1) lookup. */
-  const getBestCard = (categoryKey: string): BestCardEntry | null =>
-    bestByCategory.get(categoryKey) ?? null
-
-  // ── Mutations ──
+  })
 
   const createCard = useMutation({
-    mutationFn: async (payload: CreateCardPayload): Promise<CashbackCard> => {
-      if (!family?.id) throw new Error('Family required')
-      if (!userId) throw new Error('User required')
+    mutationFn: async (input: CreateCashbackCardInput): Promise<void> => {
+      if (!family?.id) throw new Error('[createCard] family.id is required')
       const supabase = createClient()
-      const { data, error } = await supabase
+      const { error } = await supabase.from('cashback_cards').insert({
+        family_id: family.id,
+        name: input.name,
+        bank_name: input.bank_name ?? null,
+        color: input.color ?? null,
+        icon: input.icon ?? null,
+        account_id: input.account_id ?? null,
+        is_active: true,
+      })
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['cashback-cards', family?.id] })
+  })
+
+  const archiveCard = useMutation({
+    mutationFn: async (cardId: string): Promise<void> => {
+      const supabase = createClient()
+      const { error } = await supabase
         .from('cashback_cards')
-        .insert({ family_id: family.id, user_id: userId, ...payload })
-        .select()
-        .single()
+        .update({ is_active: false })
+        .eq('id', cardId)
       if (error) throw error
-      return data as CashbackCard
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cashback-cards', family?.id] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['cashback-cards', family?.id] })
   })
 
-  const updateCard = useMutation({
-    mutationFn: async ({ id, payload }: { id: string; payload: UpdateCardPayload }): Promise<CashbackCard> => {
+  const addCategory = useMutation({
+    mutationFn: async (input: CreateCashbackCategoryInput): Promise<void> => {
       const supabase = createClient()
-      const { data, error } = await supabase
-        .from('cashback_cards')
-        .update(payload)
-        .eq('id', id)
-        .select()
-        .single()
-      if (error) throw error
-      return data as CashbackCard
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cashback-cards', family?.id] }),
-  })
-
-  const deleteCard = useMutation({
-    mutationFn: async (id: string): Promise<void> => {
-      const supabase = createClient()
-      const { error } = await supabase.from('cashback_cards').delete().eq('id', id)
+      const { error } = await supabase.from('cashback_categories').insert({
+        card_id: input.card_id,
+        category_key: input.category_key,
+        percent: input.percent,
+        monthly_limit_rub: input.monthly_limit_rub ?? null,
+        period_month: input.period_month ?? null,
+        period_year: input.period_year ?? null,
+        valid_until: input.valid_until ?? null,
+      })
       if (error) throw error
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cashback-cards', family?.id] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['cashback-cards', family?.id] })
   })
 
-  /**
-   * Upsert категорийной ставки.
-   * Конфликт по (card_id, category_key, period_month, period_year) —
-   * обновляем percent, monthly_limit_rub, valid_until.
-   */
-  const upsertCategory = useMutation({
-    mutationFn: async (payload: UpsertCategoryPayload): Promise<void> => {
+  const updateCategory = useMutation({
+    mutationFn: async ({ id, ...patch }: UpdateCashbackCategoryInput): Promise<void> => {
       const supabase = createClient()
       const { error } = await supabase
         .from('cashback_categories')
-        .upsert(payload, {
-          onConflict: 'card_id,category_key,period_month,period_year',
-        })
+        .update(patch)
+        .eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cashback-cards', family?.id] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['cashback-cards', family?.id] })
   })
 
   const deleteCategory = useMutation({
-    mutationFn: async (id: string): Promise<void> => {
+    mutationFn: async (categoryId: string): Promise<void> => {
       const supabase = createClient()
-      const { error } = await supabase.from('cashback_categories').delete().eq('id', id)
+      const { error } = await supabase
+        .from('cashback_categories')
+        .delete()
+        .eq('id', categoryId)
       if (error) throw error
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cashback-cards', family?.id] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['cashback-cards', family?.id] })
   })
 
   return {
     cards: query.data ?? [],
     isLoading: query.isLoading,
-    getBestCard,
-    bestByCategory,
     createCard,
-    updateCard,
-    deleteCard,
-    upsertCategory,
+    archiveCard,
+    addCategory,
+    updateCategory,
     deleteCategory,
   }
 }
