@@ -44,7 +44,7 @@ function buildRows(card: CashbackCard): CategoryRow[] {
     id: c.id,
     category_key: c.category_key,
     percent: String(c.percent),
-    monthly_limit_rub: String(c.monthly_limit_rub),
+    monthly_limit_rub: String(c.monthly_limit_rub ?? 0),
     valid_until: c.valid_until ?? '',
   }))
 }
@@ -55,19 +55,19 @@ export function EditCashbackCardModal({ card }: Props) {
   const { updateCard, upsertCategory, deleteCategory } = useCashbackCards()
 
   const [open, setOpen] = useState(false)
-  const [cardName, setCardName] = useState(card.card_name)
-  const [bankName, setBankName] = useState(card.bank_name)
-  const [cashbackType, setCashbackType] = useState(card.cashback_type)
-  const [pointsRate, setPointsRate] = useState(String(card.points_to_rubles_rate))
+  const [cardName, setCardName] = useState(card.card_name ?? '')
+  const [bankName, setBankName] = useState(card.bank_name ?? '')
+  const [cashbackType, setCashbackType] = useState<'rubles' | 'points' | 'miles'>(card.cashback_type ?? 'rubles')
+  const [pointsRate, setPointsRate] = useState(String(card.points_to_rubles_rate ?? 1))
   const [color, setColor] = useState(card.color ?? DEFAULT_COLORS[0])
   const [rows, setRows] = useState<CategoryRow[]>([])
 
   const onOpenChange = (next: boolean) => {
     if (next) {
-      setCardName(card.card_name)
-      setBankName(card.bank_name)
-      setCashbackType(card.cashback_type)
-      setPointsRate(String(card.points_to_rubles_rate))
+      setCardName(card.card_name ?? '')
+      setBankName(card.bank_name ?? '')
+      setCashbackType(card.cashback_type ?? 'rubles')
+      setPointsRate(String(card.points_to_rubles_rate ?? 1))
       setColor(card.color ?? DEFAULT_COLORS[0])
       setRows(buildRows(card))
     }
@@ -120,7 +120,7 @@ export function EditCashbackCardModal({ card }: Props) {
       ops.push(
         upsertCategory.mutateAsync({
           card_id: card.id,
-          category_key: key,
+          category_key: key as import('@/hooks/useCashback').CashbackCategoryKey,
           percent: pct,
           monthly_limit_rub: Number(row.monthly_limit_rub) || 3000,
           valid_until: row.valid_until || null,
@@ -284,6 +284,7 @@ export function EditCashbackCardModal({ card }: Props) {
                       <Input
                         type="number"
                         min="0"
+
                         step="100"
                         placeholder="3000"
                         value={row.monthly_limit_rub}
