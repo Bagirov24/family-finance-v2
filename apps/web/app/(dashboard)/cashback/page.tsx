@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
-import { useCashbackCards } from '@/hooks/useCashback'
+import { useCashbackCards, isCategoryActive, type CashbackCard } from '@/hooks/useCashback'
 import { useCategories } from '@/hooks/useCategories'
 import { useFamily } from '@/hooks/useFamily'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -18,10 +18,41 @@ import { cn } from '@/lib/utils'
 // Кол-во категорий в оптимизаторе (top-N по частоте трат)
 const OPTIMIZER_TOP = 10
 
+/** Returns the card+category with the highest active cashback percent for a given category key */
+function getBestCardForCategory(cards: CashbackCard[], categoryKey: string) {
+  let best: {
+    name: string
+    percent: number
+    validUntil: string | null
+    monthlyLimitRub: number
+    remainingLimitRub: number
+  } | null = null
+
+  for (const card of cards) {
+    for (const cat of card.cashback_categories ?? []) {
+      if (cat.category_key !== categoryKey) continue
+      if (!isCategoryActive(cat)) continue
+      const percent = cat.percent ?? 0
+      if (!best || percent > best.percent) {
+        const limitRub = cat.monthly_limit_rub ?? 0
+        const spentRub = cat.spent_this_month_rub ?? 0
+        best = {
+          name: card.name,
+          percent,
+          validUntil: cat.valid_until ?? null,
+          monthlyLimitRub: limitRub,
+          remainingLimitRub: Math.max(0, limitRub - spentRub),
+        }
+      }
+    }
+  }
+  return best
+}
+
 export default function CashbackPage() {
   const t = useTranslations('cashback')
   const tcat = useTranslations('categories')
-  const { cards, isLoading, getBestCard, deleteCard } = useCashbackCards()
+  const { cards, isLoading, archiveCard } = useCashbackCards()
   const { categories } = useCategories()
   const { members } = useFamily()
 
@@ -95,9 +126,9 @@ export default function CashbackPage() {
                         type="button"
                         className="p-1 rounded-md opacity-70 hover:opacity-100 transition-opacity"
                         aria-label={t('delete_card')}
-                        disabled={deleteCard.isPending}
+                        disabled={archiveCard.isPending}
                         onClick={() => {
-                          if (confirm(t('delete_card_confirm'))) deleteCard.mutate(card.id)
+                          if (confirm(t('delete_card_confirm'))) archiveCard.mutate(card.id)
                         }}
                       >
                         <Trash2 size={14} />
@@ -105,15 +136,7 @@ export default function CashbackPage() {
                     </div>
 
                     <p className="text-xs opacity-80 mb-0.5">{card.bank_name}</p>
-                    <p className="font-bold text-base">{card.card_name}</p>
-                    <p className="text-xs mt-1 opacity-75">
-                      {t('card_type_label')}: {t(`cashback_type_${card.cashback_type}`)}
-                      {card.cashback_type !== 'rubles' && card.points_to_rubles_rate !== 1 && (
-                        <span className="ml-1 opacity-90">
-                          ({card.points_to_rubles_rate} ₽/{t('point')})
-                        </span>
-                      )}
-                    </p>
+                    <p className="font-bold text-base">{card.name}</p>
 
                     {/* Кнопка раскрытия категорий */}
                     <button
@@ -171,16 +194,7 @@ export default function CashbackPage() {
         </h2>
         <div className="rounded-2xl border bg-card p-4 space-y-1">
           {expenseCategories.slice(0, OPTIMIZER_TOP).map(cat => {
-            const best = getBestCard(cat.key)
-
-            // Формируем подпись: «Карта мамы • 5%» или «Тинькофф Black • 5%» (fallback)
-            let cardLabel = best?.cardName ?? ''
-            if (best) {
-              const ownerName = memberNameById.get(best.ownerUserId)
-              if (ownerName) {
-                cardLabel = t('owner_card_label', { owner: ownerName })
-              }
-            }
+            const best = getBestCardForCategory(cards, cat.key)
 
             return (
               <div
@@ -197,7 +211,7 @@ export default function CashbackPage() {
                 {best ? (
                   <div className="text-right shrink-0">
                     <span className="text-xs font-semibold text-primary">
-                      {cardLabel} • {best.percent}%
+                      {best.name} • {best.percent}%
                     </span>
                     {best.validUntil && (
                       <p className="text-[10px] text-muted-foreground">
