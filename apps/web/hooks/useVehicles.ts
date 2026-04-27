@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, UseMutationResult } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useUIStore } from '@/store/ui.store'
 import { useFamily } from '@/hooks/useFamily'
@@ -81,6 +81,16 @@ export type ServiceItem = {
   created_at: string | null
 }
 
+export type ServiceItemInput = {
+  vehicle_id: string
+  name_key: ServiceItemNameKey
+  last_replaced_date?: string | null
+  last_replaced_mileage?: number | null
+  replace_every_km?: number | null
+  replace_every_months?: number | null
+  notes?: string | null
+}
+
 // M-1: same as FuelEntry — amount_rub comes as string from Supabase numeric column
 export type VehicleExpense = {
   id: string
@@ -125,16 +135,6 @@ export type VehicleUpdateInput = {
   license_plate?: string | null
   vin?: string | null
   current_mileage?: number
-}
-
-type ServiceItemInput = {
-  vehicle_id: string
-  name_key: ServiceItemNameKey
-  last_replaced_date?: string | null
-  last_replaced_mileage?: number | null
-  replace_every_km?: number | null
-  replace_every_months?: number | null
-  notes?: string | null
 }
 
 type FineInput = {
@@ -389,7 +389,8 @@ export function useServiceItems(vehicleId: string) {
     }
   })
 
-  const upsertServiceItem = useMutation({
+  // createServiceItem — inserts a new service item (upserts on vehicle_id+name_key conflict)
+  const createServiceItem = useMutation({
     mutationFn: async (payload: ServiceItemInput) => {
       const supabase = createClient()
       const nextDueDate = calcNextDueDate(
@@ -397,12 +398,26 @@ export function useServiceItems(vehicleId: string) {
         payload.replace_every_months
       )
       const { error } = await supabase.from('service_items').upsert(
-        {
-          ...payload,
-          next_due_date: nextDueDate,
-        },
+        { ...payload, next_due_date: nextDueDate },
         { onConflict: 'vehicle_id,name_key' }
       )
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['service-items', vehicleId] })
+  })
+
+  // updateServiceItem — updates an existing service item by id
+  const updateServiceItem = useMutation({
+    mutationFn: async ({ id, ...payload }: ServiceItemInput & { id: string }) => {
+      const supabase = createClient()
+      const nextDueDate = calcNextDueDate(
+        payload.last_replaced_date,
+        payload.replace_every_months
+      )
+      const { error } = await supabase
+        .from('service_items')
+        .update({ ...payload, next_due_date: nextDueDate })
+        .eq('id', id)
       if (error) throw error
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['service-items', vehicleId] })
@@ -421,10 +436,16 @@ export function useServiceItems(vehicleId: string) {
   })
 
   return {
+    // Expose as `items` for consumers that destructure with alias,
+    // AND as `serviceItems` for components that use it directly.
+    items: query.data ?? [],
     serviceItems: query.data ?? [],
     isLoading: query.isLoading,
-    upsertServiceItem,
+    createServiceItem,
+    updateServiceItem,
     deleteServiceItem,
+    // Keep upsertServiceItem as a convenience alias so any other callers don't break
+    upsertServiceItem: createServiceItem,
   }
 }
 
@@ -496,20 +517,24 @@ export function useVehicleExpenses(vehicleId: string) {
   })
 
   // L-2: explicit return type on helper — useMemo provides memoization
-  const totals = useMemo(() => {
-    const expenses = query.data ?? []
-    const byCategory = expenses.reduce<Record<string, number>>((acc, e) => {
+  const computedTotals = useMemo(() => {
+    const data = query.data ?? []
+    const totalByCategory = data.reduce<Record<string, number>>((acc, e) => {
       // M-1: amount_rub is string from Supabase, use Number() to convert
       acc[e.category] = (acc[e.category] ?? 0) + Number(e.amount_rub)
       return acc
     }, {})
-    const total = Object.values(byCategory).reduce((a, b) => a + b, 0)
-    return { byCategory, total }
+    const total = Object.values(totalByCategory).reduce((a, b) => a + b, 0)
+    return { totalByCategory, total }
   }, [query.data])
 
   return {
     expenses: query.data ?? [],
-    totals,
+    // Flat fields for easy destructuring in vehicle page
+    totalByCategory: computedTotals.totalByCategory,
+    total: computedTotals.total,
+    // Also expose as `totals` object for any other consumers
+    totals: computedTotals,
     isLoading: query.isLoading,
     addExpense,
     deleteExpense,
@@ -534,7 +559,7 @@ export function useVehicleFines(vehicleId: string) {
     }
   })
 
-  const addFine = useMutation({
+  const createFine = useMutation({
     mutationFn: async (input: FineInput) => {
       const supabase = createClient()
       const { error } = await supabase.from('vehicle_fines').insert({
@@ -595,7 +620,9 @@ export function useVehicleFines(vehicleId: string) {
     fines: query.data ?? [],
     totals,
     isLoading: query.isLoading,
-    addFine,
+    // createFine is the canonical name; addFine is kept as alias for backward compat
+    createFine,
+    addFine: createFine,
     updateFine,
     deleteFine,
   }

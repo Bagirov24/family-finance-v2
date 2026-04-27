@@ -67,6 +67,16 @@ export type UpdateCashbackCategoryInput = {
   valid_until?: string | null
 }
 
+/**
+ * Returns true if the cashback category is currently active:
+ * - No valid_until date set (permanent), OR
+ * - valid_until is in the future (not yet expired)
+ */
+export function isCategoryActive(cat: Pick<CashbackCategory, 'valid_until'>): boolean {
+  if (!cat.valid_until) return true
+  return new Date(cat.valid_until) > new Date()
+}
+
 export function useCashbackCards() {
   const qc = useQueryClient()
   const { family } = useFamily()
