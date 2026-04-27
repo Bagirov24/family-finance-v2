@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { useCashbackCards, type UpsertCategoryPayload } from '@/hooks/useCashback'
+import { useCashbackCards, type UpsertCategoryPayload, type CashbackCategoryKey } from '@/hooks/useCashback'
 import { useCategories } from '@/hooks/useCategories'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -28,7 +28,7 @@ export function AddCategoryModal({ cardId, open, onClose }: Props) {
 
   const now = new Date()
 
-  const [categoryKey, setCategoryKey] = useState('')
+  const [categoryKey, setCategoryKey] = useState<CashbackCategoryKey | ''>('')
   const [percent, setPercent] = useState('')
   const [limit, setLimit] = useState('3000')
   const [validUntil, setValidUntil] = useState('')
@@ -66,7 +66,10 @@ export function AddCategoryModal({ cardId, open, onClose }: Props) {
           {/* Категория */}
           <div className="space-y-1">
             <Label>{t('cat_category')}</Label>
-            <Select value={categoryKey} onValueChange={setCategoryKey}>
+            <Select
+              value={categoryKey}
+              onValueChange={v => setCategoryKey(v as CashbackCategoryKey)}
+            >
               <SelectTrigger>
                 <SelectValue placeholder={t('cat_category_placeholder')} />
               </SelectTrigger>
