@@ -40,7 +40,7 @@ export function CategoryRateRow({ cat, categoryLabel, categoryIcon }: Props) {
 
   const [editing, setEditing] = useState(false)
   const [percent, setPercent] = useState(String(cat.percent))
-  const [limit, setLimit] = useState(String(cat.monthly_limit_rub))
+  const [limit, setLimit] = useState(String(cat.monthly_limit_rub ?? 0))
   const [validUntil, setValidUntil] = useState(cat.valid_until ?? '')
 
   const expired = isExpired(cat.valid_until)
@@ -49,13 +49,14 @@ export function CategoryRateRow({ cat, categoryLabel, categoryIcon }: Props) {
 
   const now = new Date()
   const isCurrentPeriod = cat.period_month === now.getMonth() + 1 && cat.period_year === now.getFullYear()
-  // monthly_limit_rub is nullable in the DB schema — default to 0 for arithmetic
+  // Both fields are nullable in the DB schema — default to 0 for all arithmetic
   const limitRub = cat.monthly_limit_rub ?? 0
+  const spentRub = cat.spent_this_month_rub ?? 0
   const remaining = isCurrentPeriod
-    ? limitRub - cat.spent_this_month_rub
+    ? limitRub - spentRub
     : limitRub
   const usedPct = isCurrentPeriod && limitRub > 0
-    ? Math.min(100, Math.round((cat.spent_this_month_rub / limitRub) * 100))
+    ? Math.min(100, Math.round((spentRub / limitRub) * 100))
     : 0
 
   async function handleSave() {
@@ -74,7 +75,7 @@ export function CategoryRateRow({ cat, categoryLabel, categoryIcon }: Props) {
 
   function handleCancel() {
     setPercent(String(cat.percent))
-    setLimit(String(cat.monthly_limit_rub))
+    setLimit(String(cat.monthly_limit_rub ?? 0))
     setValidUntil(cat.valid_until ?? '')
     setEditing(false)
   }
@@ -175,7 +176,7 @@ export function CategoryRateRow({ cat, categoryLabel, categoryIcon }: Props) {
       {!editing && isCurrentPeriod && limitRub > 0 && (
         <div className="space-y-0.5">
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>{t('cat_spent')}: {cat.spent_this_month_rub.toLocaleString('ru-RU')} ₽</span>
+            <span>{t('cat_spent')}: {spentRub.toLocaleString('ru-RU')} ₽</span>
             <span>{t('cat_remaining')}: {remaining.toLocaleString('ru-RU')} ₽</span>
           </div>
           <div className="h-1.5 rounded-full bg-muted overflow-hidden">
