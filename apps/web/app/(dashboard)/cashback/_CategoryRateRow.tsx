@@ -49,11 +49,13 @@ export function CategoryRateRow({ cat, categoryLabel, categoryIcon }: Props) {
 
   const now = new Date()
   const isCurrentPeriod = cat.period_month === now.getMonth() + 1 && cat.period_year === now.getFullYear()
+  // monthly_limit_rub is nullable in the DB schema — default to 0 for arithmetic
+  const limitRub = cat.monthly_limit_rub ?? 0
   const remaining = isCurrentPeriod
-    ? cat.monthly_limit_rub - cat.spent_this_month_rub
-    : cat.monthly_limit_rub
-  const usedPct = isCurrentPeriod && cat.monthly_limit_rub > 0
-    ? Math.min(100, Math.round((cat.spent_this_month_rub / cat.monthly_limit_rub) * 100))
+    ? limitRub - cat.spent_this_month_rub
+    : limitRub
+  const usedPct = isCurrentPeriod && limitRub > 0
+    ? Math.min(100, Math.round((cat.spent_this_month_rub / limitRub) * 100))
     : 0
 
   async function handleSave() {
@@ -170,7 +172,7 @@ export function CategoryRateRow({ cat, categoryLabel, categoryIcon }: Props) {
       )}
 
       {/* Прогресс лимита */}
-      {!editing && isCurrentPeriod && cat.monthly_limit_rub > 0 && (
+      {!editing && isCurrentPeriod && limitRub > 0 && (
         <div className="space-y-0.5">
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>{t('cat_spent')}: {cat.spent_this_month_rub.toLocaleString('ru-RU')} ₽</span>
