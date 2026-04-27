@@ -31,21 +31,39 @@ export type CashbackCard = {
   id: string
   family_id: string
   name: string
+  card_name: string
   bank_name: string | null
   color: string | null
   icon: string | null
   account_id: string | null
   is_active: boolean
+  cashback_type: 'rubles' | 'points' | 'miles'
+  points_to_rubles_rate: number
   created_at: string | null
   cashback_categories: CashbackCategory[]
 }
 
 export type CreateCashbackCardInput = {
-  name: string
+  name?: string
+  card_name: string
   bank_name?: string
   color?: string
   icon?: string
   account_id?: string
+  cashback_type?: 'rubles' | 'points' | 'miles'
+  points_to_rubles_rate?: number
+}
+
+export type UpdateCashbackCardInput = {
+  id: string
+  payload: {
+    card_name?: string
+    bank_name?: string
+    color?: string
+    icon?: string
+    cashback_type?: 'rubles' | 'points' | 'miles'
+    points_to_rubles_rate?: number
+  }
 }
 
 export type CreateCashbackCategoryInput = {
@@ -118,13 +136,31 @@ export function useCashbackCards() {
       const supabase = createClient()
       const { error } = await supabase.from('cashback_cards').insert({
         family_id: family.id,
-        name: input.name,
+        card_name: input.card_name,
+        name: input.name ?? input.card_name,
         bank_name: input.bank_name ?? null,
         color: input.color ?? null,
         icon: input.icon ?? null,
         account_id: input.account_id ?? null,
         is_active: true,
+        cashback_type: input.cashback_type ?? 'rubles',
+        points_to_rubles_rate: input.points_to_rubles_rate ?? 1,
       })
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['cashback-cards', family?.id] })
+  })
+
+  const updateCard = useMutation({
+    mutationFn: async ({ id, payload }: UpdateCashbackCardInput): Promise<void> => {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('cashback_cards')
+        .update({
+          ...payload,
+          name: payload.card_name ?? undefined,
+        })
+        .eq('id', id)
       if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['cashback-cards', family?.id] })
@@ -162,7 +198,6 @@ export function useCashbackCards() {
   /**
    * upsertCategory — inserts or updates a category for a card.
    * Conflicts on (card_id, category_key) are resolved by updating all fields.
-   * Used by _AddCategoryModal.tsx via UpsertCategoryPayload.
    */
   const upsertCategory = useMutation({
     mutationFn: async (input: UpsertCategoryPayload): Promise<void> => {
@@ -212,6 +247,7 @@ export function useCashbackCards() {
     cards: query.data ?? [],
     isLoading: query.isLoading,
     createCard,
+    updateCard,
     archiveCard,
     addCategory,
     upsertCategory,
