@@ -1,19 +1,19 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useUIStore } from '@/store/ui.store'
+import type { Database } from '@/types/supabase'
+
+export type Notification = Database['public']['Tables']['notifications']['Row']
 
 export function useNotifications() {
   const queryClient = useQueryClient()
   const userId = useUIStore(s => s.userId)
 
-  const query = useQuery({
+  const query = useQuery<Notification[]>({
     queryKey: ['notifications', userId],
     enabled: !!userId,
     staleTime: 30_000,
-    queryFn: async () => {
-      // M-7: type guard replaces userId! assertion.
-      // enabled: !!userId prevents execution when nullish, but TypeScript
-      // cannot verify that invariant — the guard makes it explicit.
+    queryFn: async (): Promise<Notification[]> => {
       if (!userId) throw new Error('[useNotifications] userId is required')
       const supabase = createClient()
       const { data, error } = await supabase
@@ -23,7 +23,7 @@ export function useNotifications() {
         .order('created_at', { ascending: false })
         .limit(50)
       if (error) throw error
-      return data
+      return (data ?? []) as Notification[]
     },
   })
 
@@ -31,8 +31,6 @@ export function useNotifications() {
 
   const markRead = useMutation({
     mutationFn: async (id: string) => {
-      // M-7: guard instead of userId! — mutation can theoretically be called
-      // before userId is set (e.g. optimistic UI race); guard surfaces this clearly.
       if (!userId) throw new Error('[useNotifications.markRead] userId is required')
       const supabase = createClient()
       const { error } = await supabase
