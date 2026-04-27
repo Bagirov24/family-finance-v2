@@ -1,1 +1,1 @@
-${content_placeholder}
+CONTENT_WILL_BE_INJECTED
