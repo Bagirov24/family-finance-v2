@@ -68,6 +68,12 @@ export type UpdateCashbackCategoryInput = {
 }
 
 /**
+ * Payload for upsertCategory — same shape as CreateCashbackCategoryInput.
+ * Upserts on (card_id, category_key) conflict.
+ */
+export type UpsertCategoryPayload = CreateCashbackCategoryInput
+
+/**
  * Returns true if the cashback category is currently active:
  * - No valid_until date set (permanent), OR
  * - valid_until is in the future (not yet expired)
@@ -153,6 +159,31 @@ export function useCashbackCards() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['cashback-cards', family?.id] })
   })
 
+  /**
+   * upsertCategory — inserts or updates a category for a card.
+   * Conflicts on (card_id, category_key) are resolved by updating all fields.
+   * Used by _AddCategoryModal.tsx via UpsertCategoryPayload.
+   */
+  const upsertCategory = useMutation({
+    mutationFn: async (input: UpsertCategoryPayload): Promise<void> => {
+      const supabase = createClient()
+      const { error } = await supabase.from('cashback_categories').upsert(
+        {
+          card_id: input.card_id,
+          category_key: input.category_key,
+          percent: input.percent,
+          monthly_limit_rub: input.monthly_limit_rub ?? null,
+          period_month: input.period_month ?? null,
+          period_year: input.period_year ?? null,
+          valid_until: input.valid_until ?? null,
+        },
+        { onConflict: 'card_id,category_key' }
+      )
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['cashback-cards', family?.id] })
+  })
+
   const updateCategory = useMutation({
     mutationFn: async ({ id, ...patch }: UpdateCashbackCategoryInput): Promise<void> => {
       const supabase = createClient()
@@ -183,6 +214,7 @@ export function useCashbackCards() {
     createCard,
     archiveCard,
     addCategory,
+    upsertCategory,
     updateCategory,
     deleteCategory,
   }
