@@ -81,6 +81,7 @@ export function useTransfers() {
 
   const createTransfer = useMutation({
     mutationFn: async (payload: CreateTransferInput): Promise<void> => {
+      if (!userId) throw new Error('[createTransfer] userId is required')
       const supabase = createClient()
       const { error } = await supabase.from('member_transfers').insert({
         ...payload,
@@ -96,6 +97,7 @@ export function useTransfers() {
 
   const createRequest = useMutation({
     mutationFn: async (payload: CreateRequestInput): Promise<void> => {
+      if (!userId) throw new Error('[createRequest] userId is required')
       const supabase = createClient()
       const { error } = await supabase.from('member_transfers').insert({
         family_id: payload.family_id,
