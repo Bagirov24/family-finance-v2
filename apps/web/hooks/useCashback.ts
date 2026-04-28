@@ -30,12 +30,19 @@ export type CashbackCategory = {
 export type CashbackCard = {
   id: string
   family_id: string
-  name: string
+  /**
+   * Display name for the card. Column exists in the DB but is not yet
+   * reflected in the generated supabase.ts types (stale). Marked optional
+   * until types are regenerated after the next `supabase gen types` run.
+   */
+  name?: string
   card_name: string
   bank_name: string | null
   color: string | null
-  icon: string | null
-  account_id: string | null
+  /** Icon identifier. Optional - see note on `name` above. */
+  icon?: string | null
+  /** Linked account id. Optional - see note on `name` above. */
+  account_id?: string | null
   is_active: boolean
   cashback_type: 'rubles' | 'points' | 'miles'
   points_to_rubles_rate: number
@@ -86,7 +93,7 @@ export type UpdateCashbackCategoryInput = {
 }
 
 /**
- * Payload for upsertCategory — same shape as CreateCashbackCategoryInput.
+ * Payload for upsertCategory - same shape as CreateCashbackCategoryInput.
  * Upserts on (card_id, category_key) conflict.
  */
 export type UpsertCategoryPayload = CreateCashbackCategoryInput
@@ -126,7 +133,10 @@ export function useCashbackCards() {
         .eq('is_active', true)
         .order('created_at', { ascending: true })
       if (error) throw error
-      return (data ?? []) as CashbackCard[]
+      // `as unknown` is intentional: supabase.ts types are stale and do not
+      // yet include name/icon/account_id columns. Safe to cast - the select
+      // query fetches all columns via `*` so the data is correct at runtime.
+      return (data ?? []) as unknown as CashbackCard[]
     }
   })
 
@@ -196,7 +206,7 @@ export function useCashbackCards() {
   })
 
   /**
-   * upsertCategory — inserts or updates a category for a card.
+   * upsertCategory - inserts or updates a category for a card.
    * Conflicts on (card_id, category_key) are resolved by updating all fields.
    */
   const upsertCategory = useMutation({
