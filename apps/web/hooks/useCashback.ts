@@ -30,18 +30,15 @@ export type CashbackCategory = {
 export type CashbackCard = {
   id: string
   family_id: string
-  /**
-   * Display name for the card. Column exists in the DB but is not yet
-   * reflected in the generated supabase.ts types (stale). Marked optional
-   * until types are regenerated after the next `supabase gen types` run.
-   */
-  name?: string
+  // name, icon, account_id exist in the DB but are not yet reflected in the
+  // generated supabase.ts types (types lag behind the actual schema).
+  // Marked optional so the interface compiles against both the current
+  // generated types and the real data shape from Supabase.
+  name?: string | null
   card_name: string
   bank_name: string | null
   color: string | null
-  /** Icon identifier. Optional - see note on `name` above. */
   icon?: string | null
-  /** Linked account id. Optional - see note on `name` above. */
   account_id?: string | null
   is_active: boolean
   cashback_type: 'rubles' | 'points' | 'miles'
@@ -93,7 +90,7 @@ export type UpdateCashbackCategoryInput = {
 }
 
 /**
- * Payload for upsertCategory - same shape as CreateCashbackCategoryInput.
+ * Payload for upsertCategory — same shape as CreateCashbackCategoryInput.
  * Upserts on (card_id, category_key) conflict.
  */
 export type UpsertCategoryPayload = CreateCashbackCategoryInput
@@ -133,9 +130,10 @@ export function useCashbackCards() {
         .eq('is_active', true)
         .order('created_at', { ascending: true })
       if (error) throw error
-      // `as unknown` is intentional: supabase.ts types are stale and do not
-      // yet include name/icon/account_id columns. Safe to cast - the select
-      // query fetches all columns via `*` so the data is correct at runtime.
+      // Double cast required: generated supabase.ts types do not yet include
+      // name/icon/account_id columns and Supabase infers cashback_categories
+      // as SelectQueryError when the join column list differs from the schema.
+      // Safe: runtime data shape matches CashbackCard.
       return (data ?? []) as unknown as CashbackCard[]
     }
   })
@@ -206,7 +204,7 @@ export function useCashbackCards() {
   })
 
   /**
-   * upsertCategory - inserts or updates a category for a card.
+   * upsertCategory — inserts or updates a category for a card.
    * Conflicts on (card_id, category_key) are resolved by updating all fields.
    */
   const upsertCategory = useMutation({
