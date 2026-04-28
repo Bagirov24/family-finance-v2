@@ -171,12 +171,14 @@ export function useCashbackCards() {
   const updateCard = useMutation({
     mutationFn: async ({ id, payload }: UpdateCashbackCardInput): Promise<void> => {
       const supabase = createClient()
-      // `name` is absent from the generated supabase.ts schema — omit it from
-      // the typed .update() call to avoid RejectExcessProperties errors.
-      // card_name is the canonical column; keep it as-is.
+      // `icon` (and potentially other extra fields) exist in the DB but are
+      // absent from the generated supabase.ts schema — Supabase's
+      // RejectExcessProperties maps them to `never`. Cast to bypass until
+      // supabase.ts is regenerated.
       const { error } = await supabase
         .from('cashback_cards')
-        .update(payload)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .update(payload as any)
         .eq('id', id)
       if (error) throw error
     },
