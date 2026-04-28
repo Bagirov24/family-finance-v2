@@ -31,7 +31,7 @@ export function QuickAdd() {
   const wrapperRef = useRef<HTMLDivElement>(null)
 
   const { accounts } = useAccounts()
-  const { data: categories = [] } = useCategories(type)
+  const { categories = [] } = useCategories(type)
   const { mutateAsync, isPending } = useCreateTransaction()
 
   // Авто-фокус на поле суммы при раскрытии
