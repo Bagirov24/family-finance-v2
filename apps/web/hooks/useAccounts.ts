@@ -121,10 +121,8 @@ export function useUpdateAccount() {
   const { family } = useFamily()
 
   return useMutation({
-    // H-8: UpdateAccountInput instead of Partial<Account>.
-    // This ensures readonly fields (owner_user_id, family_id, created_at, balance)
-    // can never be passed to the UPDATE statement.
     mutationFn: async ({ id, ...patch }: UpdateAccountInput) => {
+      if (!userId) throw new Error('[useUpdateAccount] userId is required')
       const supabase = createClient()
       let query = supabase
         .from('accounts')
@@ -152,6 +150,7 @@ export function useArchiveAccount() {
 
   return useMutation({
     mutationFn: async (id: string) => {
+      if (!userId) throw new Error('[useArchiveAccount] userId is required')
       const supabase = createClient()
       let query = supabase
         .from('accounts')
