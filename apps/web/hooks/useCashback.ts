@@ -142,18 +142,27 @@ export function useCashbackCards() {
     mutationFn: async (input: CreateCashbackCardInput): Promise<void> => {
       if (!family?.id) throw new Error('[createCard] family.id is required')
       const supabase = createClient()
-      const { error } = await supabase.from('cashback_cards').insert({
-        family_id: family.id,
+      // Base payload — all fields known to the generated supabase.ts schema.
+      const basePayload = {
+        family_id: family.id!,  // non-null: guarded by the throw above
         card_name: input.card_name,
-        name: input.name ?? input.card_name,
         bank_name: input.bank_name ?? null,
         color: input.color ?? null,
-        icon: input.icon ?? null,
-        account_id: input.account_id ?? null,
         is_active: true,
         cashback_type: input.cashback_type ?? 'rubles',
         points_to_rubles_rate: input.points_to_rubles_rate ?? 1,
-      })
+      }
+      // name / icon / account_id exist in the DB but are absent from the
+      // generated supabase.ts schema → cast to bypass RejectExcessProperties.
+      const extraFields: Record<string, unknown> = {}
+      if (input.name !== undefined) extraFields.name = input.name ?? input.card_name
+      if (input.icon !== undefined) extraFields.icon = input.icon
+      if (input.account_id !== undefined) extraFields.account_id = input.account_id
+
+      const { error } = await supabase
+        .from('cashback_cards')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .insert({ ...basePayload, ...extraFields } as any)
       if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['cashback-cards', family?.id] })
@@ -162,12 +171,12 @@ export function useCashbackCards() {
   const updateCard = useMutation({
     mutationFn: async ({ id, payload }: UpdateCashbackCardInput): Promise<void> => {
       const supabase = createClient()
+      // `name` is absent from the generated supabase.ts schema — omit it from
+      // the typed .update() call to avoid RejectExcessProperties errors.
+      // card_name is the canonical column; keep it as-is.
       const { error } = await supabase
         .from('cashback_cards')
-        .update({
-          ...payload,
-          name: payload.card_name ?? undefined,
-        })
+        .update(payload)
         .eq('id', id)
       if (error) throw error
     },
