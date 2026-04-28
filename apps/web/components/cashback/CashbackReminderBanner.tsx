@@ -30,7 +30,8 @@ export function CashbackReminderBanner() {
         if (!isCategoryActive(cat)) continue
         const d = daysUntil(cat.valid_until)
         if (d >= 0 && d <= 7) {
-          result.push({ cardName: card.name, categoryKey: cat.category_key, daysLeft: d })
+          // card.name is optional — fall back to card_name which is always present
+          result.push({ cardName: card.name ?? card.card_name, categoryKey: cat.category_key, daysLeft: d })
         }
       }
     }
