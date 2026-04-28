@@ -198,6 +198,8 @@ export function useDeleteTransaction() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['transactions', userId] })
       qc.invalidateQueries({ queryKey: ['accounts'] })
+      // Deleting a transaction changes period income/expense totals
+      qc.invalidateQueries({ queryKey: ['monthly-summary'] })
     },
   })
 }
@@ -220,6 +222,9 @@ export function useUpdateTransaction() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['transactions', userId] })
+      // Updating amount or type changes account balance and period totals
+      qc.invalidateQueries({ queryKey: ['accounts'] })
+      qc.invalidateQueries({ queryKey: ['monthly-summary'] })
     },
   })
 }
