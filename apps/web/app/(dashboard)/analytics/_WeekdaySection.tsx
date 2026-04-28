@@ -2,6 +2,7 @@
 import { useTranslations } from 'next-intl'
 import { useFamily } from '@/hooks/useFamily'
 import { useWeekdaySpending } from '@/hooks/useAnalytics'
+import { useUIStore } from '@/store/ui.store'
 import { formatAmount } from '@/lib/formatters'
 import { Skeleton } from '@/components/ui/skeleton'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
@@ -12,14 +13,16 @@ export function AnalyticsWeekdaySection() {
   const t = useTranslations('analytics')
   const tc = useTranslations('common')
   const { family } = useFamily()
+  const month = useUIStore(s => s.activePeriod.month)
+  const year = useUIStore(s => s.activePeriod.year)
 
-  const { data: weekday, isLoading } = useWeekdaySpending(family?.id ?? '')
+  const { data: weekday, isLoading } = useWeekdaySpending(family?.id ?? '', month, year)
 
   const weekdayData = Array.from({ length: 7 }, (_, i) => {
-    const entry = (weekday ?? []).find(w => w.weekday === i)
+    const entry = (weekday ?? []).find(w => w.dow === i)
     return {
       name: WEEKDAY_KEYS_RU[i],
-      avg: entry ? Math.round(entry.avg_amount) : 0,
+      avg: entry ? Math.round(entry.total) : 0,
     }
   })
 
