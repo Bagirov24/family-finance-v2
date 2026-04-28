@@ -48,9 +48,15 @@ export function useMonthlySummary(
   })
 }
 
-export function useWeekdaySpending(familyId: string) {
+/**
+ * Returns average spending by weekday for the given family, month and year.
+ * The DB function get_weekday_spending requires all three params:
+ * { p_family_id, p_month, p_year } — month/year are included in the query
+ * key so the cache is correctly scoped per period.
+ */
+export function useWeekdaySpending(familyId: string, month: number, year: number) {
   return useQuery({
-    queryKey: ['weekday-spending', familyId],
+    queryKey: ['weekday-spending', familyId, month, year],
     enabled: !!familyId,
     staleTime: 10 * 60_000,
     gcTime: 60 * 60_000,
@@ -58,9 +64,11 @@ export function useWeekdaySpending(familyId: string) {
       const supabase = createClient()
       const { data, error } = await supabase.rpc('get_weekday_spending', {
         p_family_id: familyId,
+        p_month: month,
+        p_year: year,
       })
       if (error) throw error
-      return data as Array<{ weekday: number; avg_amount: number }>
+      return data as Array<{ dow: number; day_name: string; total: number }>
     },
   })
 }
