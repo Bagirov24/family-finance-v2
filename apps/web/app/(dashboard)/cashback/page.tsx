@@ -37,7 +37,8 @@ function getBestCardForCategory(cards: CashbackCard[], categoryKey: string) {
         const limitRub = cat.monthly_limit_rub ?? 0
         const spentRub = cat.spent_this_month_rub ?? 0
         best = {
-          name: card.name,
+          // card.name is optional (nullable) — fall back to card_name which is always present
+          name: card.name ?? card.card_name,
           percent,
           validUntil: cat.valid_until ?? null,
           monthlyLimitRub: limitRub,
@@ -136,7 +137,7 @@ export default function CashbackPage() {
                     </div>
 
                     <p className="text-xs opacity-80 mb-0.5">{card.bank_name}</p>
-                    <p className="font-bold text-base">{card.name}</p>
+                    <p className="font-bold text-base">{card.name ?? card.card_name}</p>
 
                     {/* Кнопка раскрытия категорий */}
                     <button
