@@ -170,6 +170,7 @@ export type Database = {
           period_month: number
           period_year: number
           spent_this_month_rub: number
+          valid_until: string | null
         }
         Insert: {
           card_id?: string | null
@@ -181,6 +182,7 @@ export type Database = {
           period_month: number
           period_year: number
           spent_this_month_rub?: number
+          valid_until?: string | null
         }
         Update: {
           card_id?: string | null
@@ -192,6 +194,7 @@ export type Database = {
           period_month?: number
           period_year?: number
           spent_this_month_rub?: number
+          valid_until?: string | null
         }
         Relationships: [
           {
@@ -526,44 +529,67 @@ export type Database = {
           confirmed_at: string | null
           created_at: string | null
           date: string
+          expires_at: string | null
           family_id: string
           from_account_id: string | null
           from_user_id: string
           id: string
           note: string | null
-          status: TransferStatus
+          recurring_transfer_id: string | null
+          status: string
           to_account_id: string | null
           to_user_id: string
+          transfer_type: string
         }
         Insert: {
           amount: number
           confirmed_at?: string | null
           created_at?: string | null
           date?: string
+          expires_at?: string | null
           family_id: string
           from_account_id?: string | null
           from_user_id: string
           id?: string
           note?: string | null
-          status?: TransferStatus
+          recurring_transfer_id?: string | null
+          status?: string
           to_account_id?: string | null
           to_user_id: string
+          transfer_type?: string
         }
         Update: {
           amount?: number
           confirmed_at?: string | null
           created_at?: string | null
           date?: string
+          expires_at?: string | null
           family_id?: string
           from_account_id?: string | null
           from_user_id?: string
           id?: string
           note?: string | null
-          status?: TransferStatus
+          recurring_transfer_id?: string | null
+          status?: string
           to_account_id?: string | null
           to_user_id?: string
+          transfer_type?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_member_transfers_from_user"
+            columns: ["from_user_id"]
+            isOneToOne: false
+            referencedRelation: "family_members"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "fk_member_transfers_to_user"
+            columns: ["to_user_id"]
+            isOneToOne: false
+            referencedRelation: "family_members"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "member_transfers_family_id_fkey"
             columns: ["family_id"]
@@ -579,7 +605,189 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "member_transfers_recurring_transfer_id_fkey"
+            columns: ["recurring_transfer_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_transfers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "member_transfers_to_account_id_fkey"
+            columns: ["to_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string | null
+          family_id: string | null
+          id: string
+          is_read: boolean
+          title: string
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string | null
+          family_id?: string | null
+          id?: string
+          is_read?: boolean
+          title: string
+          type?: string
+          user_id?: string | null
+        }
+        Update: {
+          body?: string | null
+          created_at?: string | null
+          family_id?: string | null
+          id?: string
+          is_read?: boolean
+          title?: string
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recurring_transactions: {
+        Row: {
+          account_id: string | null
+          amount: number
+          category_id: string | null
+          created_at: string | null
+          family_id: string | null
+          frequency: string
+          id: string
+          is_active: boolean | null
+          next_date: string
+          note: string | null
+          type: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount: number
+          category_id?: string | null
+          created_at?: string | null
+          family_id?: string | null
+          frequency: string
+          id?: string
+          is_active?: boolean | null
+          next_date: string
+          note?: string | null
+          type: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          category_id?: string | null
+          created_at?: string | null
+          family_id?: string | null
+          frequency?: string
+          id?: string
+          is_active?: boolean | null
+          next_date?: string
+          note?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_transactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_transactions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_transactions_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recurring_transfers: {
+        Row: {
+          amount: number
+          created_at: string
+          family_id: string
+          from_account_id: string | null
+          from_user_id: string
+          id: string
+          is_active: boolean
+          next_run_at: string
+          note: string | null
+          recurrence_rule: string
+          to_account_id: string | null
+          to_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          family_id: string
+          from_account_id?: string | null
+          from_user_id: string
+          id?: string
+          is_active?: boolean
+          next_run_at?: string
+          note?: string | null
+          recurrence_rule: string
+          to_account_id?: string | null
+          to_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          family_id?: string
+          from_account_id?: string | null
+          from_user_id?: string
+          id?: string
+          is_active?: boolean
+          next_run_at?: string
+          note?: string | null
+          recurrence_rule?: string
+          to_account_id?: string | null
+          to_user_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_transfers_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_transfers_from_account_id_fkey"
+            columns: ["from_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_transfers_to_account_id_fkey"
             columns: ["to_account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
@@ -634,52 +842,181 @@ export type Database = {
           },
         ]
       }
-      shopping_items: {
+      shopping_list_items: {
         Row: {
+          actual_price: number | null
           added_by_user_id: string | null
-          category: string | null
+          category: string
+          checked_at: string | null
+          checked_by_user_id: string | null
           created_at: string | null
+          id: string
+          is_checked: boolean
+          list_id: string
+          name: string
+          planned_price: number | null
+          quantity: number
+          unit: string
+        }
+        Insert: {
+          actual_price?: number | null
+          added_by_user_id?: string | null
+          category?: string
+          checked_at?: string | null
+          checked_by_user_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_checked?: boolean
+          list_id: string
+          name: string
+          planned_price?: number | null
+          quantity?: number
+          unit?: string
+        }
+        Update: {
+          actual_price?: number | null
+          added_by_user_id?: string | null
+          category?: string
+          checked_at?: string | null
+          checked_by_user_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_checked?: boolean
+          list_id?: string
+          name?: string
+          planned_price?: number | null
+          quantity?: number
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shopping_list_items_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "shopping_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shopping_lists: {
+        Row: {
+          created_at: string | null
+          created_by_user_id: string | null
           family_id: string
           id: string
-          is_purchased: boolean
+          is_completed: boolean
           name: string
-          priority: string | null
-          quantity: number
-          store: string | null
-          unit: string | null
+          planned_budget: number | null
+          store_name: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by_user_id?: string | null
+          family_id: string
+          id?: string
+          is_completed?: boolean
+          name: string
+          planned_budget?: number | null
+          store_name?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by_user_id?: string | null
+          family_id?: string
+          id?: string
+          is_completed?: boolean
+          name?: string
+          planned_budget?: number | null
+          store_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shopping_lists_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          account_id: string | null
+          amount: number
+          auto_create_tx: boolean
+          billing_cycle: string
+          category_id: string | null
+          color: string
+          created_at: string | null
+          created_by_user_id: string | null
+          currency: string
+          description: string | null
+          family_id: string
+          icon: string
+          id: string
+          is_active: boolean
+          name: string
+          next_billing_date: string
+          reminder_days: number
           updated_at: string | null
         }
         Insert: {
-          added_by_user_id?: string | null
-          category?: string | null
+          account_id?: string | null
+          amount: number
+          auto_create_tx?: boolean
+          billing_cycle?: string
+          category_id?: string | null
+          color?: string
           created_at?: string | null
+          created_by_user_id?: string | null
+          currency?: string
+          description?: string | null
           family_id: string
+          icon?: string
           id?: string
-          is_purchased?: boolean
+          is_active?: boolean
           name: string
-          priority?: string | null
-          quantity?: number
-          store?: string | null
-          unit?: string | null
+          next_billing_date: string
+          reminder_days?: number
           updated_at?: string | null
         }
         Update: {
-          added_by_user_id?: string | null
-          category?: string | null
+          account_id?: string | null
+          amount?: number
+          auto_create_tx?: boolean
+          billing_cycle?: string
+          category_id?: string | null
+          color?: string
           created_at?: string | null
+          created_by_user_id?: string | null
+          currency?: string
+          description?: string | null
           family_id?: string
+          icon?: string
           id?: string
-          is_purchased?: boolean
+          is_active?: boolean
           name?: string
-          priority?: string | null
-          quantity?: number
-          store?: string | null
-          unit?: string | null
+          next_billing_date?: string
+          reminder_days?: number
           updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "shopping_items_family_id_fkey"
+            foreignKeyName: "subscriptions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_family_id_fkey"
             columns: ["family_id"]
             isOneToOne: false
             referencedRelation: "families"
@@ -689,42 +1026,81 @@ export type Database = {
       }
       transactions: {
         Row: {
-          account_id: string
+          account_id: string | null
           amount: number
+          cashback_card_id: string | null
+          cashback_category_id: string | null
+          cashback_earned_rub: number | null
           category_id: string | null
           created_at: string | null
           date: string
           family_id: string
           id: string
           note: string | null
+          source: string | null
           type: string
-          user_id: string
+          updated_at: string | null
+          user_id: string | null
+          vehicle_id: string | null
         }
         Insert: {
-          account_id: string
+          account_id?: string | null
           amount: number
+          cashback_card_id?: string | null
+          cashback_category_id?: string | null
+          cashback_earned_rub?: number | null
           category_id?: string | null
           created_at?: string | null
           date?: string
           family_id: string
           id?: string
           note?: string | null
+          source?: string | null
           type: string
-          user_id: string
+          updated_at?: string | null
+          user_id?: string | null
+          vehicle_id?: string | null
         }
         Update: {
-          account_id?: string
+          account_id?: string | null
           amount?: number
+          cashback_card_id?: string | null
+          cashback_category_id?: string | null
+          cashback_earned_rub?: number | null
           category_id?: string | null
           created_at?: string | null
           date?: string
           family_id?: string
           id?: string
           note?: string | null
+          source?: string | null
           type?: string
-          user_id?: string
+          updated_at?: string | null
+          user_id?: string | null
+          vehicle_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_cashback_card"
+            columns: ["cashback_card_id"]
+            isOneToOne: false
+            referencedRelation: "cashback_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_cashback_category"
+            columns: ["cashback_category_id"]
+            isOneToOne: false
+            referencedRelation: "cashback_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_vehicle"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "transactions_account_id_fkey"
             columns: ["account_id"]
@@ -766,7 +1142,7 @@ export type Database = {
           amount_rub: number
           category: string
           created_at?: string | null
-          date: string
+          date?: string
           id?: string
           mileage_at_moment?: number | null
           note?: string | null
@@ -790,6 +1166,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "vehicle_expenses_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "vehicle_expenses_vehicle_id_fkey"
             columns: ["vehicle_id"]
             isOneToOne: false
@@ -806,7 +1189,6 @@ export type Database = {
           discount_amount_rub: number | null
           discount_until: string | null
           external_id: string | null
-          family_id: string | null
           id: string
           issued_date: string | null
           paid_at: string | null
@@ -822,7 +1204,6 @@ export type Database = {
           discount_amount_rub?: number | null
           discount_until?: string | null
           external_id?: string | null
-          family_id?: string | null
           id?: string
           issued_date?: string | null
           paid_at?: string | null
@@ -838,7 +1219,6 @@ export type Database = {
           discount_amount_rub?: number | null
           discount_until?: string | null
           external_id?: string | null
-          family_id?: string | null
           id?: string
           issued_date?: string | null
           paid_at?: string | null
@@ -849,10 +1229,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "vehicle_fines_family_id_fkey"
-            columns: ["family_id"]
+            foreignKeyName: "vehicle_fines_transaction_id_fkey"
+            columns: ["transaction_id"]
             isOneToOne: false
-            referencedRelation: "families"
+            referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
           {
@@ -934,21 +1314,36 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      add_fuel_entry: {
-        Args: {
-          p_account_id: string
-          p_date?: string
-          p_family_id: string
-          p_full_tank?: boolean
-          p_liters: number
-          p_mileage: number
-          p_note?: string
-          p_price_per_liter: number
-          p_user_id: string
-          p_vehicle_id: string
-        }
-        Returns: Json
-      }
+      add_fuel_entry:
+        | {
+            Args: {
+              p_account_id: string
+              p_date?: string
+              p_family_id: string
+              p_full_tank?: boolean
+              p_liters: number
+              p_mileage: number
+              p_note?: string
+              p_price_per_liter: number
+              p_user_id: string
+              p_vehicle_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_account_id: string
+              p_family_id: string
+              p_full_tank: boolean
+              p_liters: number
+              p_mileage: number
+              p_note?: string
+              p_price_per_liter: number
+              p_user_id: string
+              p_vehicle_id: string
+            }
+            Returns: undefined
+          }
       add_vehicle_expense: {
         Args: {
           p_account_id: string
@@ -978,20 +1373,27 @@ export type Database = {
             Returns: undefined
           }
         | {
-            Args: {
-              p_transfer_id: string
-              p_paid_amount?: number
-            }
+            Args: { p_paid_amount?: number; p_transfer_id: string }
             Returns: undefined
           }
       contribute_to_goal: {
-        Args: { p_goal_id: string; p_amount: number }
-        Returns: number
+        Args: { p_amount: number; p_goal_id: string }
+        Returns: {
+          auto_save_type: string | null
+          auto_save_value: number | null
+          color: string | null
+          created_at: string | null
+          current_amount: number
+          deadline: string | null
+          family_id: string | null
+          icon: string | null
+          id: string
+          is_completed: boolean | null
+          name: string
+          target_amount: number
+        }
       }
-      expire_pending_transfers: {
-        Args: Record<string, never>
-        Returns: number
-      }
+      expire_pending_transfers: { Args: never; Returns: number }
       get_expiring_items: {
         Args: { p_days_ahead?: number; p_family_id: string }
         Returns: {
@@ -1060,10 +1462,7 @@ export type Database = {
           total: number
         }[]
       }
-      rotate_invite_code: {
-        Args: { p_family_id: string }
-        Returns: string
-      }
+      rotate_invite_code: { Args: { p_family_id: string }; Returns: string }
       seed_family_categories: {
         Args: { p_family_id: string }
         Returns: undefined
@@ -1175,7 +1574,7 @@ export type Enums<
 }
   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    ? DefaultSchema["Enums\"][DefaultSchemaEnumNameOrOptions]
     : never
 
 export type CompositeTypes<
